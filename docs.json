@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "willow",
+  "theme": "aspen",
   "name": "PapelShip Developers",
   "description": "Developer documentation for PapelShip payments, store management, and qPapel software protection APIs.",
   "colors": {
