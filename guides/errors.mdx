@@ -1,0 +1,36 @@
+---
+title: "Errors"
+description: "Understand PapelShip HTTP status codes and error responses."
+---
+
+PapelShip uses standard HTTP status codes. Every JSON response includes a `success` boolean.
+
+```json Error response
+{
+  "success": false,
+  "error": "Invalid parameters provided"
+}
+```
+
+## Status codes
+
+| Code | Meaning | What to do |
+| :--- | :--- | :--- |
+| `200` | Request succeeded. | Read the response body. |
+| `400` | Bad request or validation error. | Check required fields and value types. |
+| `401` | Missing or invalid API key. | Check your authentication headers. |
+| `403` | Key lacks permission for this action. | Use a key with the right scope. |
+| `404` | Resource not found. | Check the ID in the URL or query. |
+| `500` | Server error. | Retry with exponential backoff. |
+
+## Common API Store errors
+
+| Error | Cause |
+| :--- | :--- |
+| Crypto method disabled | Crypto payments are turned off for your store. Enable them in the dashboard. |
+| Coin not enabled | The requested `coin_type` is not configured for your store. |
+| Invoice not found | The `invoiceId` does not exist or belongs to another store. |
+
+<Tip>
+  Retry only on network failures and `5xx` responses. Send the same `Idempotency-Key` on each retry. See [Idempotency](/guides/idempotency).
+</Tip>

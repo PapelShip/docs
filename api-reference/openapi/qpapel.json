@@ -1,0 +1,4733 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "qPapel Protection Web API",
+    "version": "1.0.0",
+    "description": "qPapel Protection API provides developer-grade license validation, remote software configuration, staff URL delegation, client anti-cheat heuristics, and Discord community integration for desktop applications and loaders.\n",
+    "contact": {
+      "name": "PapelShip Developer Support",
+      "url": "https://papelship.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://app.papelship.com/api/qpapel/v1",
+      "description": "Production Server"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    },
+    {
+      "ApiKeyHeader": []
+    },
+    {
+      "ApiKeyHeaderLegacy": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "License Keys",
+      "description": "Programmatic management of customer license keys, hardware ID bindings, activations, and bans."
+    },
+    {
+      "name": "Reseller Keys",
+      "description": "Multi-seat reseller key creation, extension, duration freeze, and license allocation."
+    },
+    {
+      "name": "Remote Settings",
+      "description": "Secure remote runtime configuration mapping, build SHA-256 verification, and dynamic values."
+    },
+    {
+      "name": "Staff Management",
+      "description": "Temporary and scope-limited web portal URLs for support moderators."
+    },
+    {
+      "name": "Discord Integrations",
+      "description": "Guild linkage, anti-cheat event channel streaming, and role-based bot permissions."
+    },
+    {
+      "name": "Client Security & Anti-Cheat",
+      "description": "Device fingerprint monitoring, process blacklists, window title filters, and server-side protected strings/files."
+    }
+  ],
+  "paths": {
+    "/keys": {
+      "get": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "List License Keys",
+        "description": "Retrieve a paginated and filterable list of active, expired, or banned license keys.",
+        "operationId": "listLicenseKeys",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "description": "Scope filter for key ownership: 'me' (own keys), 'resellers', or 'all'.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "me",
+                "resellers",
+                "all"
+              ],
+              "default": "me"
+            }
+          },
+          {
+            "name": "product",
+            "in": "query",
+            "description": "Filter keys by specific product cheat_value or product ID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Case-insensitive search string matching license key sequence or user notes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expiresInDays",
+            "in": "query",
+            "description": "Filter keys scheduled to expire within the specified number of days.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of records to return per page.",
+            "schema": {
+              "type": "integer",
+              "default": 25,
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of records to skip for pagination.",
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "Field name to sort results by.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "end_time",
+                "used_count",
+                "key_value"
+              ],
+              "default": "created_at"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "description": "Sort ordering direction.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ASC",
+                "DESC"
+              ],
+              "default": "DESC"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of license keys.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "keys": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LicenseKey"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "Create License Key",
+        "description": "Generate a new license key with custom duration, HWID binding rules, activation modes, and optional metadata notes.",
+        "operationId": "createLicenseKey",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "days"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "integer",
+                    "description": "Unique numeric database ID of the target product.",
+                    "example": 101
+                  },
+                  "days": {
+                    "type": "integer",
+                    "description": "Validity duration in days (or hours if key_type is hour_limited).",
+                    "example": 30
+                  },
+                  "key_type": {
+                    "type": "string",
+                    "description": "Licensing behavior model.",
+                    "enum": [
+                      "time_limited",
+                      "single_use",
+                      "multi_use",
+                      "time_restricted",
+                      "hour_limited"
+                    ],
+                    "default": "time_limited",
+                    "example": "time_limited"
+                  },
+                  "note": {
+                    "type": "string",
+                    "description": "Internal reference notes or customer identifier.",
+                    "example": "Order"
+                  },
+                  "max_uses": {
+                    "type": "integer",
+                    "description": "Maximum activations allowed before key locks out.",
+                    "default": 1,
+                    "example": 1
+                  },
+                  "bind_hwid": {
+                    "type": "boolean",
+                    "description": "Enforce hardware ID locking on first machine activation.",
+                    "default": true,
+                    "example": true
+                  },
+                  "auto_start": {
+                    "type": "boolean",
+                    "description": "If true, expiry countdown begins upon generation rather than on first client use.",
+                    "default": false,
+                    "example": false
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "description": "Quantity of keys to generate in bulk (max 100).",
+                    "default": 1,
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "License key created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Key created successfully"
+                    },
+                    "key": {
+                      "type": "string",
+                      "example": "ABCD-EFGH-IJKL-USER"
+                    },
+                    "id": {
+                      "type": "integer",
+                      "example": 542
+                    },
+                    "type": {
+                      "type": "string",
+                      "example": "time_limited"
+                    },
+                    "product": {
+                      "type": "string",
+                      "example": "cs2_cheat"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          }
+        }
+      }
+    },
+    "/keys/{id}": {
+      "delete": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "Delete License Key",
+        "description": "Permanently remove a license key from the system.",
+        "operationId": "deleteLicenseKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the license key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/keys/{id}/ban": {
+      "post": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "Ban License Key",
+        "description": "Revoke license validity and record a disciplinary ban reason.",
+        "operationId": "banLicenseKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the license key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "Explanation for the ban action.",
+                    "example": "Chargeback fraud initiated"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Key banned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/keys/{id}/unban": {
+      "post": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "Unban License Key",
+        "description": "Restore active validity to a previously banned license key.",
+        "operationId": "unbanLicenseKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the license key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key unbanned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/keys/{id}/freeze": {
+      "post": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "Freeze License Key",
+        "description": "Pause the expiration countdown on an active license key.",
+        "operationId": "freezeLicenseKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the license key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key frozen successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "Unfreeze License Key",
+        "description": "Resume the expiration countdown on a frozen license key.",
+        "operationId": "unfreezeLicenseKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the license key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key unfrozen successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/keys/{id}/reset-hwid": {
+      "post": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "Reset HWID Binding",
+        "description": "Clear the locked hardware fingerprint to allow user activation on a new machine.",
+        "operationId": "resetKeyHwid",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the license key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HWID binding reset successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/keys/{id}/add-time": {
+      "post": {
+        "tags": [
+          "License Keys"
+        ],
+        "summary": "Extend Key Duration",
+        "description": "Add additional validity days to an active license key.",
+        "operationId": "addTimeToKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the license key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "days"
+                ],
+                "properties": {
+                  "days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of days to append to the license end date.",
+                    "example": 7
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Duration added successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/reseller/keys": {
+      "get": {
+        "tags": [
+          "Reseller Keys"
+        ],
+        "summary": "List Reseller Keys",
+        "description": "Retrieve all reseller keys managed under the authenticated developer account.",
+        "operationId": "listResellerKeys",
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of reseller keys.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "keys": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ResellerKey"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Reseller Keys"
+        ],
+        "summary": "Create Reseller Key",
+        "description": "Issue an access key allocated to an authorized reseller account.",
+        "operationId": "createResellerKey",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "reseller_id",
+                  "days"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "integer",
+                    "description": "Product ID linked to the reseller entitlement.",
+                    "example": 12
+                  },
+                  "reseller_id": {
+                    "type": "integer",
+                    "description": "Internal User ID of the reseller.",
+                    "example": 98
+                  },
+                  "days": {
+                    "type": "integer",
+                    "description": "Validity duration in days.",
+                    "example": 30
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reseller key created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Reseller key created successfully"
+                    },
+                    "key": {
+                      "type": "string",
+                      "example": "RESELLER-KEY-1234"
+                    },
+                    "id": {
+                      "type": "integer",
+                      "example": 99
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/reseller/keys/{id}": {
+      "get": {
+        "tags": [
+          "Reseller Keys"
+        ],
+        "summary": "Get Single Reseller Key",
+        "description": "Retrieve details for a specific reseller key by database ID.",
+        "operationId": "getResellerKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the reseller key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reseller key details retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "key": {
+                      "$ref": "#/components/schemas/ResellerKey"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Reseller Keys"
+        ],
+        "summary": "Delete Reseller Key",
+        "description": "Permanently remove a reseller key.",
+        "operationId": "deleteResellerKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the reseller key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reseller key deleted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/reseller/keys/{id}/ban": {
+      "post": {
+        "tags": [
+          "Reseller Keys"
+        ],
+        "summary": "Update Reseller Key Ban Status",
+        "description": "Ban or unban a reseller license key.",
+        "operationId": "setResellerKeyBan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the reseller key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "is_banned"
+                ],
+                "properties": {
+                  "is_banned": {
+                    "type": "boolean",
+                    "description": "True to ban the key, false to unban.",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ban status updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/reseller/keys/{id}/extend": {
+      "post": {
+        "tags": [
+          "Reseller Keys"
+        ],
+        "summary": "Extend Reseller Key",
+        "description": "Append additional validity days to a reseller key.",
+        "operationId": "extendResellerKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the reseller key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "days"
+                ],
+                "properties": {
+                  "days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Number of days to extend.",
+                    "example": 15
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reseller key extended.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/reseller/keys/{id}/freeze": {
+      "post": {
+        "tags": [
+          "Reseller Keys"
+        ],
+        "summary": "Toggle Reseller Key Freeze",
+        "description": "Freeze or unfreeze duration countdown for a reseller key.",
+        "operationId": "toggleResellerKeyFreeze",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the reseller key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "is_frozen"
+                ],
+                "properties": {
+                  "is_frozen": {
+                    "type": "boolean",
+                    "description": "True to freeze countdown, false to unfreeze.",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Freeze status updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/reseller/keys/{id}/reset-hwid": {
+      "post": {
+        "tags": [
+          "Reseller Keys"
+        ],
+        "summary": "Reset Reseller Key HWID",
+        "description": "Reset hardware identification lock for a reseller key.",
+        "operationId": "resetResellerKeyHwid",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the reseller key.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HWID reset successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/remote-settings": {
+      "get": {
+        "tags": [
+          "Remote Settings"
+        ],
+        "summary": "List Remote Settings",
+        "description": "Retrieve all active and inactive remote product configuration profiles.",
+        "operationId": "listRemoteSettings",
+        "responses": {
+          "200": {
+            "description": "List of remote settings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RemoteSetting"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Remote Settings"
+        ],
+        "summary": "Create Remote Setting",
+        "description": "Register a new remote configuration payload bound to a product.",
+        "operationId": "createRemoteSetting",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "config"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "string",
+                    "description": "Product cheat_value identifier.",
+                    "example": "cs2_cheat"
+                  },
+                  "config": {
+                    "type": "object",
+                    "description": "JSON key-value configuration tree.",
+                    "example": {
+                      "hwid_method": "full_system",
+                      "detection_response": "crash",
+                      "blacklisted_windows": [
+                        "x64dbg",
+                        "Cheat Engine"
+                      ]
+                    }
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ],
+                    "default": "active",
+                    "example": "active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Remote setting configuration created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RemoteSetting"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/remote-settings/{id}": {
+      "get": {
+        "tags": [
+          "Remote Settings"
+        ],
+        "summary": "Get Remote Setting by ID",
+        "description": "Retrieve configuration details for a single remote setting entry.",
+        "operationId": "getRemoteSettingById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the remote setting record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remote setting details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RemoteSetting"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Remote Settings"
+        ],
+        "summary": "Update Remote Setting",
+        "description": "Overwrite configuration payload and status for an existing remote setting.",
+        "operationId": "updateRemoteSetting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the remote setting record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "config"
+                ],
+                "properties": {
+                  "config": {
+                    "type": "object",
+                    "description": "Replacement configuration object."
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Remote setting updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RemoteSetting"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Remote Settings"
+        ],
+        "summary": "Delete Remote Setting",
+        "description": "Delete a remote setting configuration record.",
+        "operationId": "deleteRemoteSetting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the remote setting record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Remote setting deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Remote Settings"
+        ],
+        "summary": "Toggle Remote Setting Status",
+        "description": "Switch remote setting status between active and inactive.",
+        "operationId": "toggleRemoteSettingStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the remote setting record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ],
+                    "example": "inactive"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status toggled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 45
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "inactive"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/remote-settings/upload-sha256": {
+      "post": {
+        "tags": [
+          "Remote Settings"
+        ],
+        "summary": "Upload Executable for SHA-256 Extraction",
+        "description": "Stream and analyze a compiled binary to auto-compute and update product integrity SHA-256 hash.",
+        "operationId": "uploadSha256Binary",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "file"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "string",
+                    "description": "Product cheat_value identifier.",
+                    "example": "cs2_cheat"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Executable binary or DLL payload."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Binary analyzed and hash recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "SHA-256 hash updated successfully"
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "example": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/remote-settings/by-product/{productId}": {
+      "get": {
+        "tags": [
+          "Remote Settings"
+        ],
+        "summary": "Get Remote Settings by Product Identifier",
+        "description": "Fetch effective configuration for a product using its cheat_value.",
+        "operationId": "getRemoteSettingsByProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "description": "Unique cheat_value of the product.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "cs2_cheat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active configuration retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RemoteSetting"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/staff-urls": {
+      "get": {
+        "tags": [
+          "Staff Management"
+        ],
+        "summary": "List Staff URLs",
+        "description": "Retrieve all active and historical temporary access links created for staff moderators.",
+        "operationId": "listStaffUrls",
+        "responses": {
+          "200": {
+            "description": "List of staff management URLs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "urls": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StaffUrl"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Staff Management"
+        ],
+        "summary": "Create Staff URL",
+        "description": "Create a time-limited or scoped moderator dashboard URL with explicit capability permissions.",
+        "operationId": "createStaffUrl",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "description",
+                  "permissions"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Descriptive label for the staff link.",
+                    "example": "Tier 1 Support - Reset Access"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Detailed reason or assigned moderator notes.",
+                    "example": "Temporary support staff for weekend event"
+                  },
+                  "permissions": {
+                    "type": "array",
+                    "description": "Action permissions granted to this portal session.",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "create_key",
+                        "delete_key",
+                        "reset_hwid",
+                        "ban_key",
+                        "freeze_key"
+                      ]
+                    },
+                    "example": [
+                      "reset_hwid"
+                    ]
+                  },
+                  "allowed_product_ids": {
+                    "type": "array",
+                    "description": "Restrict actions to specific product IDs.",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [
+                      12
+                    ]
+                  },
+                  "usage_limit": {
+                    "type": "integer",
+                    "description": "Maximum allowed portal accesses before revocation.",
+                    "example": 10
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Absolute expiration timestamp.",
+                    "example": "2026-06-30T00:00:00.000Z"
+                  },
+                  "url_path": {
+                    "type": "string",
+                    "description": "Optional custom URL segment (auto-generated if omitted).",
+                    "example": "staff-cs2-mod-abc"
+                  },
+                  "access_key": {
+                    "type": "string",
+                    "description": "Optional secret access token (auto-generated if omitted)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Staff URL created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Staff URL created successfully"
+                    },
+                    "url": {
+                      "$ref": "#/components/schemas/StaffUrl"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/staff-urls/{id}": {
+      "put": {
+        "tags": [
+          "Staff Management"
+        ],
+        "summary": "Update Staff URL",
+        "description": "Modify parameters, permissions, or toggle access validity on an existing staff URL.",
+        "operationId": "updateStaffUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the staff URL record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "example": "Senior Moderator Access"
+                  },
+                  "permissions": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": [
+                      "create_key",
+                      "reset_hwid"
+                    ]
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Staff URL updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Staff Management"
+        ],
+        "summary": "Delete Staff URL",
+        "description": "Permanently revoke and delete a staff URL.",
+        "operationId": "deleteStaffUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the staff URL record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Staff URL deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/discord-integrations": {
+      "get": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "List Discord Integrations",
+        "description": "Retrieve connected Discord server integrations, log stream channels, and role permission mappings.",
+        "operationId": "listDiscordIntegrations",
+        "parameters": [
+          {
+            "name": "includeProducts",
+            "in": "query",
+            "description": "Expand linked products in response.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "includePermissions",
+            "in": "query",
+            "description": "Expand role and user permission assignments in response.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of Discord integrations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "integrations": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DiscordIntegration"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "Register Discord Guild Integration",
+        "description": "Connect a new Discord server guild to the developer protection workspace.",
+        "operationId": "createDiscordIntegration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "guild_id"
+                ],
+                "properties": {
+                  "guild_id": {
+                    "type": "string",
+                    "description": "Discord Snowflake Guild ID.",
+                    "example": "1234567890123456"
+                  },
+                  "guild_name": {
+                    "type": "string",
+                    "description": "Guild title.",
+                    "example": "Dev Community Server"
+                  },
+                  "log_channel_id": {
+                    "type": "string",
+                    "description": "Discord Text Channel Snowflake ID for anti-cheat and security logs.",
+                    "example": "9876543210987654"
+                  },
+                  "log_dm_enabled": {
+                    "type": "boolean",
+                    "description": "Allow automated direct notification messages to users.",
+                    "default": false,
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Integration registered.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "integration": {
+                      "$ref": "#/components/schemas/DiscordIntegration"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/discord-integrations/{id}": {
+      "get": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "Get Discord Integration Details",
+        "description": "Retrieve complete configuration, attached products, and role permissions for a Discord guild connection.",
+        "operationId": "getDiscordIntegrationById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detailed integration record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "integration": {
+                      "$ref": "#/components/schemas/DiscordIntegration"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "Update Discord Integration",
+        "description": "Modify channel routing, active state, or DM delivery settings.",
+        "operationId": "updateDiscordIntegration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "guild_name": {
+                    "type": "string",
+                    "example": "Updated Guild Name"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "log_channel_id": {
+                    "type": "string",
+                    "example": "9876543210987654"
+                  },
+                  "log_dm_enabled": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Integration updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "Delete Discord Integration",
+        "description": "Disconnect Discord guild and cascade delete mapped permissions.",
+        "operationId": "deleteDiscordIntegration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Integration removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/discord-integrations/{id}/test-log": {
+      "post": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "Send Test Log Webhook",
+        "description": "Dispatch a test verification event message to the designated Discord logging channel.",
+        "operationId": "testDiscordLogging",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Test log sent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/discord-integrations/{id}/permissions": {
+      "get": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "List Discord Role/User Permissions",
+        "description": "Retrieve role and user command permission entries for a connected Discord guild.",
+        "operationId": "listDiscordPermissions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of permissions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DiscordPermission"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "Create or Update Discord Permission",
+        "description": "Assign bot management permissions to a Discord role or user Snowflake.",
+        "operationId": "upsertDiscordPermission",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "subject_type",
+                  "subject_id"
+                ],
+                "properties": {
+                  "subject_type": {
+                    "type": "string",
+                    "enum": [
+                      "ROLE",
+                      "USER"
+                    ],
+                    "example": "ROLE"
+                  },
+                  "subject_id": {
+                    "type": "string",
+                    "description": "Discord Snowflake ID.",
+                    "example": "888888888888"
+                  },
+                  "product_id": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Restrict capability to product ID (null for global scope).",
+                    "example": null
+                  },
+                  "can_create_key": {
+                    "type": "boolean",
+                    "default": false,
+                    "example": true
+                  },
+                  "can_delete_key": {
+                    "type": "boolean",
+                    "default": false,
+                    "example": false
+                  },
+                  "can_ban_key": {
+                    "type": "boolean",
+                    "default": false,
+                    "example": true
+                  },
+                  "can_freeze_key": {
+                    "type": "boolean",
+                    "default": false,
+                    "example": true
+                  },
+                  "can_reset_hwid": {
+                    "type": "boolean",
+                    "default": false,
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Permission saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "permission": {
+                      "$ref": "#/components/schemas/DiscordPermission"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/discord-integrations/{id}/permissions/{permissionId}": {
+      "delete": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "Delete Discord Permission",
+        "description": "Revoke a specific role or user permission entry.",
+        "operationId": "deleteDiscordPermission",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "permissionId",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the permission record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Permission revoked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/discord-integrations/{id}/products": {
+      "get": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "List Products Mapped to Discord",
+        "description": "Retrieve products linked to the specified Discord integration.",
+        "operationId": "listDiscordProducts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of mapped products.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "example": 4
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Premium Client Access"
+                          },
+                          "cheat_value": {
+                            "type": "string",
+                            "example": "cheat_prod"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Discord Integrations"
+        ],
+        "summary": "Map Product to Discord Integration",
+        "description": "Associate a product catalog entry with this Discord integration.",
+        "operationId": "addDiscordProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the integration.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "integer",
+                    "description": "Numeric database ID of the product.",
+                    "example": 4
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product mapped.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "product": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "example": 4
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Premium Client Access"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/computers": {
+      "get": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "List Client Computers",
+        "description": "Retrieve device fingerprints, active hardware signatures, suspicious heuristics, and threat assessments.",
+        "operationId": "listComputers",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term across CPU ID, machine name, username, IP address, or license key.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "product",
+            "in": "query",
+            "description": "Filter by product cheat_value.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by status flag.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "suspicious",
+                "banned"
+              ]
+            }
+          },
+          {
+            "name": "threat_level",
+            "in": "query",
+            "description": "Filter by computed threat level.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "clean",
+                "suspicious",
+                "critical"
+              ]
+            }
+          },
+          {
+            "name": "banned",
+            "in": "query",
+            "description": "Filter by ban status.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page index.",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size limit.",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated computers list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "computers": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Computer"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationMeta"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Ban or Unban Client Device",
+        "description": "Apply a hardware ban or restore access for a client computer record.",
+        "operationId": "setComputerBan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "computerId",
+                  "action"
+                ],
+                "properties": {
+                  "computerId": {
+                    "type": "integer",
+                    "description": "Unique ID of the computer.",
+                    "example": 12
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "ban",
+                      "unban"
+                    ],
+                    "example": "ban"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Required when action is 'ban'.",
+                    "example": "Memory tampering detected"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Computer ban status updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Clear Suspicious Flags",
+        "description": "Reset anti-cheat alert flags and cracker detections on a client machine back to clean.",
+        "operationId": "clearSuspiciousComputer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "computerId",
+                  "action"
+                ],
+                "properties": {
+                  "computerId": {
+                    "type": "integer",
+                    "example": 12
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "clear-suspicious"
+                    ],
+                    "example": "clear-suspicious"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Suspicious flags cleared.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/build-check": {
+      "get": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Get Build Integrity Status",
+        "description": "Retrieve active build validation settings, pending unverified hashes, and approved build signatures.",
+        "operationId": "getBuildCheckStatus",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Comma-separated list of build review statuses.",
+            "schema": {
+              "type": "string",
+              "example": "pending,warned,blocked,approved,rejected"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Build integrity verification payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "protected_products": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "total_products": {
+                              "type": "integer",
+                              "example": 5
+                            },
+                            "pending_builds": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "verified_builds": {
+                              "type": "integer",
+                              "example": 2
+                            },
+                            "rejected_builds": {
+                              "type": "integer",
+                              "example": 0
+                            }
+                          }
+                        },
+                        "settings": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/BuildSetting"
+                          }
+                        },
+                        "unverified": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/UnverifiedBuild"
+                          }
+                        },
+                        "verified": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/VerifiedBuild"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/serverside-strings": {
+      "get": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "List Server-Side Strings",
+        "description": "Retrieve encrypted strings and game memory offsets delivered at runtime to authenticated loaders.",
+        "operationId": "listServersideStrings",
+        "responses": {
+          "200": {
+            "description": "List of server-side strings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServersideString"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Create Server-Side String",
+        "description": "Register a protected string, memory offset, or URL endpoint for runtime client retrieval.",
+        "operationId": "createServersideString",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "string_value"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Identifier label for lookup.",
+                    "example": "D3D Device Offset"
+                  },
+                  "string_value": {
+                    "type": "string",
+                    "description": "Value to store and securely encrypt.",
+                    "example": "0x3A2F"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "string",
+                      "offset",
+                      "function"
+                    ],
+                    "default": "string",
+                    "example": "offset"
+                  },
+                  "product_cheat_value": {
+                    "type": "string",
+                    "description": "Product association.",
+                    "example": "cs2_cheat"
+                  },
+                  "force_key_check": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Require active key session before serving."
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ],
+                    "default": "active"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-side string created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ServersideString"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/serverside-strings/{id}": {
+      "put": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Update Server-Side String",
+        "description": "Modify string payload, type, or product bindings.",
+        "operationId": "updateServersideString",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "string_value"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "example": "D3D Device Offset"
+                  },
+                  "string_value": {
+                    "type": "string",
+                    "example": "0x3A30"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "string",
+                      "offset",
+                      "function"
+                    ]
+                  },
+                  "product_cheat_value": {
+                    "type": "string",
+                    "example": "cs2_cheat"
+                  },
+                  "force_key_check": {
+                    "type": "boolean"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "String updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ServersideString"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Toggle Server-Side String Status",
+        "description": "Switch state between active and inactive.",
+        "operationId": "toggleServersideStringStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ],
+                    "example": "inactive"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Delete Server-Side String",
+        "description": "Permanently delete a protected string record.",
+        "operationId": "deleteServersideString",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique ID of the record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "String deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/serverside-files": {
+      "get": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "List Server-Side Binary Files",
+        "description": "List uploaded protected DLLs, binary segments, and asset files.",
+        "operationId": "listServersideFiles",
+        "responses": {
+          "200": {
+            "description": "List of server-side files.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ServersideFile"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Upload Server-Side Binary File",
+        "description": "Upload and encrypt a binary DLL or payload file (supports up to 50MB).",
+        "operationId": "uploadServersideFile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "label",
+                  "file"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Descriptive title.",
+                    "example": "Main Loader DLL"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "DLL or binary file payload."
+                  },
+                  "product_cheat_value": {
+                    "type": "string",
+                    "description": "Associated product cheat_value.",
+                    "example": "cs2_cheat"
+                  },
+                  "force_key_check": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "force_encrypted_download": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "install_path": {
+                    "type": "string",
+                    "description": "Destination path on the target machine.",
+                    "example": "C:\\ProgramData\\qPapel\\core.dll"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File uploaded and encrypted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ServersideFile"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/serverside-files/{id}": {
+      "put": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Update Server-Side File Settings",
+        "description": "Modify properties, active state, install path, or security enforcement flags.",
+        "operationId": "updateServersideFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the file record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "example": "Core Game Module"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive"
+                    ]
+                  },
+                  "product_cheat_value": {
+                    "type": "string"
+                  },
+                  "force_key_check": {
+                    "type": "boolean"
+                  },
+                  "force_encrypted_download": {
+                    "type": "boolean"
+                  },
+                  "install_path": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File settings updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Regenerate File Access ID",
+        "description": "Rotate the download access ID token for security purposes.",
+        "operationId": "regenerateFileAccessId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the file record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action"
+                ],
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "regenerate-access"
+                    ],
+                    "example": "regenerate-access"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Access token regenerated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Overwrite File Payload Binary",
+        "description": "Upload a new binary version while keeping the existing file metadata and ID.",
+        "operationId": "reuploadServersideFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the file record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "reupload"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Replacement executable/DLL payload."
+                  },
+                  "reupload": {
+                    "type": "string",
+                    "enum": [
+                      "true"
+                    ],
+                    "example": "true"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File payload re-uploaded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Delete Server-Side File",
+        "description": "Permanently remove a file record and delete binary data from storage.",
+        "operationId": "deleteServersideFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the file record.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/blacklisted-processes": {
+      "get": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "List Blacklisted Processes",
+        "description": "Retrieve executable process name blacklist rules scanned by client loaders.",
+        "operationId": "listBlacklistedProcesses",
+        "responses": {
+          "200": {
+            "description": "List of blacklisted processes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BlacklistedProcess"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Create Blacklisted Process Rule",
+        "description": "Add an executable process filename to client detection lists.",
+        "operationId": "createBlacklistedProcess",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "process_name"
+                ],
+                "properties": {
+                  "process_name": {
+                    "type": "string",
+                    "description": "Process filename (e.g. CheatEngine.exe, fiddler.exe).",
+                    "example": "x64dbg.exe"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "suspicious",
+                      "ban"
+                    ],
+                    "default": "suspicious",
+                    "example": "ban"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Context note on why this process is flagged.",
+                    "example": "Disassembler and debugger process"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Blacklist rule added.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BlacklistedProcess"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/blacklisted-processes/{id}": {
+      "put": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Update Blacklisted Process Rule",
+        "description": "Modify rule parameters, action severity, or active status.",
+        "operationId": "updateBlacklistedProcess",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the rule.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "process_name": {
+                    "type": "string",
+                    "example": "x64dbg.exe"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "suspicious",
+                      "ban"
+                    ],
+                    "example": "ban"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Blacklist rule updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Delete Blacklisted Process Rule",
+        "description": "Remove a process filename rule from the blacklist catalog.",
+        "operationId": "deleteBlacklistedProcess",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the rule.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Blacklist rule removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    },
+    "/blacklisted-windows": {
+      "get": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "List Blacklisted Windows",
+        "description": "Retrieve active window title detection strings scanned by protected loaders.",
+        "operationId": "listBlacklistedWindows",
+        "responses": {
+          "200": {
+            "description": "List of window title blacklist rules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BlacklistedWindow"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Create Blacklisted Window Rule",
+        "description": "Add an exact or partial window title string to detect debuggers and disassemblers.",
+        "operationId": "createBlacklistedWindow",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "window_title"
+                ],
+                "properties": {
+                  "window_title": {
+                    "type": "string",
+                    "description": "Window title string to search for.",
+                    "example": "Cheat Engine"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "suspicious",
+                      "ban"
+                    ],
+                    "default": "suspicious",
+                    "example": "ban"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Documentation note for this window check.",
+                    "example": "Block open Cheat Engine UI windows"
+                  },
+                  "is_partial_match": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Match substring occurrences within window titles."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Window blacklist rule created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BlacklistedWindow"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/blacklisted-windows/{id}": {
+      "put": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Update Blacklisted Window Rule",
+        "description": "Modify window title matching options, severity actions, or active status.",
+        "operationId": "updateBlacklistedWindow",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the rule.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "window_title": {
+                    "type": "string",
+                    "example": "Cheat Engine 7.5"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "suspicious",
+                      "ban"
+                    ],
+                    "example": "ban"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "is_partial_match": {
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Window rule updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Client Security & Anti-Cheat"
+        ],
+        "summary": "Delete Blacklisted Window Rule",
+        "description": "Permanently remove a window title check from the blacklist.",
+        "operationId": "deleteBlacklistedWindow",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique database ID of the rule.",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Window rule deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardSuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API_KEY",
+        "description": "Standard HTTP Bearer token authentication header (e.g. `Authorization: Bearer pk_live_...`)."
+      },
+      "ApiKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Custom header API key authentication parameter (`x-api-key: pk_live_...`)."
+      },
+      "ApiKeyHeaderLegacy": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "api-key",
+        "description": "Legacy custom header API key fallback parameter (`api-key: pk_live_...`)."
+      }
+    },
+    "schemas": {
+      "StandardSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Operation completed successfully"
+          }
+        }
+      },
+      "StandardErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "string",
+            "example": "Invalid parameters provided"
+          }
+        }
+      },
+      "LicenseKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 541
+          },
+          "key_value": {
+            "type": "string",
+            "example": "ABCD-EFGH-IJKL-USER"
+          },
+          "product": {
+            "type": "string",
+            "example": "cs2_cheat"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-06-12T00:00:00.000Z"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-07-12T00:00:00.000Z"
+          },
+          "used_count": {
+            "type": "integer",
+            "example": 0
+          },
+          "max_uses": {
+            "type": "integer",
+            "example": 1
+          },
+          "is_banned": {
+            "type": "boolean",
+            "example": false
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "example": "API generated license"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T06:00:00.000Z"
+          }
+        }
+      },
+      "ResellerKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 98
+          },
+          "key_value": {
+            "type": "string",
+            "example": "RESELLER-KEY-1234"
+          },
+          "status": {
+            "type": "string",
+            "example": "active"
+          },
+          "user_id": {
+            "type": "integer",
+            "example": 12
+          },
+          "max_uses": {
+            "type": "integer",
+            "example": 10
+          },
+          "used_count": {
+            "type": "integer",
+            "example": 2
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T06:00:00.000Z"
+          }
+        }
+      },
+      "RemoteSetting": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 45
+          },
+          "user_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "product_id": {
+            "type": "string",
+            "example": "cs2_cheat"
+          },
+          "product_name": {
+            "type": "string",
+            "example": "Counter Strike 2 Loader"
+          },
+          "access_id": {
+            "type": "string",
+            "example": "389204859012"
+          },
+          "config": {
+            "type": "string",
+            "description": "Serialized JSON configuration or structured object.",
+            "example": "{\"hwid_method\":\"full_system\"}"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "example": "active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T06:00:00.000Z"
+          }
+        }
+      },
+      "StaffUrl": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 8
+          },
+          "title": {
+            "type": "string",
+            "example": "Moderator URL"
+          },
+          "description": {
+            "type": "string",
+            "example": "Keys resetting access for CS2"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "reset_hwid"
+            ]
+          },
+          "allowed_product_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "example": [
+              12
+            ]
+          },
+          "usage_limit": {
+            "type": "integer",
+            "nullable": true,
+            "example": 10
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2026-06-30T00:00:00.000Z"
+          },
+          "url_path": {
+            "type": "string",
+            "example": "abcde123"
+          },
+          "access_key": {
+            "type": "string",
+            "example": "some_secure_access_key"
+          },
+          "is_active": {
+            "type": "integer",
+            "example": 1
+          }
+        }
+      },
+      "DiscordIntegration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 2
+          },
+          "guild_id": {
+            "type": "string",
+            "example": "1234567890123456"
+          },
+          "guild_name": {
+            "type": "string",
+            "example": "Developer Community"
+          },
+          "is_active": {
+            "type": "integer",
+            "example": 1
+          },
+          "log_channel_id": {
+            "type": "string",
+            "nullable": true,
+            "example": "9876543210987654"
+          },
+          "log_dm_enabled": {
+            "type": "integer",
+            "example": 1
+          },
+          "owner_username": {
+            "type": "string",
+            "nullable": true,
+            "example": "dev_admin"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "example": 4
+                },
+                "name": {
+                  "type": "string",
+                  "example": "Premium Access"
+                }
+              }
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscordPermission"
+            }
+          }
+        }
+      },
+      "DiscordPermission": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 1
+          },
+          "subject_type": {
+            "type": "string",
+            "enum": [
+              "ROLE",
+              "USER"
+            ],
+            "example": "ROLE"
+          },
+          "subject_id": {
+            "type": "string",
+            "example": "888888888888"
+          },
+          "product_id": {
+            "type": "integer",
+            "nullable": true,
+            "example": null
+          },
+          "can_create_key": {
+            "type": "integer",
+            "example": 1
+          },
+          "can_delete_key": {
+            "type": "integer",
+            "example": 0
+          },
+          "can_ban_key": {
+            "type": "integer",
+            "example": 1
+          },
+          "can_freeze_key": {
+            "type": "integer",
+            "example": 0
+          },
+          "can_reset_hwid": {
+            "type": "integer",
+            "example": 1
+          }
+        }
+      },
+      "Computer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 12
+          },
+          "cpu_id": {
+            "type": "string",
+            "example": "BFEBFBFF000906E3"
+          },
+          "computer_name": {
+            "type": "string",
+            "example": "DESKTOP-DEV"
+          },
+          "username": {
+            "type": "string",
+            "example": "user123"
+          },
+          "ip_address": {
+            "type": "string",
+            "example": "192.168.1.50"
+          },
+          "product": {
+            "type": "string",
+            "example": "cs2_cheat"
+          },
+          "key_value": {
+            "type": "string",
+            "example": "ABCD-EFGH-IJKL-USER"
+          },
+          "status": {
+            "type": "string",
+            "example": "suspicious"
+          },
+          "threat_level": {
+            "type": "string",
+            "example": "suspicious"
+          },
+          "is_banned": {
+            "type": "boolean",
+            "example": false
+          },
+          "ban_reason": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "cracker_actions": {
+            "type": "string",
+            "nullable": true,
+            "example": "Debugger attached detection"
+          },
+          "blacklist_detections": {
+            "type": "string",
+            "nullable": true,
+            "example": "CheatEngine.exe"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T06:00:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T06:10:00.000Z"
+          },
+          "product_name": {
+            "type": "string",
+            "example": "Counter Strike 2 Loader"
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "example": 1
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 1
+          }
+        }
+      },
+      "BuildSetting": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 15
+          },
+          "product_id": {
+            "type": "string",
+            "example": "cs2_cheat"
+          },
+          "product_name": {
+            "type": "string",
+            "example": "Counter Strike 2 Loader"
+          },
+          "access_id": {
+            "type": "string",
+            "example": "389204859012"
+          },
+          "status": {
+            "type": "string",
+            "example": "active"
+          },
+          "build_check": {
+            "type": "boolean",
+            "example": true
+          },
+          "build_check_retry_seconds": {
+            "type": "integer",
+            "example": 10
+          },
+          "build_check_action": {
+            "type": "string",
+            "example": "close_app"
+          },
+          "pending_count": {
+            "type": "integer",
+            "example": 1
+          },
+          "verified_count": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      },
+      "UnverifiedBuild": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 4
+          },
+          "api_key": {
+            "type": "string",
+            "example": "api_••••user"
+          },
+          "product_id": {
+            "type": "string",
+            "example": "cs2_cheat"
+          },
+          "build_sha256": {
+            "type": "string",
+            "example": "ea822f3e8f498c8a14b3017a9eb538c351f044994da5d42c35a6db9e5a6f23c2"
+          },
+          "client_version": {
+            "type": "string",
+            "example": "1.0.4"
+          },
+          "cpu_id": {
+            "type": "string",
+            "example": "BFEBFBFF000906E3"
+          },
+          "ip_address": {
+            "type": "string",
+            "example": "192.168.1.50"
+          },
+          "first_seen": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T06:00:00.000Z"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T06:12:00.000Z"
+          },
+          "seen_count": {
+            "type": "integer",
+            "example": 5
+          },
+          "status": {
+            "type": "string",
+            "example": "pending"
+          },
+          "metadata": {
+            "type": "object",
+            "example": {
+              "os": "Windows 11"
+            }
+          }
+        }
+      },
+      "VerifiedBuild": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 2
+          },
+          "api_key": {
+            "type": "string",
+            "example": "api_••••user"
+          },
+          "product_id": {
+            "type": "string",
+            "example": "cs2_cheat"
+          },
+          "build_sha256": {
+            "type": "string",
+            "example": "f2c5e5332f146a4892c90f2351f044994da5d42c35a6db9e5a6f23c253d8f8ef"
+          },
+          "client_version": {
+            "type": "string",
+            "example": "1.0.3"
+          },
+          "label": {
+            "type": "string",
+            "example": "Official Release v1.0.3"
+          },
+          "approved_by": {
+            "type": "string",
+            "example": "Owner"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T05:00:00.000Z"
+          },
+          "enabled": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "ServersideString": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 4
+          },
+          "user_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "username": {
+            "type": "string",
+            "example": "Owner"
+          },
+          "access_id": {
+            "type": "string",
+            "example": "849203849102"
+          },
+          "label": {
+            "type": "string",
+            "example": "D3D Device Offset"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "offset",
+              "function"
+            ],
+            "example": "offset"
+          },
+          "string_value": {
+            "type": "string",
+            "example": "0x3A2F"
+          },
+          "product_cheat_value": {
+            "type": "string",
+            "nullable": true,
+            "example": "cs2_cheat"
+          },
+          "force_key_check": {
+            "type": "boolean",
+            "example": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "example": "active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T05:00:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T05:30:00.000Z"
+          }
+        }
+      },
+      "ServersideFile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 8
+          },
+          "user_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "access_id": {
+            "type": "string",
+            "example": "583920194829"
+          },
+          "label": {
+            "type": "string",
+            "example": "Main Loader DLL"
+          },
+          "original_name": {
+            "type": "string",
+            "example": "core.dll"
+          },
+          "stored_name": {
+            "type": "string",
+            "example": "583920194829_core.dll"
+          },
+          "storage_path": {
+            "type": "string",
+            "example": "uploads/serverside-files/1/583920194829_core.dll"
+          },
+          "mime_type": {
+            "type": "string",
+            "example": "application/octet-stream"
+          },
+          "file_size": {
+            "type": "integer",
+            "example": 1048576
+          },
+          "file_hash": {
+            "type": "string",
+            "example": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ],
+            "example": "active"
+          },
+          "download_count": {
+            "type": "integer",
+            "example": 142
+          },
+          "last_downloaded": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T06:05:00.000Z"
+          },
+          "product_cheat_value": {
+            "type": "string",
+            "nullable": true,
+            "example": "cs2_cheat"
+          },
+          "force_key_check": {
+            "type": "boolean",
+            "example": true
+          },
+          "force_encrypted_download": {
+            "type": "boolean",
+            "example": true
+          },
+          "install_path": {
+            "type": "string",
+            "nullable": true,
+            "example": "C:\\ProgramData\\qPapel\\temp.dll"
+          }
+        }
+      },
+      "BlacklistedProcess": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 3
+          },
+          "user_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "process_name": {
+            "type": "string",
+            "example": "CheatEngine.exe"
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": true
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "suspicious",
+              "ban"
+            ],
+            "example": "ban"
+          },
+          "description": {
+            "type": "string",
+            "example": "Flashed Cheat Engine process detection"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T04:00:00.000Z"
+          }
+        }
+      },
+      "BlacklistedWindow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 7
+          },
+          "user_id": {
+            "type": "integer",
+            "example": 1
+          },
+          "window_title": {
+            "type": "string",
+            "example": "x64dbg"
+          },
+          "is_active": {
+            "type": "boolean",
+            "example": true
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "suspicious",
+              "ban"
+            ],
+            "example": "ban"
+          },
+          "is_partial_match": {
+            "type": "boolean",
+            "example": true
+          },
+          "description": {
+            "type": "string",
+            "example": "Block running debugger windows"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-12T04:00:00.000Z"
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequestError": {
+        "description": "Invalid request body or query parameter structure.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/StandardErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": "Missing required field or invalid value"
+            }
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "description": "Authentication failed. Missing or invalid developer API key.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/StandardErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": "Unauthorized access. Valid API key required."
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Insufficient permissions or subscription tier limits reached.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/StandardErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": "Plan limit reached for this resource"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "The requested resource was not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/StandardErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": "Resource not found"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Server error occurred during operation processing.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/StandardErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": "Internal server error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

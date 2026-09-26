@@ -1,0 +1,36 @@
+---
+title: "User API overview"
+sidebarTitle: "Overview"
+description: "Manage your store's products, orders, and customers programmatically."
+---
+
+The User API gives store owners programmatic access to everything in the dashboard.
+
+**Base URL:** `https://app.papelship.com/api_user/api/v1`
+
+Authenticate with the `x-api-key` and `x-store-hash` headers. See [Authentication](/guides/authentication).
+
+## Resources
+
+<CardGroup cols={3}>
+  <Card title="Analytics" icon="chart-line">Revenue, orders, and customer totals for any date range.</Card>
+  <Card title="Products" icon="box">Create, update, and delete products and their pricing.</Card>
+  <Card title="Categories & groups" icon="folder-tree">Organize products into categories and collections.</Card>
+  <Card title="Coupons" icon="ticket">Create percent or fixed discount codes.</Card>
+  <Card title="Customers" icon="users">View customers and their purchase history.</Card>
+  <Card title="Invoices" icon="receipt">List orders, complete them, and mark refunds.</Card>
+</CardGroup>
+
+## Prices are in cents
+
+All `*_cents` fields are integers in the smallest currency unit. For example, `price_cents: 2999` is $29.99.
+
+## Pagination
+
+List endpoints such as `GET /products` accept `limit` (default `50`) and `offset` (default `0`):
+
+```bash
+curl "https://app.papelship.com/api_user/api/v1/products?limit=50&offset=100&status=active" \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```

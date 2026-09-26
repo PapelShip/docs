@@ -1,47 +1,126 @@
 ---
 title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+description: "Create a hosted payment link and confirm the payment in a few minutes."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+This guide walks you through a full payment flow with the API Store: create a payment link, send your customer to checkout, and confirm the payment.
 
 ## Prerequisites
 
-Before you begin, you must have:
+- A PapelShip account with at least one store
+- An API key (`psa_...`), its numeric **API Key ID**, and your 12-character **Store Hash ID**
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+<Tip>
+  You can find all three values in the [PapelShip dashboard](https://app.papelship.com) under your store's API settings.
+</Tip>
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Create a payment link">
+    Send the order amount to the payment links endpoint. Add an `Idempotency-Key` header so retries never create duplicate invoices.
 
-    ```bash
-    npm install your-package
+    <CodeGroup>
+    ```bash cURL
+    curl -X POST https://app.papelship.com/api/api-store/payment-links \
+      -H "Authorization: Bearer psa_your_api_key" \
+      -H "Content-Type: application/json" \
+      -H "Idempotency-Key: 7b9e8f1a-3c2d-4e5f-6a7b-8c9d0e1f2a3b" \
+      -d '{
+        "storeHashId": "0bHQn0bU2dei",
+        "apiKeyId": 42,
+        "amount": 49.99,
+        "currency": "USD",
+        "customer_email": "buyer@example.com",
+        "description": "Order #1042",
+        "redirect_url": "https://yourdomain.com/checkout/success"
+      }'
     ```
+
+    ```javascript Node.js
+    const res = await fetch("https://app.papelship.com/api/api-store/payment-links", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PAPELSHIP_API_KEY}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        storeHashId: "0bHQn0bU2dei",
+        apiKeyId: 42,
+        amount: 49.99,
+        currency: "USD",
+        customer_email: "buyer@example.com",
+        redirect_url: "https://yourdomain.com/checkout/success",
+      }),
+    });
+    const { invoice, checkout_url } = await res.json();
+    ```
+
+    ```python Python
+    import os, uuid, requests
+
+    res = requests.post(
+        "https://app.papelship.com/api/api-store/payment-links",
+        headers={
+            "Authorization": f"Bearer {os.environ['PAPELSHIP_API_KEY']}",
+            "Idempotency-Key": str(uuid.uuid4()),
+        },
+        json={
+            "storeHashId": "0bHQn0bU2dei",
+            "apiKeyId": 42,
+            "amount": 49.99,
+            "currency": "USD",
+            "customer_email": "buyer@example.com",
+            "redirect_url": "https://yourdomain.com/checkout/success",
+        },
+    )
+    data = res.json()
+    ```
+    </CodeGroup>
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
+  <Step title="Redirect your customer">
+    The response contains a `checkout_url`. Send your customer there to pay by card, Papara, bank transfer, or crypto.
+
+    ```json Response
+    {
+      "success": true,
+      "invoice": {
+        "id": "aB9xK12Lp9012345678901234",
+        "amount": 49.99,
+        "currency": "USD",
+        "status": "awaiting_method",
+        "expires_at": "2026-08-09T02:18:00.000Z"
+      },
+      "checkout_url": "https://app.papelship.com/checkout-gateway/aB9xK12Lp9012345678901234"
+    }
     ```
+
+    Store `invoice.id` with your order. You need it to check the payment.
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+
+  <Step title="Confirm the payment">
+    When the customer returns to your `redirect_url`, verify the payment on your server. Never trust the redirect alone.
 
     ```bash
-    your-cli start
+    curl "https://app.papelship.com/api/api-store/v1/payment-links/check?invoiceId=aB9xK12Lp9012345678901234" \
+      -H "Authorization: Bearer psa_your_api_key"
     ```
+
+    Fulfill the order only when `payment.is_paid` is `true`.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+<Warning>
+  Keep your API key on your server. Never ship it in browser code, mobile apps, or desktop clients.
+</Warning>
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Crypto invoices" icon="bitcoin-sign" href="/api-store/crypto-payments">
+    Show your own checkout with a dedicated deposit address and QR code.
+  </Card>
+  <Card title="API Store reference" icon="code" href="/api-store/overview">
+    Explore every endpoint, parameter, and response.
+  </Card>
+</CardGroup>

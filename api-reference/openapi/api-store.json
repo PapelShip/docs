@@ -1,0 +1,586 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PapelShip API Gateway",
+    "description": "Official API reference for PapelShip API Store integrations, hosted payment links, direct crypto deposit invoices, real-time blockchain status checks, and HMAC webhooks.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "PapelShip Support",
+      "url": "https://app.papelship.com",
+      "email": "support@papelship.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://app.papelship.com",
+      "description": "Production API Server"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    },
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Payment Links",
+      "description": "Hosted payment link generation supporting Credit Card, Papara, and Crypto"
+    },
+    {
+      "name": "Crypto Invoice",
+      "description": "Direct cryptocurrency deposit invoice generation with HD wallet derivation"
+    },
+    {
+      "name": "Payment Status",
+      "description": "Real-time payment status and blockchain confirmation check API"
+    },
+    {
+      "name": "Orders",
+      "description": "V1 store order creation API"
+    },
+    {
+      "name": "Refunds",
+      "description": "Invoice refund processing API"
+    }
+  ],
+  "paths": {
+    "/api/api-store/payment-links": {
+      "post": {
+        "summary": "Generate Hosted Checkout Payment Link",
+        "description": "Creates a custom payment link invoice supporting Credit Card, Papara, Bank Transfer, and Crypto payment methods.",
+        "operationId": "createPaymentLink",
+        "tags": [
+          "Payment Links"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Unique UUID/string to prevent duplicate invoice creation on retries.",
+            "schema": {
+              "type": "string",
+              "example": "7b9e8f1a-3c2d-4e5f-6a7b-8c9d0e1f2a3b"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "storeHashId",
+                  "apiKeyId"
+                ],
+                "properties": {
+                  "storeHashId": {
+                    "type": "string",
+                    "description": "Your store 12-char hash ID",
+                    "example": "0bHQn0bU2dei"
+                  },
+                  "apiKeyId": {
+                    "type": "integer",
+                    "description": "Numeric API Key ID",
+                    "example": 42
+                  },
+                  "amount": {
+                    "type": "number",
+                    "description": "Total amount in fiat currency",
+                    "example": 49.99
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "ISO 4217 Currency (USD, EUR, TRY, GBP)",
+                    "default": "USD",
+                    "example": "USD"
+                  },
+                  "customer_email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "buyer@example.com"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "API Store Service Order #1042"
+                  },
+                  "redirect_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://yourdomain.com/checkout/success"
+                  },
+                  "expires_in": {
+                    "type": "integer",
+                    "description": "Expiration period in minutes (default 1440)",
+                    "default": 1440
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment link invoice created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "invoice": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "aB9xK12Lp9012345678901234"
+                        },
+                        "amount": {
+                          "type": "number",
+                          "example": 49.99
+                        },
+                        "currency": {
+                          "type": "string",
+                          "example": "USD"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "awaiting_method"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2026-08-09T02:18:00.000Z"
+                        }
+                      }
+                    },
+                    "checkout_url": {
+                      "type": "string",
+                      "format": "uri",
+                      "example": "https://app.papelship.com/checkout-gateway/aB9xK12Lp9012345678901234"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Validation Error"
+          },
+          "401": {
+            "description": "Unauthorized / Invalid API Key"
+          }
+        }
+      }
+    },
+    "/api/api-store/v1/crypto-invoice": {
+      "post": {
+        "summary": "Create Direct Crypto Deposit Invoice",
+        "description": "Generates a dedicated cryptocurrency deposit invoice with a derived HD wallet deposit address, exchange rate, and QR code.",
+        "operationId": "createCryptoInvoice",
+        "tags": [
+          "Crypto Invoice"
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Unique UUID/string to prevent duplicate deposit address creation on retries.",
+            "schema": {
+              "type": "string",
+              "example": "9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "coin_type"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "description": "Order total in fiat currency",
+                    "example": 50.0
+                  },
+                  "currency": {
+                    "type": "string",
+                    "description": "Fiat currency code",
+                    "default": "USD",
+                    "example": "USD"
+                  },
+                  "coin_type": {
+                    "type": "string",
+                    "description": "Crypto coin symbol (LTC, BTC, USDT, USDC, DOGE, ETH, TRX, SOL, BNB)",
+                    "example": "LTC"
+                  },
+                  "network": {
+                    "type": "string",
+                    "description": "Blockchain network override (e.g. TRC20, ERC20, SOL)",
+                    "example": "MAINNET"
+                  },
+                  "customer_email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "buyer@example.com"
+                  },
+                  "description": {
+                    "type": "string",
+                    "example": "Crypto Deposit Order #9021"
+                  },
+                  "redirect_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://yourdomain.com/order/success"
+                  },
+                  "webhook_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://yourserver.com/api/crypto-callback"
+                  },
+                  "expires_in": {
+                    "type": "integer",
+                    "description": "Expiration in minutes (default 60)",
+                    "default": 60
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Crypto deposit invoice created with dedicated deposit address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "invoice": {
+                      "type": "object",
+                      "properties": {
+                        "invoice_id": {
+                          "type": "string",
+                          "example": "cRyPtO9912a8f0012"
+                        },
+                        "store_hash_id": {
+                          "type": "string",
+                          "example": "0bHQn0bU2dei"
+                        },
+                        "amount": {
+                          "type": "number",
+                          "example": 50.0
+                        },
+                        "currency": {
+                          "type": "string",
+                          "example": "USD"
+                        },
+                        "crypto_coin": {
+                          "type": "string",
+                          "example": "LTC"
+                        },
+                        "expected_crypto_amount": {
+                          "type": "number",
+                          "example": 0.584795
+                        },
+                        "deposit_address": {
+                          "type": "string",
+                          "example": "Ltc1q99a812bf00192837410293847561928374"
+                        },
+                        "payment_url": {
+                          "type": "string",
+                          "format": "uri",
+                          "example": "https://app.papelship.com/checkout-gateway/cRyPtO9912a8f0012"
+                        },
+                        "qr_code_url": {
+                          "type": "string",
+                          "format": "uri",
+                          "example": "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=litecoin:Ltc1q99a812bf00192837410293847561928374?amount=0.584795"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "payment_pending"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2026-08-08T03:16:30.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request / Crypto Method Disabled / Coin Not Enabled"
+          }
+        }
+      }
+    },
+    "/api/api-store/v1/payment-links/check": {
+      "get": {
+        "summary": "Check Real-time Payment & Confirmation Status",
+        "description": "Verifies real-time status, paid timestamp, payment method, block confirmations, transaction hash, and return URL status.",
+        "operationId": "checkPaymentStatus",
+        "tags": [
+          "Payment Status"
+        ],
+        "parameters": [
+          {
+            "name": "invoiceId",
+            "in": "query",
+            "required": true,
+            "description": "The unique invoice ID string",
+            "schema": {
+              "type": "string",
+              "example": "aB9xK12Lp9012345678901234"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Real-time payment status and blockchain confirmation details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "payment": {
+                      "type": "object",
+                      "properties": {
+                        "invoice_id": {
+                          "type": "string",
+                          "example": "aB9xK12Lp9012345678901234"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "paid"
+                        },
+                        "is_paid": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "amount": {
+                          "type": "number",
+                          "example": 49.99
+                        },
+                        "currency": {
+                          "type": "string",
+                          "example": "USD"
+                        },
+                        "payment_method": {
+                          "type": "string",
+                          "example": "crypto_ltc"
+                        },
+                        "customer_email": {
+                          "type": "string",
+                          "example": "buyer@example.com"
+                        },
+                        "redirect_url": {
+                          "type": "string",
+                          "example": "https://yourdomain.com/checkout/success"
+                        },
+                        "paid_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2026-08-08T02:15:00.000Z"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2026-08-08T02:10:00.000Z"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2026-08-09T02:10:00.000Z"
+                        },
+                        "crypto_details": {
+                          "type": "object",
+                          "properties": {
+                            "coin": {
+                              "type": "string",
+                              "example": "LTC"
+                            },
+                            "network": {
+                              "type": "string",
+                              "example": "LTC MAINNET"
+                            },
+                            "address": {
+                              "type": "string",
+                              "example": "Ltc1q99a812bf00192837410293847561928374"
+                            },
+                            "crypto_amount": {
+                              "type": "number",
+                              "example": 0.584795
+                            },
+                            "confirmations": {
+                              "type": "integer",
+                              "example": 2
+                            },
+                            "required_confirmations": {
+                              "type": "integer",
+                              "example": 2
+                            },
+                            "tx_hash": {
+                              "type": "string",
+                              "example": "a1075db55d416d3ca199f55b603e87854619"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invoice Not Found"
+          }
+        }
+      }
+    },
+    "/api/api-store/v1/orders": {
+      "post": {
+        "summary": "Create V1 Store Order Invoice",
+        "description": "Generates a V1 order invoice with custom metadata and optional direct crypto payment initialization.",
+        "operationId": "createOrder",
+        "tags": [
+          "Orders"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount_cents"
+                ],
+                "properties": {
+                  "amount_cents": {
+                    "type": "integer",
+                    "example": 4999
+                  },
+                  "currency": {
+                    "type": "string",
+                    "default": "USD",
+                    "example": "USD"
+                  },
+                  "customer_email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "buyer@example.com"
+                  },
+                  "crypto_coin": {
+                    "type": "string",
+                    "example": "LTC"
+                  },
+                  "redirect_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "example": "https://yourdomain.com/success"
+                  },
+                  "expires_in_minutes": {
+                    "type": "integer",
+                    "default": 60,
+                    "example": 60
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order created successfully"
+          }
+        }
+      }
+    },
+    "/api/api-store/v1/refunds": {
+      "post": {
+        "summary": "Trigger Invoice Refund",
+        "description": "Initiates a partial or full refund for a completed invoice.",
+        "operationId": "createRefund",
+        "tags": [
+          "Refunds"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "invoice_id"
+                ],
+                "properties": {
+                  "invoice_id": {
+                    "type": "string",
+                    "example": "aB9xK12Lp9012345678901234"
+                  },
+                  "amount_cents": {
+                    "type": "integer",
+                    "description": "Optional partial refund amount in cents",
+                    "example": 1000
+                  },
+                  "reason": {
+                    "type": "string",
+                    "example": "Customer requested cancellation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refund processed successfully"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API-Key",
+        "description": "Pass your secret API key formatted as: `Authorization: Bearer psa_...`"
+      },
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Alternative header format: `X-API-Key: psa_...`"
+      }
+    }
+  }
+}
