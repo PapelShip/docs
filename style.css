@@ -1,0 +1,15 @@
+/* Center the top navigation tabs */
+.nav-tabs {
+  justify-content: center;
+  width: 100%;
+}
+.nav-tabs-item {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* Hide the sparkle icon on the AI assistant button */
+#assistant-entry svg,
+#assistant-entry-mobile svg {
+  display: none;
+}

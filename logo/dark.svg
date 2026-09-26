@@ -1,6 +1,5 @@
-<svg width="150" height="28" viewBox="0 0 150 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="0" y="3" width="22" height="22" rx="5" fill="#FAFAFA"/>
-<path d="M7.5 19.5V8.5h4.8a3.4 3.4 0 0 1 0 6.8H10" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="30" y="20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" letter-spacing="-0.3" fill="#FAFAFA">PapelShip</text>
-<text x="113" y="20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="400" fill="#FAFAFA" opacity="0.55">Docs</text>
+<svg width="170" height="28" viewBox="0 0 170 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg x="0" y="2" width="32.9" height="24" viewBox="0 0 516 376"><path fill="#CB6441" fill-rule="evenodd" d="M0 191 L152 191 L154 193 L98 305 L160 375 L246 212 L243 208 L198 194 L211 191 L416 191 L515 1 L100 1 L168 79 L377 78 L405 79 L406 82 L359 94 L346 117 L312 117 L310 114 L316 103 L315 100 L206 100 L202 103 L194 117 L38 117 L35 119Z"/></svg>
+<text x="42" y="20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" letter-spacing="-0.3" fill="#FAFAFA">PapelShip</text>
+<text x="126" y="20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="400" fill="#FAFAFA" opacity="0.55">Docs</text>
 </svg>
