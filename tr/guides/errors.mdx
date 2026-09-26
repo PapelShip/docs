@@ -1,0 +1,36 @@
+---
+title: "Hatalar"
+description: "PapelShip HTTP durum kodlarını ve hata yanıtlarını anlayın."
+---
+
+PapelShip standart HTTP durum kodlarını kullanır. Her JSON yanıtı bir `success` boolean alanı içerir.
+
+```json Hata yanıtı
+{
+  "success": false,
+  "error": "Invalid parameters provided"
+}
+```
+
+## Durum kodları
+
+| Kod | Anlamı | Ne yapmalı |
+| :--- | :--- | :--- |
+| `200` | İstek başarılı. | Yanıt gövdesini okuyun. |
+| `400` | Hatalı istek veya doğrulama hatası. | Zorunlu alanları ve değer tiplerini kontrol edin. |
+| `401` | API anahtarı eksik veya geçersiz. | Kimlik doğrulama header'larınızı kontrol edin. |
+| `403` | Anahtarın bu işlem için yetkisi yok. | Doğru yetkiye sahip bir anahtar kullanın. |
+| `404` | Kaynak bulunamadı. | URL veya sorgudaki ID'yi kontrol edin. |
+| `500` | Sunucu hatası. | Exponential backoff ile tekrar deneyin. |
+
+## Sık görülen API Store hataları
+
+| Hata | Nedeni |
+| :--- | :--- |
+| Crypto method disabled | Mağazanızda kripto ödemeleri kapalı. Panelden etkinleştirin. |
+| Coin not enabled | İstenen `coin_type` mağazanız için yapılandırılmamış. |
+| Invoice not found | `invoiceId` mevcut değil veya başka bir mağazaya ait. |
+
+<Tip>
+  Yalnızca ağ hatalarında ve `5xx` yanıtlarında tekrar deneyin. Her denemede aynı `Idempotency-Key` değerini gönderin. Bkz. [Idempotency](/tr/guides/idempotency).
+</Tip>

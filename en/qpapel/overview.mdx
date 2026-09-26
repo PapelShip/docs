@@ -1,0 +1,34 @@
+---
+title: "qPapel Protection overview"
+sidebarTitle: "Overview"
+description: "License, configure, and protect your desktop applications and loaders."
+---
+
+qPapel Protection is a licensing and anti-tamper backend for desktop software. The Web API lets you automate everything from your own panel or bot.
+
+**Base URL:** `https://app.papelship.com/api/qpapel/v1`
+
+<CardGroup cols={2}>
+  <Card title="License keys" icon="key" href="/en/qpapel/license-keys">
+    Create, ban, freeze, extend, and reset HWID on customer keys.
+  </Card>
+  <Card title="Reseller keys" icon="handshake">
+    Allocate keys to reseller accounts and control their duration.
+  </Card>
+  <Card title="Remote settings" icon="sliders">
+    Push runtime config to clients and verify build SHA-256 hashes.
+  </Card>
+  <Card title="Staff URLs" icon="user-shield">
+    Give moderators scoped, time-limited portal access.
+  </Card>
+  <Card title="Discord integrations" icon="discord">
+    Stream security logs to a channel and map role permissions.
+  </Card>
+  <Card title="Client security" icon="shield-halved">
+    Block processes and windows, ban devices, and serve protected strings and files.
+  </Card>
+</CardGroup>
+
+## Product identifiers
+
+Some endpoints take a numeric `product_id`. Others take the product's `cheat_value`, a string such as `cs2_cheat`. Each endpoint's reference shows which one it expects.

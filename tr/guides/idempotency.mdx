@@ -1,0 +1,29 @@
+---
+title: "Idempotency"
+description: "Ödeme isteklerini mükerrer fatura oluşturmadan güvenle tekrar deneyin."
+---
+
+Ağ hataları olur. Bir istek zaman aşımına uğradığında PapelShip'in faturayı oluşturup oluşturmadığını bilemezsiniz. Idempotency anahtarları güvenle tekrar denemenizi sağlar.
+
+## Nasıl çalışır
+
+Oluşturma isteğine bir `Idempotency-Key` header'ı ekleyin. Aynı anahtarı tekrar gönderirseniz PapelShip ikinci bir fatura veya deposit adresi oluşturmak yerine ilk sonucu döndürür.
+
+```bash
+curl -X POST https://app.papelship.com/api/api-store/v1/crypto-invoice \
+  -H "Authorization: Bearer psa_your_api_key" \
+  -H "Idempotency-Key: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d" \
+  -H "Content-Type: application/json" \
+  -d '{ "amount": 50, "coin_type": "LTC" }'
+```
+
+## Desteklenen endpoint'ler
+
+- [`POST /payment-links`](/tr/api-store/overview)
+- [`POST /v1/crypto-invoice`](/tr/api-store/crypto-payments)
+
+## En iyi uygulamalar
+
+- Her istek için değil, her sipariş için bir UUID v4 üretin.
+- Anahtarı siparişinizle saklayın, böylece her deneme aynı anahtarı kullanır.
+- Bir anahtarı asla farklı bir sipariş veya tutar için tekrar kullanmayın.

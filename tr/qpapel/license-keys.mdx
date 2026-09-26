@@ -1,0 +1,67 @@
+---
+title: "Lisans anahtarları"
+description: "HWID bağlamalı müşteri lisans anahtarları oluşturun ve yönetin."
+---
+
+## Anahtar tipleri
+
+| `key_type` | Davranış |
+| :--- | :--- |
+| `time_limited` | `days` gün boyunca geçerli. Varsayılan. |
+| `hour_limited` | `days` değeri saat olarak okunur. |
+| `single_use` | Bir kez aktive edilebilir. |
+| `multi_use` | `max_uses` kadar aktive edilebilir. |
+| `time_restricted` | Yalnızca belirli bir zaman aralığında geçerli. |
+
+## Anahtar oluşturun
+
+```bash
+curl -X POST https://app.papelship.com/api/qpapel/v1/keys \
+  -H "Authorization: Bearer pk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 101,
+    "days": 30,
+    "key_type": "time_limited",
+    "bind_hwid": true,
+    "auto_start": false,
+    "amount": 1,
+    "note": "Sipariş #1042"
+  }'
+```
+
+<ParamField body="bind_hwid" type="boolean" default="true">
+  Anahtarı onu ilk aktive eden cihaza kilitler.
+</ParamField>
+<ParamField body="auto_start" type="boolean" default="false">
+  `true` ise süre hemen başlar. `false` ise ilk kullanımda başlar.
+</ParamField>
+<ParamField body="amount" type="integer" default="1">
+  Tek çağrıda en fazla 100 anahtar oluşturur.
+</ParamField>
+
+## Anahtarı yönetin
+
+<AccordionGroup>
+  <Accordion title="HWID sıfırlama" icon="rotate">
+    Müşterinin yeni bir PC'ye geçmesini sağlayın: `POST /keys/{id}/reset-hwid`.
+  </Accordion>
+  <Accordion title="Dondurma ve çözme" icon="snowflake">
+    Kesinti sırasında süreyi `POST /keys/{id}/freeze` ile durdurun. `DELETE /keys/{id}/freeze` ile devam ettirin.
+  </Accordion>
+  <Accordion title="Süre uzatma" icon="clock">
+    `POST /keys/{id}/add-time` ve `{ "days": 7 }` ile gün ekleyin.
+  </Accordion>
+  <Accordion title="Ban ve ban kaldırma" icon="ban">
+    `POST /keys/{id}/ban` ve bir `reason` ile iptal edin. `POST /keys/{id}/unban` ile geri açın.
+  </Accordion>
+</AccordionGroup>
+
+## Süresi dolacak anahtarları bulun
+
+Yenileme hatırlatması göndermek için önümüzdeki yedi gün içinde süresi dolacak anahtarları listeleyin:
+
+```bash
+curl "https://app.papelship.com/api/qpapel/v1/keys?expiresInDays=7&sortBy=end_time&sortOrder=ASC" \
+  -H "Authorization: Bearer pk_live_your_key"
+```

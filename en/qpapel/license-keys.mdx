@@ -1,0 +1,67 @@
+---
+title: "License keys"
+description: "Issue and manage customer license keys with HWID binding."
+---
+
+## Key types
+
+| `key_type` | Behavior |
+| :--- | :--- |
+| `time_limited` | Valid for `days` days. Default. |
+| `hour_limited` | `days` is read as hours. |
+| `single_use` | Can be activated once. |
+| `multi_use` | Can be activated up to `max_uses` times. |
+| `time_restricted` | Valid only inside a set time window. |
+
+## Create keys
+
+```bash
+curl -X POST https://app.papelship.com/api/qpapel/v1/keys \
+  -H "Authorization: Bearer pk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 101,
+    "days": 30,
+    "key_type": "time_limited",
+    "bind_hwid": true,
+    "auto_start": false,
+    "amount": 1,
+    "note": "Order #1042"
+  }'
+```
+
+<ParamField body="bind_hwid" type="boolean" default="true">
+  Locks the key to the first machine that activates it.
+</ParamField>
+<ParamField body="auto_start" type="boolean" default="false">
+  When `true`, the countdown starts now. When `false`, it starts on first use.
+</ParamField>
+<ParamField body="amount" type="integer" default="1">
+  Generate up to 100 keys in one call.
+</ParamField>
+
+## Manage a key
+
+<AccordionGroup>
+  <Accordion title="Reset HWID" icon="rotate">
+    Let a customer move to a new PC: `POST /keys/{id}/reset-hwid`.
+  </Accordion>
+  <Accordion title="Freeze and unfreeze" icon="snowflake">
+    Pause the countdown during downtime with `POST /keys/{id}/freeze`. Resume with `DELETE /keys/{id}/freeze`.
+  </Accordion>
+  <Accordion title="Extend" icon="clock">
+    Add days with `POST /keys/{id}/add-time` and `{ "days": 7 }`.
+  </Accordion>
+  <Accordion title="Ban and unban" icon="ban">
+    Revoke with `POST /keys/{id}/ban` and a `reason`. Restore with `POST /keys/{id}/unban`.
+  </Accordion>
+</AccordionGroup>
+
+## Find expiring keys
+
+List keys that expire in the next seven days to send renewal reminders:
+
+```bash
+curl "https://app.papelship.com/api/qpapel/v1/keys?expiresInDays=7&sortBy=end_time&sortOrder=ASC" \
+  -H "Authorization: Bearer pk_live_your_key"
+```
