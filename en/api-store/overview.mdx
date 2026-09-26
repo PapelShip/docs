@@ -10,7 +10,7 @@ The API Store lets any website or bot take payments through PapelShip. Pick the 
   <Card title="Hosted payment links" icon="link">
     PapelShip hosts the checkout. Your customer picks a method: credit card, Papara, bank transfer, or crypto.
   </Card>
-  <Card title="Direct crypto invoices" icon="bitcoin-sign" href="/api-store/crypto-payments">
+  <Card title="Direct crypto invoices" icon="bitcoin-sign" href="/en/api-store/crypto-payments">
     You build the checkout. PapelShip gives you a unique deposit address, the exact crypto amount, and a QR code.
   </Card>
 </CardGroup>
@@ -25,10 +25,10 @@ flowchart LR
   D --> E[Fulfill order]
 ```
 
-1. Create an invoice with [payment links](/quickstart) or a [crypto invoice](/api-store/crypto-payments).
+1. Create an invoice with [payment links](/en/quickstart) or a [crypto invoice](/en/api-store/crypto-payments).
 2. The customer pays on the hosted checkout or to the deposit address.
-3. Poll the [status endpoint](/api-store/crypto-payments#track-confirmations) until `is_paid` is `true`.
-4. Fulfill the order. Issue [refunds](/api-store/overview#refunds) when needed.
+3. Poll the [status endpoint](/en/api-store/crypto-payments#track-confirmations) until `is_paid` is `true`.
+4. Fulfill the order. Issue [refunds](/en/api-store/overview#refunds) when needed.
 
 ## Supported currencies
 

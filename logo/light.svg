@@ -1,6 +1,6 @@
-<svg width="170" height="28" viewBox="0 0 170 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="0" y="2" width="24" height="24" rx="6" fill="#6366F1"/>
-<path d="M8 20V8h5.2a3.8 3.8 0 0 1 0 7.6H11" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="32" y="20.5" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18" font-weight="700" fill="#0B1220">PapelShip</text>
-<text x="124" y="20.5" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="500" fill="#6366F1">Docs</text>
+<svg width="150" height="28" viewBox="0 0 150 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="0" y="3" width="22" height="22" rx="5" fill="#0A0A0A"/>
+<path d="M7.5 19.5V8.5h4.8a3.4 3.4 0 0 1 0 6.8H10" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="30" y="20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="17" font-weight="600" letter-spacing="-0.3" fill="#0A0A0A">PapelShip</text>
+<text x="113" y="20" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="400" fill="#0A0A0A" opacity="0.55">Docs</text>
 </svg>
