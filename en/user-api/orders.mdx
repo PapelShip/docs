@@ -1,0 +1,171 @@
+---
+title: "Create and manage orders"
+sidebarTitle: "Orders"
+description: "Create an order from your own site, send the customer to checkout, and handle payment, cancellation and refunds."
+---
+
+An order (invoice) holds the products, the customer and the price. The customer pays on the hosted `checkout_url`, where they choose any payment method your store accepts.
+
+Orders created through the API follow the same rules as your storefront: prices come from your catalogue, stock is reserved, coupons and product rules apply, and fraud checks run.
+
+## Create an order
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 6f1c8a52-4f0e-4b8e-9a7c-2d1b3e5f7a90" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_email": "buyer@example.com",
+    "items": [
+      { "product_id": "a1B2c3D4e5F6", "quantity": 1 },
+      { "product_id": "Zx9Yw8Vu7Ts6", "variant_id": 881 }
+    ],
+    "coupon_code": "SUMMER10",
+    "customer_ip": "203.0.113.10",
+    "metadata": { "order_ref": "WEB-1042" }
+  }'
+```
+
+```javascript Node.js
+const res = await fetch("https://app.papelship.com/api/v1/invoices", {
+  method: "POST",
+  headers: {
+    "x-api-key": process.env.PAPELSHIP_API_KEY,
+    "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+    "Idempotency-Key": order.id,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    customer_email: order.email,
+    items: [{ product_id: "a1B2c3D4e5F6", quantity: 1 }],
+    customer_ip: order.ip,
+    metadata: { order_ref: order.id },
+  }),
+});
+const { invoice } = await res.json();
+// Send the customer to invoice.checkout_url
+```
+
+```python Python
+import os, requests
+
+res = requests.post(
+    "https://app.papelship.com/api/v1/invoices",
+    headers={
+        "x-api-key": os.environ["PAPELSHIP_API_KEY"],
+        "x-store-hash": os.environ["PAPELSHIP_STORE_ID"],
+        "Idempotency-Key": order_id,
+    },
+    json={
+        "customer_email": "buyer@example.com",
+        "items": [{"product_id": "a1B2c3D4e5F6", "quantity": 1}],
+        "metadata": {"order_ref": order_id},
+    },
+)
+invoice = res.json()["invoice"]
+```
+</CodeGroup>
+
+```json Response (201)
+{
+  "success": true,
+  "invoice": {
+    "id": "c35ffd-19a1b2c3d4e-8c7a20",
+    "object": "invoice",
+    "status": "pending",
+    "currency": "USD",
+    "total_cents": 3499,
+    "customer_email": "buyer@example.com",
+    "source": "api",
+    "metadata": { "order_ref": "WEB-1042" },
+    "checkout_url": "https://app.papelship.com/invoice/c35ffd-19a1b2c3d4e-8c7a20",
+    "expires_at": "2026-10-04T15:00:00.000Z",
+    "items": [ ... ]
+  }
+}
+```
+
+Redirect the customer to `checkout_url`. Unpaid orders expire after 3 hours.
+
+<AccordionGroup>
+  <Accordion title="Fields you can send" icon="list">
+    | Field | Notes |
+    | :--- | :--- |
+    | `customer_email` | Required. Gets the invoice email and the delivery. |
+    | `items` | Required. 1–50 lines of `product_id` (hash ID), `quantity`, and `variant_id` for products with variants. |
+    | `coupon_code` | Applied when valid for these products. |
+    | `customer_ip` | The buyer's IP. Turns on your fraud, VPN and blocklist rules for this order. |
+    | `expected_total_cents` | Optional check. The call fails with `TOTAL_MISMATCH` if the price changed. |
+    | `shipping_address`, `shipping_rate_id` | Physical products. See below. |
+    | `custom_fields` | Answers to your checkout fields. |
+    | `affiliate_code` | Credits a partner of your affiliate programme. |
+    | `send_email` | `false` to skip the invoice email (default `true`). |
+    | `metadata` | Up to 20 of your own key/value strings. |
+  </Accordion>
+  <Accordion title="Errors when creating" icon="triangle-exclamation">
+    | Code | Status | Meaning |
+    | :--- | :--- | :--- |
+    | `PRODUCT_NOT_FOUND` | `404` | A `product_id` is not in your store. |
+    | `OUT_OF_STOCK` | `409` | Not enough stock. `details.products` lists what's short. |
+    | `TOTAL_MISMATCH` | `409` | `expected_total_cents` doesn't match. `details.expected_total_cents` has the real total. |
+    | `CURRENCY_MISMATCH` | `422` | Products have different currencies, or `currency` doesn't match. |
+    | `INVALID_VARIANT` | `422` | Missing or wrong `variant_id`. |
+    | `ADDRESS_INVALID` | `422` | Incomplete shipping address. `details.fields` names the fields. |
+    | `CUSTOMER_BLOCKED` | `403` | The email or IP is on your blocklist. |
+    | `FRAUD_BLOCKED` | `403` | Your fraud rules rejected the order. |
+    | `STORE_SUSPENDED` | `403` | The store can't take orders right now. |
+  </Accordion>
+</AccordionGroup>
+
+## Physical products
+
+For products that ship, add the address. Get the options first with `POST /shipping/quote`, or leave out `shipping_rate_id` to use the cheapest rate.
+
+```json
+{
+  "customer_email": "buyer@example.com",
+  "items": [{ "product_id": "Tsh1rtM3d1um", "variant_id": 2041, "quantity": 2 }],
+  "shipping_address": {
+    "full_name": "Alex Morgan",
+    "phone": "+44 20 7946 0958",
+    "country_code": "GB",
+    "city": "London",
+    "line1": "221B Baker Street",
+    "postal_code": "NW1 6XE"
+  },
+  "shipping_rate_id": 12
+}
+```
+
+Shipping is added to `total_cents` and shown as `shipping_cents`. Without an address, the customer enters it on the checkout page before paying. After payment, ship the order with [`POST /orders/{invoiceId}/shipments`](/en/user-api/fulfillment).
+
+## Order statuses
+
+| Status | Meaning |
+| :--- | :--- |
+| `pending` | Waiting for the customer to pay. |
+| `payment_pending`, `payment_processing` | The customer chose a method; the payment is on its way. |
+| `partial_payment` | Part of the amount arrived (crypto). |
+| `manual_review_pending` | A manual payment waits for your review. |
+| `completed` | Paid and delivered. |
+| `cancelled` | Cancelled before payment. |
+| `expired` | Not paid in time. |
+
+Listen to the `order.completed` webhook instead of polling. See [Webhooks](/en/user-api/webhooks).
+
+## After the order is created
+
+| Action | Endpoint | When |
+| :--- | :--- | :--- |
+| Mark as paid | `POST /invoices/{id}/complete` | You received the money outside PapelShip (bank transfer, cash). Delivers the products. |
+| Cancel | `POST /invoices/{id}/cancel` | The order is unpaid. Releases reserved stock. |
+| Record a refund | `POST /invoices/{id}/refund` | You paid the customer back. Send `amount_cents` for a partial refund. |
+| See what was delivered | `GET /invoices/{id}/deliveries` | License keys, files and notes sent to the customer. |
+| Update | `PATCH /invoices/{id}` | Change `metadata` or `delivery_email`. |
+
+<Tip>
+  Use your own order ID as the `Idempotency-Key` for create, complete and refund calls. Retries then never create a second order or a second refund.
+</Tip>

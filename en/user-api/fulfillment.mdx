@@ -1,0 +1,63 @@
+---
+title: "Ship physical orders"
+sidebarTitle: "Shipping"
+description: "List orders to ship, create shipments with tracking, update delivery status and handle returns."
+---
+
+If your store sells physical products, use these endpoints to connect your warehouse or shipping software. Your store must be approved for physical goods in **Settings › Physical goods**.
+
+## 1. Find orders to ship
+
+```bash
+curl "https://app.papelship.com/api/v1/orders?status=to_ship" \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+`to_ship` lists paid orders with items not shipped yet, oldest first. Other filters: `in_transit`, `delivered`, `issues` (failed deliveries, returns) and `all`.
+
+`GET /orders/{invoiceId}` returns the address, each item with `shipped_quantity`, shipments, returns and notes.
+
+## 2. Create a shipment
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "carrier_code": "dhl_express", "tracking_number": "1234567890" }'
+```
+
+- Leave out `items` to ship everything that's left. For a partial shipment send `items: [{ "invoice_item_id": 55, "qty": 1 }]`.
+- The customer gets an email with the tracking link. Send `notify_customer: false` to skip it.
+- The tracking link is built from the carrier. `GET /shipping` lists carrier codes.
+
+## 3. Update the status
+
+```bash
+curl -X PATCH https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments/88 \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "delivered", "location": "London" }'
+```
+
+Statuses: `label_created`, `shipped`, `in_transit`, `out_for_delivery`, `delivered`, `failed_attempt`, `returned_to_sender`. Each one is added to the tracking timeline the customer sees. The order's `fulfillment_status` follows the shipments automatically.
+
+## Returns
+
+Customers request returns from their order page within the product's return window. Handle them with `PATCH /orders/{invoiceId}/returns/{returnId}`:
+
+| `action` | Effect |
+| :--- | :--- |
+| `approve` | Accepts the request. `location_id` sets where to send the parcel. |
+| `reject` | Declines it. `note` is required and sent to the customer. |
+| `receive` | You got the parcel. `restock: true` puts the items back in stock. |
+| `refund` | Records `refund_cents`. Pay the money back yourself, then call `POST /invoices/{id}/refund`. |
+| `close` | Closes the return. |
+
+`GET /returns?status=requested` lists open requests across all orders.
+
+## Shipping settings
+
+Read and change zones, rates and warehouse locations with `/shipping/zones` and `/shipping/locations`. Quote a basket with `POST /shipping/quote`.

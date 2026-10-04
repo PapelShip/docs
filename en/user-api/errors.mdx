@@ -1,0 +1,68 @@
+---
+title: "User API errors"
+sidebarTitle: "Errors"
+description: "Status codes and error codes returned by the User API."
+---
+
+Errors return `success: false`, a stable `code`, a readable `error` and a `request_id`.
+
+```json
+{
+  "success": false,
+  "code": "INSUFFICIENT_SCOPE",
+  "error": "This API key needs the orders:write permission",
+  "required_scope": "orders:write",
+  "request_id": "req_7YbK2mQ9xP1cRt4v"
+}
+```
+
+Retry only `429` (after `Retry-After`) and `5xx` responses, with the same `Idempotency-Key`.
+
+## Authentication and limits
+
+| Code | Status | Fix |
+| :--- | :--- | :--- |
+| `MISSING_API_KEY` | `401` | Send `x-api-key`. |
+| `MISSING_STORE_HASH` | `401` | Send `x-store-hash`. |
+| `INVALID_API_KEY` | `401` | The key is wrong or revoked. |
+| `API_KEY_EXPIRED` | `401` | Create a new key or extend it. |
+| `IP_NOT_ALLOWED` | `403` | Call from an allowed IP or edit the key. |
+| `STORE_NOT_ALLOWED` | `403` | The key belongs to another account or is limited to other stores. |
+| `STORE_NOT_FOUND` | `404` | Check `x-store-hash`. |
+| `INSUFFICIENT_SCOPE` | `403` | Give the key the permission in `required_scope`. |
+| `STORE_API_NOT_IN_PLAN` | `403` | Your plan doesn't include the Store API. |
+| `RATE_LIMITED` | `429` | More than 300 requests in a minute. |
+| `STORE_API_MONTHLY_QUOTA_EXCEEDED` | `429` | Monthly quota used. Resets on the 1st (UTC). |
+
+## Requests
+
+| Code | Status | Meaning |
+| :--- | :--- | :--- |
+| `INVALID_JSON` | `400` | The body isn't valid JSON. |
+| `PAYLOAD_TOO_LARGE` | `413` | The body is too large. |
+| `VALIDATION_FAILED` | `422` | A field is missing or invalid. `details.field` names it. |
+| `NOT_FOUND` | `404` | No such record in this store. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | The `Idempotency-Key` was used with a different body. |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | The first request with this key is still running. |
+| `ENDPOINT_RETIRED` | `410` | The endpoint was removed. The message names the replacement. |
+| `FEATURE_NOT_ENABLED` | `403` | The store isn't approved for this feature (physical goods, affiliates). |
+| `INTERNAL_ERROR` | `500` | Our side. Retry, then contact support with the `request_id`. |
+
+## Resource codes
+
+| Code | Status | Meaning |
+| :--- | :--- | :--- |
+| `PRODUCT_NOT_FOUND` | `404` | An order item refers to a product outside your store. |
+| `OUT_OF_STOCK` | `409` | Not enough stock for the order. |
+| `TOTAL_MISMATCH` | `409` | `expected_total_cents` differs from the real price. |
+| `INVOICE_PAID` | `409` | Paid orders can't be cancelled. Refund instead. |
+| `PAYMENT_IN_PROGRESS` | `409` | A payment is being processed. |
+| `INVOICE_CLOSED` | `409` | Cancelled or expired orders can't be completed. |
+| `INVOICE_NOT_PAID` | `409` | Only paid orders can be refunded or delivered. |
+| `ALREADY_REFUNDED` / `REFUND_TOO_LARGE` | `409` | Nothing or less left to refund. |
+| `DELIVERY_FAILED` | `502` | Paid but delivery failed. Call `/complete` again. |
+| `SLUG_TAKEN`, `SKU_TAKEN`, `COUPON_CODE_TAKEN` | `409` | The value is already used in your store. |
+| `PLAN_LIMIT_REACHED` | `403` | Your plan's product limit is reached. |
+| `NOT_PAID`, `OVER_SHIPPED`, `CLOSED` | `409` | Shipment can't be created for this order or quantity. |
+| `INVALID_TRANSITION` | `409` | A return or ticket can't move to that status. |
+| `ENDPOINT_LIMIT_REACHED` | `409` | 16 webhook endpoints per store. |

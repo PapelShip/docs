@@ -83,7 +83,11 @@
                 "group": "Guides",
                 "pages": [
                   "en/user-api/overview",
-                  "en/user-api/affiliates"
+                  "en/user-api/affiliates",
+                  "en/user-api/orders",
+                  "en/user-api/webhooks",
+                  "en/user-api/fulfillment",
+                  "en/user-api/errors"
                 ]
               },
               {
