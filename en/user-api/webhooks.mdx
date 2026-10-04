@@ -20,6 +20,7 @@ Create endpoints in **Developers › Webhooks** or with [`POST /webhooks`](#mana
 | `order.cancelled` | An unpaid order was cancelled. |
 | `order.refunded` | A refund was recorded. Sent once per refunded amount. |
 | `product.out_of_stock` | A product ran out of stock. |
+| `product.low_stock` | A variant of a physical product reached its low stock threshold. Includes `variant_id` and `threshold`. |
 | `product.restocked` | Stock was added to a product. |
 | `product.deleted` | A product was deleted. |
 | `review.created` | A customer left a review. |

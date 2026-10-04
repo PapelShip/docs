@@ -20,6 +20,7 @@ Uç noktaları **Developers › Webhooks** bölümünden veya `POST /webhooks` i
 | `order.cancelled` | Ödenmemiş sipariş iptal edildi. |
 | `order.refunded` | İade kaydedildi. İade edilen her tutar için bir kez. |
 | `product.out_of_stock` | Ürünün stoku bitti. |
+| `product.low_stock` | Fiziksel ürünün bir varyantı düşük stok eşiğine indi. `variant_id` ve `threshold` içerir. |
 | `product.restocked` | Ürüne stok eklendi. |
 | `product.deleted` | Ürün silindi. |
 | `review.created` | Müşteri yorum bıraktı. |
