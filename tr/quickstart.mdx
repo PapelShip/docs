@@ -1,0 +1,126 @@
+---
+title: "Hızlı başlangıç"
+description: "Birkaç dakika içinde hosted ödeme linki oluşturun ve ödemeyi doğrulayın."
+---
+
+Bu rehber API Store ile uçtan uca bir ödeme akışını anlatır: ödeme linki oluşturun, müşterinizi checkout'a yönlendirin ve ödemeyi doğrulayın.
+
+## Gereksinimler
+
+- En az bir mağazası olan bir PapelShip hesabı
+- Bir API anahtarı (`psa_...`), sayısal **API Key ID** değeri ve 12 karakterlik **Store Hash ID**
+
+<Tip>
+  Üç değeri de [PapelShip panelinde](https://app.papelship.com) mağazanızın API ayarları altında bulabilirsiniz.
+</Tip>
+
+<Steps>
+  <Step title="Ödeme linki oluşturun">
+    Sipariş tutarını ödeme linki endpoint'ine gönderin. Tekrar denemelerde mükerrer fatura oluşmaması için `Idempotency-Key` header'ı ekleyin.
+
+    <CodeGroup>
+    ```bash cURL
+    curl -X POST https://app.papelship.com/api/api-store/payment-links \
+      -H "Authorization: Bearer psa_your_api_key" \
+      -H "Content-Type: application/json" \
+      -H "Idempotency-Key: 7b9e8f1a-3c2d-4e5f-6a7b-8c9d0e1f2a3b" \
+      -d '{
+        "storeHashId": "0bHQn0bU2dei",
+        "apiKeyId": 42,
+        "amount": 49.99,
+        "currency": "USD",
+        "customer_email": "buyer@example.com",
+        "description": "Sipariş #1042",
+        "redirect_url": "https://yourdomain.com/checkout/success"
+      }'
+    ```
+
+    ```javascript Node.js
+    const res = await fetch("https://app.papelship.com/api/api-store/payment-links", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PAPELSHIP_API_KEY}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        storeHashId: "0bHQn0bU2dei",
+        apiKeyId: 42,
+        amount: 49.99,
+        currency: "USD",
+        customer_email: "buyer@example.com",
+        redirect_url: "https://yourdomain.com/checkout/success",
+      }),
+    });
+    const { invoice, checkout_url } = await res.json();
+    ```
+
+    ```python Python
+    import os, uuid, requests
+
+    res = requests.post(
+        "https://app.papelship.com/api/api-store/payment-links",
+        headers={
+            "Authorization": f"Bearer {os.environ['PAPELSHIP_API_KEY']}",
+            "Idempotency-Key": str(uuid.uuid4()),
+        },
+        json={
+            "storeHashId": "0bHQn0bU2dei",
+            "apiKeyId": 42,
+            "amount": 49.99,
+            "currency": "USD",
+            "customer_email": "buyer@example.com",
+            "redirect_url": "https://yourdomain.com/checkout/success",
+        },
+    )
+    data = res.json()
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Müşterinizi yönlendirin">
+    Yanıtta bir `checkout_url` döner. Müşterinizi kart, Papara, havale veya kripto ile ödeme yapması için bu adrese gönderin.
+
+    ```json Yanıt
+    {
+      "success": true,
+      "invoice": {
+        "id": "aB9xK12Lp9012345678901234",
+        "amount": 49.99,
+        "currency": "USD",
+        "status": "awaiting_method",
+        "expires_at": "2026-08-09T02:18:00.000Z"
+      },
+      "checkout_url": "https://app.papelship.com/checkout-gateway/aB9xK12Lp9012345678901234"
+    }
+    ```
+
+    `invoice.id` değerini siparişinizle birlikte saklayın. Ödemeyi kontrol etmek için buna ihtiyacınız olacak.
+  </Step>
+
+  <Step title="Ödemeyi doğrulayın">
+    Müşteri `redirect_url` adresinize döndüğünde ödemeyi sunucunuzda doğrulayın. Yalnızca yönlendirmeye güvenmeyin.
+
+    ```bash
+    curl "https://app.papelship.com/api/api-store/v1/payment-links/check?invoiceId=aB9xK12Lp9012345678901234" \
+      -H "Authorization: Bearer psa_your_api_key"
+    ```
+
+    Siparişi yalnızca `payment.is_paid` değeri `true` olduğunda teslim edin.
+  </Step>
+</Steps>
+
+<Warning>
+  API anahtarınızı sunucuda tutun. Asla tarayıcı koduna, mobil uygulamalara veya masaüstü istemcilere gömmeyin.
+</Warning>
+
+## Sonraki adımlar
+
+<CardGroup cols={2}>
+  <Card title="Kripto faturaları" icon="bitcoin-sign" href="/tr/api-store/crypto-payments">
+    Özel deposit adresi ve QR kod ile kendi checkout'unuzu gösterin.
+  </Card>
+  <Card title="API Store referansı" icon="code" href="/tr/api-store/overview">
+    Tüm endpoint, parametre ve yanıtları inceleyin.
+  </Card>
+</CardGroup>

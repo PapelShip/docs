@@ -1,53 +1,235 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "theme": "aspen",
+  "name": "PapelShip Developers",
+  "description": "Developer documentation for PapelShip payments, store management, and qPapel software protection APIs.",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0A0A0A",
+    "light": "#FAFAFA",
+    "dark": "#0A0A0A"
   },
   "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://papelship.com"
+  },
+  "api": {
+    "playground": {
+      "display": "interactive"
+    },
+    "examples": {
+      "languages": [
+        "curl",
+        "javascript",
+        "python",
+        "php",
+        "go"
+      ],
+      "defaults": "required"
+    }
+  },
   "navigation": {
-    "pages": [
+    "languages": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
+        "language": "en",
+        "tabs": [
+          {
+            "tab": "Guides",
+            "icon": "book-open",
+            "groups": [
+              {
+                "group": "Get started",
+                "pages": [
+                  "en/index",
+                  "en/quickstart"
+                ]
+              },
+              {
+                "group": "Core concepts",
+                "pages": [
+                  "en/guides/authentication",
+                  "en/guides/errors",
+                  "en/guides/idempotency"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "API Store",
+            "icon": "credit-card",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": [
+                  "en/api-store/overview",
+                  "en/api-store/crypto-payments"
+                ]
+              },
+              {
+                "group": "Endpoints",
+                "openapi": {
+                  "source": "api-reference/openapi/api-store.json",
+                  "directory": "en/reference/api-store"
+                }
+              }
+            ]
+          },
+          {
+            "tab": "User API",
+            "icon": "store",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": [
+                  "en/user-api/overview",
+                  "en/user-api/affiliates"
+                ]
+              },
+              {
+                "group": "Endpoints",
+                "openapi": {
+                  "source": "api-reference/openapi/user-api.yaml",
+                  "directory": "en/reference/user-api"
+                }
+              }
+            ]
+          },
+          {
+            "tab": "qPapel Protection",
+            "icon": "shield-halved",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": [
+                  "en/qpapel/overview",
+                  "en/qpapel/license-keys"
+                ]
+              },
+              {
+                "group": "Endpoints",
+                "openapi": {
+                  "source": "api-reference/openapi/qpapel.json",
+                  "directory": "en/reference/qpapel"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "tr",
+        "tabs": [
+          {
+            "tab": "Rehberler",
+            "icon": "book-open",
+            "groups": [
+              {
+                "group": "Başlarken",
+                "pages": [
+                  "tr/index",
+                  "tr/quickstart"
+                ]
+              },
+              {
+                "group": "Temel kavramlar",
+                "pages": [
+                  "tr/guides/authentication",
+                  "tr/guides/errors",
+                  "tr/guides/idempotency"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "API Store",
+            "icon": "credit-card",
+            "groups": [
+              {
+                "group": "Rehberler",
+                "pages": [
+                  "tr/api-store/overview",
+                  "tr/api-store/crypto-payments"
+                ]
+              },
+              {
+                "group": "Endpoint'ler",
+                "openapi": {
+                  "source": "api-reference/openapi/api-store.json",
+                  "directory": "tr/reference/api-store"
+                }
+              }
+            ]
+          },
+          {
+            "tab": "User API",
+            "icon": "store",
+            "groups": [
+              {
+                "group": "Rehberler",
+                "pages": [
+                  "tr/user-api/overview",
+                  "tr/user-api/affiliates"
+                ]
+              },
+              {
+                "group": "Endpoint'ler",
+                "openapi": {
+                  "source": "api-reference/openapi/user-api.yaml",
+                  "directory": "tr/reference/user-api"
+                }
+              }
+            ]
+          },
+          {
+            "tab": "qPapel Protection",
+            "icon": "shield-halved",
+            "groups": [
+              {
+                "group": "Rehberler",
+                "pages": [
+                  "tr/qpapel/overview",
+                  "tr/qpapel/license-keys"
+                ]
+              },
+              {
+                "group": "Endpoint'ler",
+                "openapi": {
+                  "source": "api-reference/openapi/qpapel.json",
+                  "directory": "tr/reference/qpapel"
+                }
+              }
+            ]
+          }
         ]
       }
     ],
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "Dashboard",
+          "href": "https://app.papelship.com",
+          "icon": "gauge"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Support",
+          "href": "mailto:support@papelship.com",
+          "icon": "life-ring"
         }
       ]
     }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
   },
   "navbar": {
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@papelship.com"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "href": "https://app.papelship.com"
     }
   },
   "contextual": {
@@ -56,17 +238,57 @@
       "view",
       "chatgpt",
       "claude",
-      "perplexity",
-      "mcp",
       "cursor",
       "vscode"
     ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "website": "https://papelship.com"
     }
-  }
+  },
+  "background": {
+    "color": {
+      "light": "#FFFFFF",
+      "dark": "#09090B"
+    }
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "fonts": {
+    "family": "Inter"
+  },
+  "styling": {
+    "codeblocks": "system"
+  },
+  "icons": {
+    "library": "fontawesome"
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/en"
+    },
+    {
+      "source": "/quickstart",
+      "destination": "/en/quickstart"
+    },
+    {
+      "source": "/guides/:slug*",
+      "destination": "/en/guides/:slug*"
+    },
+    {
+      "source": "/api-store/:slug*",
+      "destination": "/en/api-store/:slug*"
+    },
+    {
+      "source": "/user-api/:slug*",
+      "destination": "/en/user-api/:slug*"
+    },
+    {
+      "source": "/qpapel/:slug*",
+      "destination": "/en/qpapel/:slug*"
+    }
+  ]
 }
