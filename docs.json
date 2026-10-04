@@ -173,7 +173,11 @@
                 "group": "Rehberler",
                 "pages": [
                   "tr/user-api/overview",
-                  "tr/user-api/affiliates"
+                  "tr/user-api/affiliates",
+                  "tr/user-api/orders",
+                  "tr/user-api/webhooks",
+                  "tr/user-api/fulfillment",
+                  "tr/user-api/errors"
                 ]
               },
               {

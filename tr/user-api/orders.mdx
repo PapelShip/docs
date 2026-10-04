@@ -1,0 +1,136 @@
+---
+title: "Sipariş oluşturma ve yönetme"
+sidebarTitle: "Siparişler"
+description: "Kendi sitenden sipariş oluştur, müşteriyi ödemeye yönlendir; ödemeyi, iptali ve iadeyi yönet."
+---
+
+Sipariş (fatura) ürünleri, müşteriyi ve fiyatı tutar. Müşteri ödemeyi `checkout_url` adresindeki barındırılan sayfada yapar ve mağazanın kabul ettiği herhangi bir yöntemi seçer.
+
+API ile oluşturulan siparişler storefront ile aynı kurallara uyar: fiyatlar kataloğundan gelir, stok ayrılır, kuponlar ve ürün kuralları uygulanır, fraud kontrolleri çalışır.
+
+## Sipariş oluşturma
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_anahtarin" \
+  -H "x-store-hash: magaza_id" \
+  -H "Idempotency-Key: 6f1c8a52-4f0e-4b8e-9a7c-2d1b3e5f7a90" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_email": "alici@example.com",
+    "items": [
+      { "product_id": "a1B2c3D4e5F6", "quantity": 1 },
+      { "product_id": "Zx9Yw8Vu7Ts6", "variant_id": 881 }
+    ],
+    "coupon_code": "YAZ10",
+    "customer_ip": "203.0.113.10",
+    "metadata": { "order_ref": "WEB-1042" }
+  }'
+```
+
+```javascript Node.js
+const res = await fetch("https://app.papelship.com/api/v1/invoices", {
+  method: "POST",
+  headers: {
+    "x-api-key": process.env.PAPELSHIP_API_KEY,
+    "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+    "Idempotency-Key": order.id,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    customer_email: order.email,
+    items: [{ product_id: "a1B2c3D4e5F6", quantity: 1 }],
+    customer_ip: order.ip,
+    metadata: { order_ref: order.id },
+  }),
+});
+const { invoice } = await res.json();
+// Müşteriyi invoice.checkout_url adresine yönlendir
+```
+</CodeGroup>
+
+```json Yanıt (201)
+{
+  "success": true,
+  "invoice": {
+    "id": "c35ffd-19a1b2c3d4e-8c7a20",
+    "object": "invoice",
+    "status": "pending",
+    "currency": "USD",
+    "total_cents": 3499,
+    "source": "api",
+    "metadata": { "order_ref": "WEB-1042" },
+    "checkout_url": "https://app.papelship.com/invoice/c35ffd-19a1b2c3d4e-8c7a20",
+    "expires_at": "2026-10-04T15:00:00.000Z"
+  }
+}
+```
+
+Müşteriyi `checkout_url` adresine yönlendir. Ödenmeyen siparişler 3 saat sonra sona erer.
+
+| Alan | Not |
+| :--- | :--- |
+| `customer_email` | Zorunlu. Fatura e-postasını ve teslimatı alır. |
+| `items` | Zorunlu. 1–50 satır: `product_id` (hash ID), `quantity`, varyantlı ürünlerde `variant_id`. |
+| `coupon_code` | Bu ürünler için geçerliyse uygulanır. |
+| `customer_ip` | Alıcının IP'si. Bu sipariş için fraud, VPN ve engel listesi kurallarını açar. |
+| `expected_total_cents` | İsteğe bağlı kontrol. Fiyat değiştiyse `TOTAL_MISMATCH` döner. |
+| `shipping_address`, `shipping_rate_id` | Fiziksel ürünler. Aşağıya bak. |
+| `custom_fields` | Ödeme formundaki özel alanların cevapları. |
+| `affiliate_code` | Affiliate programındaki bir ortağa yazar. |
+| `send_email` | Fatura e-postasını göndermemek için `false` (varsayılan `true`). |
+| `metadata` | Kendi anahtar/değerlerin, en fazla 20. |
+
+Oluşturma hataları: `PRODUCT_NOT_FOUND` (404), `OUT_OF_STOCK` (409), `TOTAL_MISMATCH` (409), `CURRENCY_MISMATCH` (422), `INVALID_VARIANT` (422), `ADDRESS_INVALID` (422), `CUSTOMER_BLOCKED` (403), `FRAUD_BLOCKED` (403), `STORE_SUSPENDED` (403).
+
+## Fiziksel ürünler
+
+Gönderilen ürünlerde adresi ekle. Seçenekleri önce `POST /shipping/quote` ile al ya da `shipping_rate_id` göndermeyip en ucuz ücreti kullan.
+
+```json
+{
+  "customer_email": "alici@example.com",
+  "items": [{ "product_id": "Tsh1rtM3d1um", "variant_id": 2041, "quantity": 2 }],
+  "shipping_address": {
+    "full_name": "Ayşe Yılmaz",
+    "phone": "+90 532 000 00 00",
+    "country_code": "TR",
+    "city": "İstanbul",
+    "district": "Kadıköy",
+    "line1": "Moda Cad. No: 10",
+    "postal_code": "34710"
+  },
+  "shipping_rate_id": 12
+}
+```
+
+Kargo ücreti `total_cents` toplamına eklenir ve `shipping_cents` olarak görünür. Adres göndermezsen müşteri ödeme sayfasında girer. Ödemeden sonra siparişi [`POST /orders/{invoiceId}/shipments`](/tr/user-api/fulfillment) ile kargola.
+
+## Sipariş durumları
+
+| Durum | Anlamı |
+| :--- | :--- |
+| `pending` | Müşterinin ödemesi bekleniyor. |
+| `payment_pending`, `payment_processing` | Müşteri yöntemi seçti, ödeme yolda. |
+| `partial_payment` | Tutarın bir kısmı geldi (kripto). |
+| `manual_review_pending` | Manuel ödeme incelemeni bekliyor. |
+| `completed` | Ödendi ve teslim edildi. |
+| `cancelled` | Ödeme öncesi iptal edildi. |
+| `expired` | Zamanında ödenmedi. |
+
+Sorgulamak yerine `order.completed` webhook'unu dinle. Bkz. [Webhook'lar](/tr/user-api/webhooks).
+
+## Sipariş oluştuktan sonra
+
+| İşlem | Uç nokta | Ne zaman |
+| :--- | :--- | :--- |
+| Ödendi olarak işaretle | `POST /invoices/{id}/complete` | Parayı PapelShip dışında aldın (havale, nakit). Ürünleri teslim eder. |
+| İptal et | `POST /invoices/{id}/cancel` | Sipariş ödenmedi. Ayrılan stok geri bırakılır. |
+| İade kaydet | `POST /invoices/{id}/refund` | Müşteriye parayı geri ödedin. Kısmi iade için `amount_cents` gönder. |
+| Teslim edilenleri gör | `GET /invoices/{id}/deliveries` | Lisans anahtarları, dosyalar ve notlar. |
+| Güncelle | `PATCH /invoices/{id}` | `metadata` veya `delivery_email` değiştir. |
+
+<Tip>
+  Oluşturma, tamamlama ve iade çağrılarında kendi sipariş ID'ni `Idempotency-Key` olarak kullan. Tekrar denemeler asla ikinci sipariş ya da ikinci iade oluşturmaz.
+</Tip>

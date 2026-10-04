@@ -1,0 +1,106 @@
+---
+title: "Webhook'lar"
+sidebarTitle: "Webhook'lar"
+description: "Siparişler, ürünler, yorumlar ve affiliate kayıtları değiştiğinde imzalı olaylar al."
+---
+
+Webhook'lar mağazanda bir şey olduğunda sunucuna HTTP `POST` gönderir; sürekli sorgulaman gerekmez.
+
+Uç noktaları **Developers › Webhooks** bölümünden veya `POST /webhooks` ile oluştur.
+
+## Olaylar
+
+| Olay | Ne zaman |
+| :--- | :--- |
+| `order.created` | Sipariş oluşturuldu (storefront, API veya embed). |
+| `order.completed` | Sipariş ödendi ve teslim edildi. Teslimatları içerir. |
+| `order.partially_paid` | Kripto ödemenin bir kısmı geldi. |
+| `order.manual_review` | Manuel ödeme incelemeni bekliyor. |
+| `order.expired` | Sipariş zamanında ödenmedi. |
+| `order.cancelled` | Ödenmemiş sipariş iptal edildi. |
+| `order.refunded` | İade kaydedildi. İade edilen her tutar için bir kez. |
+| `product.out_of_stock` | Ürünün stoku bitti. |
+| `product.restocked` | Ürüne stok eklendi. |
+| `product.deleted` | Ürün silindi. |
+| `review.created` | Müşteri yorum bıraktı. |
+| `customer.created` | Mağazana yeni müşteri eklendi. |
+| `withdrawal.completed` | Cüzdan çekimi gönderildi. |
+| `affiliate.partner_applied` | Biri affiliate programına başvurdu. |
+| `affiliate.conversion` | Atfedilen sipariş tamamlandı ve komisyon yazıldı. |
+| `affiliate.payout_requested` | Ortak ödeme talep etti. |
+| `affiliate.payout_sent` | Bir ödemeyi gönderildi olarak işaretledin. |
+
+## Gövde
+
+```json
+{
+  "id": "evt_9b2c4f1a7d",
+  "object": "event",
+  "type": "order.completed",
+  "created": 1791100000,
+  "livemode": true,
+  "store": { "id": "0bHQn0bU2dei", "name": "Acme", "slug": "acme" },
+  "data": {
+    "object": {
+      "object": "order",
+      "id": "c35ffd-19a1b2c3d4e-8c7a20",
+      "status": "completed",
+      "currency": "USD",
+      "total": 34.99,
+      "customer": { "email": "alici@example.com", "country": "TR" },
+      "paid_at": "2026-10-04T12:03:00.000Z"
+    }
+  }
+}
+```
+
+<Note>
+  Webhook tutarları ana birimdedir (`34.99`); API ise en küçük birimi kullanır (`3499`).
+</Note>
+
+## İmzayı doğrula
+
+| Başlık | Değer |
+| :--- | :--- |
+| `PapelShip-Signature` | `t=<unix saniye>,v1=<hex HMAC>` |
+| `PapelShip-Event-Id` | Olay ID'si. Tekrarları ayıklamak için kullan. |
+| `PapelShip-Event-Type` | Olay tipi. |
+| `PapelShip-Delivery-Attempt` | İlk deneme için 1. |
+
+İmza `HMAC-SHA256(secret, "<t>.<ham gövde>")` değerinin hex hali. Secret (`whsec_...`) uç noktayı oluştururken gösterilir. JSON'u ayrıştırmadan önce **ham** gövde üzerinden hesapla ve eski zaman damgalarını reddet.
+
+```javascript Node.js
+import crypto from "node:crypto";
+
+export function verify(rawBody, header, secret, toleranceSec = 300) {
+  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")));
+  const t = Number(parts.t);
+  if (!t || Math.abs(Date.now() / 1000 - t) > toleranceSec) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${t}.${rawBody}`).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(parts.v1 || "");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
+Python ve PHP örnekleri için [İngilizce sayfaya](/en/user-api/webhooks#verify-the-signature) bak.
+
+## Yanıt ve tekrar denemeler
+
+- 10 saniye içinde herhangi bir `2xx` ile yanıt ver. Uzun işleri yanıttan sonra yap.
+- Başarısız teslimatlar 1 dk, 5 dk, 30 dk, 2 sa, 6 sa ve 12 sa sonra tekrar denenir (yaklaşık 21 saatte 7 deneme).
+- 3 gün boyunca hiç başarı olmadan arka arkaya 40 hatadan sonra uç nokta kapatılır. Panelden veya `PATCH /webhooks/{id}` ile `enabled: true` göndererek aç.
+- Aynı olay birden fazla gelebilir. Bir kez işlemek için `PapelShip-Event-Id` kullan.
+
+## Uç noktaları API ile yönet
+
+| Uç nokta | Kullanım |
+| :--- | :--- |
+| `POST /webhooks` | Uç nokta oluştur. Yanıttaki `secret` yalnızca bir kez gösterilir. |
+| `GET /webhooks` | 7 günlük istatistiklerle listele. |
+| `PATCH /webhooks/{id}` | URL, olaylar veya `enabled` değiştir. |
+| `POST /webhooks/{id}/test` | Örnek olay gönder. |
+| `GET /events/deliveries` | Durum ve yanıt kodlarıyla teslimat kaydı. |
+| `POST /events/deliveries/{id}/resend` | Teslimatı tekrar gönder. |
+
+Secret yenileme panelde kalır.

@@ -1,0 +1,61 @@
+---
+title: "Fiziksel siparişleri kargolama"
+sidebarTitle: "Kargo"
+description: "Kargolanacak siparişleri listele, takip numaralı gönderi oluştur, teslimat durumunu güncelle ve iadeleri yönet."
+---
+
+Mağazan fiziksel ürün satıyorsa depo veya kargo yazılımını bu uç noktalarla bağla. Mağazanın fiziksel ürün satışı için onaylanmış olması gerekir.
+
+## 1. Kargolanacak siparişleri bul
+
+```bash
+curl "https://app.papelship.com/api/v1/orders?status=to_ship" \
+  -H "x-api-key: pk_live_anahtarin" \
+  -H "x-store-hash: magaza_id"
+```
+
+`to_ship`, kargolanmamış ürünü olan ödenmiş siparişleri en eskiden başlayarak listeler. Diğer filtreler: `in_transit`, `delivered`, `issues` (başarısız teslimat, iade) ve `all`.
+
+## 2. Gönderi oluştur
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments \
+  -H "x-api-key: pk_live_anahtarin" \
+  -H "x-store-hash: magaza_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "carrier_code": "yurtici", "tracking_number": "1234567890" }'
+```
+
+- `items` göndermezsen kalan her şey kargolanır. Kısmi gönderi için `items: [{ "invoice_item_id": 55, "qty": 1 }]`.
+- Müşteriye takip linkli e-posta gider. Göndermemek için `notify_customer: false`.
+- Kargo firması kodları `GET /shipping` yanıtında.
+
+## 3. Durumu güncelle
+
+```bash
+curl -X PATCH https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments/88 \
+  -H "x-api-key: pk_live_anahtarin" \
+  -H "x-store-hash: magaza_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "delivered", "location": "İstanbul" }'
+```
+
+Durumlar: `label_created`, `shipped`, `in_transit`, `out_for_delivery`, `delivered`, `failed_attempt`, `returned_to_sender`. Her biri müşterinin gördüğü takip akışına eklenir. Siparişin `fulfillment_status` değeri gönderilere göre otomatik güncellenir.
+
+## İadeler
+
+Müşteriler ürünün iade süresi içinde sipariş sayfasından iade talep eder. `PATCH /orders/{invoiceId}/returns/{returnId}` ile yönet:
+
+| `action` | Etki |
+| :--- | :--- |
+| `approve` | Talebi kabul eder. `location_id` paketin gönderileceği adres. |
+| `reject` | Reddeder. `note` zorunlu, müşteriye gönderilir. |
+| `receive` | Paketi aldın. `restock: true` ürünleri stoğa geri ekler. |
+| `refund` | `refund_cents` kaydeder. Parayı kendin iade et, sonra `POST /invoices/{id}/refund` çağır. |
+| `close` | İadeyi kapatır. |
+
+`GET /returns?status=requested` tüm siparişlerdeki açık talepleri listeler.
+
+## Kargo ayarları
+
+Bölgeleri, ücretleri ve depoları `/shipping/zones` ve `/shipping/locations` ile oku ve değiştir. Bir sepet için fiyat almak üzere `POST /shipping/quote` kullan.

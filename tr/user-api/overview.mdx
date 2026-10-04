@@ -1,36 +1,140 @@
 ---
 title: "User API'ye genel bakış"
 sidebarTitle: "Genel bakış"
-description: "Mağazanızın ürünlerini, siparişlerini ve müşterilerini programatik olarak yönetin."
+description: "Kendi sistemlerinden sipariş oluştur, kataloğunu eşitle, fiziksel ürün gönder ve olaylara tepki ver."
 ---
 
-User API, mağaza sahiplerine paneldeki her şeye programatik erişim sağlar.
+User API (panelde Store API olarak geçer), mağaza panelindeki kontrolün aynısını sunucularına verir: siparişler, ürünler, stok, müşteriler, destek, kargo ve webhook'lar.
 
-**Base URL:** `https://app.papelship.com/api_user/api/v1`
+**Base URL:** `https://app.papelship.com/api/v1`
 
-`x-api-key` ve `x-store-hash` header'larıyla kimlik doğrulayın. Bkz. [Kimlik doğrulama](/tr/guides/authentication).
+<Note>
+  `https://app.papelship.com/api_user/api/v1` adresini kullanan eski entegrasyonlar çalışmaya devam eder. Yeni kodda `/api/v1` kullan.
+</Note>
 
-## Kaynaklar
+## Kimlik doğrulama
 
-<CardGroup cols={3}>
-  <Card title="Analitik" icon="chart-line">Herhangi bir tarih aralığı için gelir, sipariş ve müşteri toplamları.</Card>
-  <Card title="Ürünler" icon="box">Ürünleri ve fiyatlarını oluşturun, güncelleyin ve silin.</Card>
-  <Card title="Kategoriler ve gruplar" icon="folder-tree">Ürünleri kategori ve koleksiyonlara ayırın.</Card>
-  <Card title="Kuponlar" icon="ticket">Yüzdelik veya sabit indirim kodları oluşturun.</Card>
-  <Card title="Müşteriler" icon="users">Müşterileri ve satın alma geçmişlerini görüntüleyin.</Card>
-  <Card title="Faturalar" icon="receipt">Siparişleri listeleyin, tamamlayın ve iade olarak işaretleyin.</Card>
-</CardGroup>
+**Developers › API keys** bölümünden bir anahtar oluştur ve her istekte mağaza ID'nle birlikte gönder:
 
-## Fiyatlar kuruş (cent) cinsindendir
+```bash
+curl https://app.papelship.com/api/v1/me \
+  -H "x-api-key: pk_live_anahtarin" \
+  -H "x-store-hash: magaza_id"
+```
 
-Tüm `*_cents` alanları en küçük para birimi cinsinden tam sayıdır. Örneğin `price_cents: 2999` değeri $29.99 demektir.
+`GET /me` her geçerli anahtarla çalışır. Mağazayı, anahtarın izinlerini ve limitlerini döner; kurulumunu test etmek için kullan.
+
+<Warning>
+  Anahtarlar mağaza sahibi adına işlem yapar. Sunucunda tut; tarayıcı veya mobil uygulama koduna asla koyma.
+</Warning>
+
+## İzinler
+
+Anahtar oluştururken **Tam erişim**, **Salt okuma** veya **Özel** seç. Özel'de her alan için okuma ya da yazma izni verirsin. Yazma, okumayı da kapsar.
+
+| Alan | İzin | Kapsar |
+| :-- | :-- | :-- |
+| Siparişler | `orders` | `/invoices` |
+| Ürünler | `products` | `/products` ve altı |
+| Kategoriler ve gruplar | `catalog` | `/categories`, `/groups` |
+| Kuponlar | `coupons` | `/coupons` |
+| Müşteriler ve engel listesi | `customers` | `/customers`, `/blacklist` |
+| Kargo ve gönderim | `fulfillment` | `/orders`, `/returns`, `/shipping` |
+| Yorumlar | `reviews` | `/reviews` |
+| Destek talepleri | `support` | `/tickets` |
+| Abonelikler | `subscriptions` | `/subscriptions` |
+| Affiliate | `affiliates` | `/affiliates` |
+| Webhook'lar | `webhooks` | `/webhooks`, `/events` |
+| Analitik | `analytics` | `/analytics` (salt okuma) |
+| Mağaza | `store` | `/store`, `/payment-methods` (salt okuma) |
+
+`GET` istekleri okuma, `POST`, `PATCH`, `PUT` ve `DELETE` yazma izni ister. İzni olmayan anahtar `403 INSUFFICIENT_SCOPE` alır; eksik izin `required_scope` alanında yazar.
+
+Bir anahtarı ayrıca bu mağazayla, IP listesiyle veya son kullanma tarihiyle sınırlayabilirsin.
+
+## Yanıtlar
+
+Her yanıt `success` alanı olan bir JSON'dur.
+
+```json Başarılı
+{ "success": true, "invoice": { "id": "c35ffd-19a1b2c3d4e-8c7a20", "status": "pending" } }
+```
+
+```json Hata
+{
+  "success": false,
+  "code": "VALIDATION_FAILED",
+  "error": "customer_email must be a valid email address",
+  "details": { "field": "customer_email" },
+  "request_id": "req_7YbK2mQ9xP1cRt4v"
+}
+```
+
+Mesaja değil `code` alanına göre karar ver. Her yanıtta `X-Request-Id` başlığı var; destekle iletişimde bunu paylaş. Tüm kodlar için [Hatalar](/tr/user-api/errors).
+
+## Kurallar
+
+- **Tutarlar** en küçük para birimi cinsinden tam sayıdır: `price_cents: 2999` = 29,99.
+- **Tarihler** UTC, ISO 8601.
+- **ID'ler** public ID'dir: ürün hash ID'si, `c35ffd-19a1b2c3d4e-8c7a20` gibi sipariş ID'leri. Başka mağazanın kaydı `404` döner.
+- **Oluşturma** işlemleri `201` döner.
 
 ## Sayfalama
 
-`GET /products` gibi liste endpoint'leri `limit` (varsayılan `50`) ve `offset` (varsayılan `0`) kabul eder:
+Listeler `limit` (1–100, varsayılan 25) ve `offset` alır, `pagination` nesnesi döner:
 
 ```bash
-curl "https://app.papelship.com/api_user/api/v1/products?limit=50&offset=100&status=active" \
-  -H "x-api-key: your_api_key" \
-  -H "x-store-hash: your_store_hash"
+curl "https://app.papelship.com/api/v1/invoices?status=completed&limit=50&offset=100" \
+  -H "x-api-key: pk_live_anahtarin" \
+  -H "x-store-hash: magaza_id"
 ```
+
+```json
+{
+  "success": true,
+  "invoices": [ ... ],
+  "pagination": { "total": 342, "limit": 50, "offset": 100, "has_more": true }
+}
+```
+
+Affiliate listeleri imleç kullanır: `next_cursor` değerini `cursor` olarak geri gönder.
+
+## Güvenli tekrar deneme
+
+Oluşturma çağrılarında (sipariş, iade, gönderi, ürün, webhook ve referansta işaretli diğerleri) `Idempotency-Key` başlığı gönder. Ağ hatasında aynı anahtar ve gövdeyle tekrar dene: kopya yerine ilk sonucu alırsın.
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_anahtarin" \
+  -H "x-store-hash: magaza_id" \
+  -H "Idempotency-Key: 6f1c8a52-4f0e-4b8e-9a7c-2d1b3e5f7a90" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_email": "alici@example.com", "items": [{ "product_id": "a1B2c3D4e5F6" }] }'
+```
+
+- Anahtarlar 24 saat saklanır.
+- Tekrarlanan yanıtta `Idempotent-Replayed: true` başlığı olur.
+- Aynı anahtar farklı gövdeyle gönderilirse `422 IDEMPOTENCY_KEY_REUSED` döner.
+
+## Limitler
+
+| Limit | Değer | Başlıklar |
+| :-- | :-- | :-- |
+| Anahtar başına istek | Dakikada 300 | `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (Unix zamanı) |
+| Aylık çağrı | Planına bağlı | `X-Quota-Limit` |
+
+Limit aşılınca `Retry-After` ile `429` döner. `RATE_LIMITED` bir dakika içinde açılır; `STORE_API_MONTHLY_QUOTA_EXCEEDED` sonraki ayın ilk günü (UTC) sıfırlanır.
+
+Her istek durum kodu ve süresiyle **Developers › API requests** bölümünde görünür.
+
+## Sonraki adımlar
+
+<CardGroup cols={2}>
+  <Card title="Sipariş oluştur" icon="cart-shopping" href="/tr/user-api/orders">
+    Kendi sitenden veya uygulamandan sipariş al, müşteriyi ödemeye yönlendir.
+  </Card>
+
+  <Card title="Webhook'lar" icon="bolt" href="/tr/user-api/webhooks">
+    Siparişler ödendiğinde, iptal edildiğinde veya iade edildiğinde haberdar ol.
+  </Card>
+</CardGroup>

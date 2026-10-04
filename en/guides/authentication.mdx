@@ -51,7 +51,7 @@ Every request must include an API key. Each API accepts a slightly different set
 Call the User API connectivity endpoint to confirm your key and store hash work:
 
 ```bash
-curl https://app.papelship.com/api_user/api/v1/test-routing \
+curl https://app.papelship.com/api/v1/me \
   -H "x-api-key: your_api_key" \
   -H "x-store-hash: your_store_hash"
 ```

@@ -48,15 +48,15 @@ Her istek bir API anahtarı içermelidir. Her API biraz farklı header setleri k
 
 ## Bilgilerinizi test edin
 
-Anahtarınızın ve store hash değerinizin çalıştığını doğrulamak için User API bağlantı testini çağırın:
+Anahtarınızın ve store hash değerinizin çalıştığını doğrulamak için User API'de `GET /me` çağırın:
 
 ```bash
-curl https://app.papelship.com/api_user/api/v1/test-routing \
+curl https://app.papelship.com/api/v1/me \
   -H "x-api-key: your_api_key" \
   -H "x-store-hash: your_store_hash"
 ```
 
-Geçerli bir istek `"success": true` döndürür. Geçersiz bir anahtar `401 Unauthorized` döndürür.
+Geçerli bir istek mağazayı, anahtarın izinlerini ve limitlerinizi döndürür. Geçersiz bir anahtar `INVALID_API_KEY` koduyla `401` döndürür.
 
 ## Anahtarlarınızı güvende tutun
 

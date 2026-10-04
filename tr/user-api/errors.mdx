@@ -1,0 +1,68 @@
+---
+title: "User API hataları"
+sidebarTitle: "Hatalar"
+description: "User API'nin döndürdüğü durum ve hata kodları."
+---
+
+Hatalar `success: false`, sabit bir `code`, okunabilir bir `error` ve `request_id` döner.
+
+```json
+{
+  "success": false,
+  "code": "INSUFFICIENT_SCOPE",
+  "error": "This API key needs the orders:write permission",
+  "required_scope": "orders:write",
+  "request_id": "req_7YbK2mQ9xP1cRt4v"
+}
+```
+
+Sadece `429` (`Retry-After` sonrası) ve `5xx` yanıtlarını aynı `Idempotency-Key` ile tekrar dene.
+
+## Kimlik doğrulama ve limitler
+
+| Kod | Durum | Çözüm |
+| :--- | :--- | :--- |
+| `MISSING_API_KEY` | `401` | `x-api-key` gönder. |
+| `MISSING_STORE_HASH` | `401` | `x-store-hash` gönder. |
+| `INVALID_API_KEY` | `401` | Anahtar yanlış veya iptal edilmiş. |
+| `API_KEY_EXPIRED` | `401` | Yeni anahtar oluştur veya süresini uzat. |
+| `IP_NOT_ALLOWED` | `403` | İzinli bir IP'den çağır veya anahtarı düzenle. |
+| `STORE_NOT_ALLOWED` | `403` | Anahtar başka hesabın veya başka mağazalarla sınırlı. |
+| `STORE_NOT_FOUND` | `404` | `x-store-hash` değerini kontrol et. |
+| `INSUFFICIENT_SCOPE` | `403` | Anahtara `required_scope` iznini ver. |
+| `STORE_API_NOT_IN_PLAN` | `403` | Planın Store API'yi içermiyor. |
+| `RATE_LIMITED` | `429` | Dakikada 300 isteği aştın. |
+| `STORE_API_MONTHLY_QUOTA_EXCEEDED` | `429` | Aylık kota doldu. Ayın 1'inde (UTC) sıfırlanır. |
+
+## İstekler
+
+| Kod | Durum | Anlamı |
+| :--- | :--- | :--- |
+| `INVALID_JSON` | `400` | Gövde geçerli JSON değil. |
+| `PAYLOAD_TOO_LARGE` | `413` | Gövde çok büyük. |
+| `VALIDATION_FAILED` | `422` | Bir alan eksik veya geçersiz. `details.field` alanı gösterir. |
+| `NOT_FOUND` | `404` | Bu mağazada böyle bir kayıt yok. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | `Idempotency-Key` farklı bir gövdeyle kullanılmış. |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | Bu anahtarla ilk istek hâlâ çalışıyor. |
+| `ENDPOINT_RETIRED` | `410` | Uç nokta kaldırıldı. Mesaj yerine kullanılacak olanı söyler. |
+| `FEATURE_NOT_ENABLED` | `403` | Mağaza bu özellik için onaylı değil (fiziksel ürün, affiliate). |
+| `INTERNAL_ERROR` | `500` | Bizim tarafımız. Tekrar dene, sürerse `request_id` ile desteğe yaz. |
+
+## Kaynağa özel kodlar
+
+| Kod | Durum | Anlamı |
+| :--- | :--- | :--- |
+| `PRODUCT_NOT_FOUND` | `404` | Sipariş satırı mağazan dışındaki bir ürüne ait. |
+| `OUT_OF_STOCK` | `409` | Sipariş için yeterli stok yok. |
+| `TOTAL_MISMATCH` | `409` | `expected_total_cents` gerçek fiyattan farklı. |
+| `INVOICE_PAID` | `409` | Ödenmiş sipariş iptal edilemez; iade et. |
+| `PAYMENT_IN_PROGRESS` | `409` | Bir ödeme işleniyor. |
+| `INVOICE_CLOSED` | `409` | İptal edilmiş veya süresi dolmuş sipariş tamamlanamaz. |
+| `INVOICE_NOT_PAID` | `409` | Sadece ödenmiş siparişler iade veya teslim edilir. |
+| `ALREADY_REFUNDED` / `REFUND_TOO_LARGE` | `409` | İade edilecek tutar kalmadı veya daha az. |
+| `DELIVERY_FAILED` | `502` | Ödendi ama teslimat başarısız. `/complete` çağrısını tekrarla. |
+| `SLUG_TAKEN`, `SKU_TAKEN`, `COUPON_CODE_TAKEN` | `409` | Değer mağazanda zaten kullanılıyor. |
+| `PLAN_LIMIT_REACHED` | `403` | Planının ürün limiti doldu. |
+| `NOT_PAID`, `OVER_SHIPPED`, `CLOSED` | `409` | Bu sipariş veya adet için gönderi oluşturulamaz. |
+| `INVALID_TRANSITION` | `409` | İade veya talep bu duruma geçemez. |
+| `ENDPOINT_LIMIT_REACHED` | `409` | Mağaza başına 16 webhook uç noktası. |
