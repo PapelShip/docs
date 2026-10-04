@@ -36,6 +36,9 @@ x-tag-groups:
       - Customers
       - Invoices
       - Reviews
+  - name: Affiliates
+    tags:
+      - Affiliates
   - name: Checkout & Payments
     tags:
       - Checkout
@@ -67,6 +70,8 @@ tags:
     description: 💳 Configure crypto wallets and payment gateways.
   - name: System
     description: ⚙️ System status and health checks.
+  - name: Affiliates
+    description: Read your affiliate programme (partners, conversions, payouts) and invite partners. The store must be approved for the affiliate programme.
 
 components:
   securitySchemes:
@@ -386,6 +391,230 @@ components:
             description_html:
               type: string
     
+    AffiliateError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          enum: [FEATURE_NOT_ENABLED, PROGRAM_NOT_ACTIVE, INVALID_EMAIL, ALREADY_MEMBER, NOT_FOUND, INVALID_TRANSITION, INVALID_CODE, CODE_TAKEN, COUPON_NOT_FOUND, COUPON_TAKEN, INVALID_VALUE, BANNED]
+          example: FEATURE_NOT_ENABLED
+        error:
+          type: string
+          example: This store is not approved for the affiliate programme.
+
+    AffiliatePartnerRef:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Public partner ID (16 characters).
+          example: "7fKq2LmN9xPa3RtB"
+        email:
+          type: string
+          format: email
+          example: "creator@example.com"
+        name:
+          type: string
+          nullable: true
+          example: "Alex Creator"
+
+    AffiliatePartner:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Public partner ID (16 characters).
+          example: "7fKq2LmN9xPa3RtB"
+        email:
+          type: string
+          format: email
+          example: "creator@example.com"
+        name:
+          type: string
+          nullable: true
+          example: "Alex Creator"
+        status:
+          type: string
+          enum: [pending, active, suspended, banned, rejected]
+          example: active
+        commission_override:
+          type: object
+          nullable: true
+          description: Partner-specific rate. `null` means the programme rate applies.
+          properties:
+            type:
+              type: string
+              enum: [percent, fixed]
+            value:
+              type: integer
+              description: Basis points for `percent` (1000 = 10%), minor units for `fixed`.
+              example: 1500
+        active_links:
+          type: integer
+          example: 2
+        clicks:
+          type: integer
+          example: 418
+        orders:
+          type: integer
+          description: Completed orders attributed to the partner.
+          example: 12
+        created_at:
+          type: string
+          format: date-time
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    AffiliateConversion:
+      type: object
+      properties:
+        invoice_id:
+          type: string
+          description: Public invoice ID of the attributed order.
+          example: "c35ffd-19a1b2c3d4e-8c7a20"
+        captured_at:
+          type: string
+          format: date-time
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        source:
+          type: string
+          enum: [link, coupon, api, renewal]
+          description: How the order was attributed.
+          example: link
+        status:
+          type: string
+          enum: [valid, flagged, rejected]
+          example: valid
+        flags:
+          type: array
+          description: Fraud signals that flagged the conversion.
+          items:
+            type: string
+            enum: [self_referral, other_coupon, high_fraud_score, velocity]
+        order_total:
+          type: integer
+          description: Order total in minor units.
+          example: 4999
+        order_currency:
+          type: string
+          example: USD
+        invoice_status:
+          type: string
+          example: completed
+        refund_status:
+          type: string
+          nullable: true
+          example: none
+        partner:
+          $ref: '#/components/schemas/AffiliatePartnerRef'
+        link_code:
+          type: string
+          nullable: true
+          example: "alex"
+        commission:
+          type: integer
+          description: Net commission in minor units (accruals minus reversals plus adjustments).
+          example: 499
+        commission_currency:
+          type: string
+          example: USD
+        commission_state:
+          type: string
+          enum: [none, unpaid, held, pending, available]
+          description: |
+            - `none`: the conversion was rejected.
+            - `unpaid`: the order is not completed yet.
+            - `held`: flagged, waiting for your review.
+            - `pending`: inside the hold period.
+            - `available`: the partner can request a payout.
+          example: pending
+        available_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the commission leaves the hold period.
+
+    AffiliatePayout:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "Qm3vX8kL2pN7rT4w"
+        amount:
+          type: integer
+          description: Amount in minor units of `currency`.
+          example: 12500
+        currency:
+          type: string
+          example: USD
+        method:
+          type: string
+          enum: [crypto, manual]
+        coin:
+          type: string
+          nullable: true
+          example: USDT
+        network:
+          type: string
+          nullable: true
+          example: TRC20
+        address:
+          type: string
+          nullable: true
+        details:
+          type: string
+          nullable: true
+          description: Payout details for manual payouts.
+        amount_coin:
+          type: number
+          nullable: true
+          description: Coin amount quoted when the payout was approved.
+          example: 125.04
+        quote_at:
+          type: string
+          format: date-time
+          nullable: true
+        tx_hash:
+          type: string
+          nullable: true
+        tx_verified:
+          type: boolean
+          description: "`true` when the transaction was matched to a withdrawal from your store wallet."
+        reference:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [requested, approved, sent, failed, cancelled]
+        requested_at:
+          type: string
+          format: date-time
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        partner:
+          $ref: '#/components/schemas/AffiliatePartnerRef'
+        partner_available:
+          type: integer
+          description: The partner's current available balance in minor units.
+          example: 12500
+
     ProductShort:
       type: object
       properties:
@@ -1058,6 +1287,225 @@ paths:
                 properties:
                   success:
                     type: boolean
+
+  /affiliates/partners:
+    get:
+      tags:
+        - Affiliates
+      operationId: listAffiliatePartners
+      summary: List partners
+      description: List the partners of your affiliate programme, newest first. Returns 25 partners per page.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, active, suspended, banned, rejected]
+          description: Only return partners with this status.
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Search by email or name.
+        - in: query
+          name: cursor
+          schema:
+            type: integer
+          description: Pass `next_cursor` from the previous page. Omit for the first page.
+      responses:
+        '200':
+          description: A page of partners
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  partners:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AffiliatePartner'
+                  next_cursor:
+                    type: integer
+                    nullable: true
+                    description: Cursor for the next page. `null` on the last page.
+                  counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    description: 'Number of partners per status, for example {"active": 12, "pending": 3}.'
+        '403':
+          description: The store is not approved for the affiliate programme (`FEATURE_NOT_ENABLED`), or the key is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateError'
+    post:
+      tags:
+        - Affiliates
+      operationId: inviteAffiliatePartner
+      summary: Invite a partner
+      description: |
+        Add a partner to your programme. Invited partners are active at once and get a store-wide tracking link.
+        If the email belongs to a pending or rejected applicant, the application is approved.
+        Requires a key with write access.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "creator@example.com"
+                name:
+                  type: string
+                  example: "Alex Creator"
+                note:
+                  type: string
+                  description: Private note, visible only to your team.
+      responses:
+        '201':
+          description: Partner invited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  id:
+                    type: string
+                    description: Public partner ID.
+                    example: "7fKq2LmN9xPa3RtB"
+        '400':
+          description: "`INVALID_EMAIL`: the email address is not valid."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateError'
+        '409':
+          description: "`ALREADY_MEMBER`: the email is already a partner. `BANNED`: the partner account is banned or suspended."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateError'
+        '403':
+          description: The store is not approved for the affiliate programme (`FEATURE_NOT_ENABLED`), or the key is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateError'
+
+  /affiliates/conversions:
+    get:
+      tags:
+        - Affiliates
+      operationId: listAffiliateConversions
+      summary: List conversions
+      description: List orders attributed to a partner, newest first, with the commission state of each. Returns 25 conversions per page.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [all, valid, flagged, rejected]
+            default: all
+        - in: query
+          name: partner
+          schema:
+            type: string
+          description: Public partner ID.
+        - in: query
+          name: cursor
+          schema:
+            type: integer
+          description: Pass `next_cursor` from the previous page. Omit for the first page.
+      responses:
+        '200':
+          description: A page of conversions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  conversions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AffiliateConversion'
+                  next_cursor:
+                    type: integer
+                    nullable: true
+                    description: Cursor for the next page. `null` on the last page.
+                  counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    description: 'Number of conversions per status, for example {"valid": 40, "flagged": 2}.'
+        '403':
+          description: The store is not approved for the affiliate programme (`FEATURE_NOT_ENABLED`), or the key is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateError'
+
+  /affiliates/payouts:
+    get:
+      tags:
+        - Affiliates
+      operationId: listAffiliatePayouts
+      summary: List payouts
+      description: |
+        List partner payout requests. Open requests (`requested`, `approved`) come first. Returns 25 payouts per page.
+        This endpoint is read-only. Approve and send payouts in the dashboard.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [open, requested, approved, sent, failed, cancelled]
+          description: "`open` returns `requested` and `approved` payouts."
+        - in: query
+          name: cursor
+          schema:
+            type: integer
+          description: Pass `next_cursor` from the previous page. Omit for the first page.
+      responses:
+        '200':
+          description: A page of payouts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  payouts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AffiliatePayout'
+                  next_cursor:
+                    type: integer
+                    nullable: true
+                    description: Cursor for the next page. `null` on the last page.
+                  counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                    description: "Number of payouts per status."
+        '403':
+          description: The store is not approved for the affiliate programme (`FEATURE_NOT_ENABLED`), or the key is not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AffiliateError'
 
   /checkout:
     post:
