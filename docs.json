@@ -82,7 +82,8 @@
               {
                 "group": "Guides",
                 "pages": [
-                  "en/user-api/overview"
+                  "en/user-api/overview",
+                  "en/user-api/affiliates"
                 ]
               },
               {
@@ -167,7 +168,8 @@
               {
                 "group": "Rehberler",
                 "pages": [
-                  "tr/user-api/overview"
+                  "tr/user-api/overview",
+                  "tr/user-api/affiliates"
                 ]
               },
               {
