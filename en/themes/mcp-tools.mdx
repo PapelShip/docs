@@ -96,7 +96,7 @@ Dry run of the design security scanner. Nothing is recorded. Liquid themes answe
 | `themeId` | integer | Required |
 | `page` | string | Page path, for example `/` or `/shop` |
 
-Returns `url`, a link to the preview in the PapelShip panel. The user must be signed in. It shows the copy's saved files and the drafts `save_draft` left on the live copy.
+Returns `url`, a link to the preview in the PapelShip panel. The user must be signed in. It shows the copy's saved (draft) files, plus proposals `save_draft` left on a live design.
 
 ## Write tools
 
@@ -119,7 +119,8 @@ Pass exactly one of `content` or `edits`. Saves are validated like editor saves;
 |---|---|---|
 | `copy` | The copy is not live | Saved, with a new version. `saved: true` |
 | `code_package_draft` | A theme code package | Saved. Live pages keep the published version. `saved: true` |
-| `proposal` | The live copy | Nothing written. A pending proposal (`proposalId`) for the owner to accept, and a 30-minute preview draft. `saved: false` |
+| `live_copy_draft` | The live theme copy | Saved as a draft. Live pages keep the published version until the owner publishes. `saved: true` |
+| `proposal` | A live uploaded design | Nothing written. A pending proposal (`proposalId`) for the owner to accept, and a 30-minute preview draft. `saved: false` |
 
 Every result includes `problems` from the editor diagnostics.
 
