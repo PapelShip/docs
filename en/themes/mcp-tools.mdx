@@ -68,7 +68,7 @@ Returns hits with `path`, `line`, `column` and a line preview.
 | `themeId` | integer | Required |
 | `path` | string | A section file |
 
-Without `path`: the theme settings from `config/settings_schema.json` and every section with its name, setting ids and block types. With `path`: the section's full `{% schema %}` JSON.
+Without `path`: the theme settings from `config/settings_schema.json` and every section with its name, setting ids and block types. With `path`: the section's full `{% schema %}` JSON. Both answers include `sectionObject`: the section fields and the `section.css_id` note.
 
 ### validate
 
@@ -78,7 +78,7 @@ Without `path`: the theme settings from `config/settings_schema.json` and every 
 | `path` | string | One stored file |
 | `proposalId` | string | A proposal from `propose_edit` or `save_draft` |
 
-Without `path` and `proposalId`, validates the whole copy as publishing would. Returns `valid` and `problems` (`path`, `line`, `column`, `message`, `severity`).
+Without `path` and `proposalId`, validates the whole copy as publishing would. Returns `valid` and `problems` (`path`, `line`, `column`, `message`, `severity`). For theme code packages, a raw `section.id` in CSS or `id=`/`for=` is a `warning` (never makes `valid` false).
 
 ### scan
 
@@ -96,7 +96,7 @@ Dry run of the design security scanner. Nothing is recorded. Liquid themes answe
 | `themeId` | integer | Required |
 | `page` | string | Page path, for example `/` or `/shop` |
 
-Returns `url`, a link to the preview in the PapelShip panel. The user must be signed in. It shows the copy's saved (draft) files.
+Returns `url`, a link to the preview in the PapelShip panel. The user must be signed in. It shows the copy's saved (draft) files. Test clicks, toggles and links in this page; the visual editor canvas selects on click.
 
 ## Write tools
 
@@ -121,7 +121,7 @@ Pass exactly one of `content` or `edits`. Saves are validated like editor saves;
 | `code_package_draft` | A theme code package | Saved. Live pages keep the published version. `saved: true` |
 | `live_copy_draft` | The live theme copy or the live design | Saved as a draft. The store keeps the published version until Publish. `saved: true` |
 
-Every result includes `problems` from the editor diagnostics.
+Every result includes `problems` from the editor diagnostics, for example the `section.css_id` warning in code packages.
 
 ### propose_edit
 

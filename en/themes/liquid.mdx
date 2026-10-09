@@ -59,6 +59,7 @@ Rich text and HTML setting values are sanitised on the server when they are save
 | `collections` | All collections, each with the collection fields |
 | `all_products` | Every product of the store, each with the product fields |
 | `settings` | Theme setting values |
+| `section` | In a section: `id`, `css_id`, `type`, `settings`, `blocks` |
 | `request` | `locale`, `page_type`, `path`, `design_mode` |
 | `localization` | `language`, `available_languages`, `currency` |
 
@@ -81,6 +82,7 @@ Rich text and HTML setting values are sanitised on the server when they are save
 | `collection_url` | Link to a collection page |
 | `store_url` | Link to a store path |
 | `escape` | Escapes text for HTML |
+| `css_id` | Makes a value safe for CSS selectors and id attributes |
 
 <Warning>
 Escape every product and customer text with `| escape`. Titles and descriptions are written by people.

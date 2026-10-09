@@ -25,6 +25,12 @@ Every `sections/<name>.liquid` with a `{% schema %}` block appears in the visual
 
 When you change the schema in code, the form updates right away. New settings get their defaults; removed settings are ignored and their values kept.
 
+## Section ids in CSS
+
+In a code section `section.id` is `code:<name>`. The `:` breaks CSS selectors (`#{{ section.id }}-yearly:checked` is dropped silently) and `#id` lookups. Use `section.css_id` (`code-<name>`) in `{% style %}` and in `id=` / `for=` attributes, or `{{ value | css_id }}`. The code editor and MCP `validate` / `save_draft` warn about a raw `section.id` there; the editor's quick fix is **Use section.css_id**.
+
+Labels, radio/checkbox toggles, `<details>` and selects work in the visual editor canvas. To click links and buttons, turn on **Interact** in the top bar (or press `I`, or hold `Alt`).
+
 ## Edit code of a built-in section
 
 Choose **Edit code** on a built-in section to eject it. Its Liquid twin is copied into your package with the same markup and class names, so it looks identical and keeps its settings. **Revert to built-in** brings the original section back.
