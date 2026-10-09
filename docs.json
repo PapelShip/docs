@@ -56,7 +56,7 @@
             ]
           },
           {
-            "tab": "API Store",
+            "tab": "API-based Store",
             "icon": "credit-card",
             "groups": [
               {
@@ -76,7 +76,7 @@
             ]
           },
           {
-            "tab": "User API",
+            "tab": "Digital Store",
             "icon": "store",
             "groups": [
               {
@@ -96,6 +96,28 @@
                   "source": "api-reference/openapi/user-api.yaml",
                   "directory": "en/reference/user-api"
                 }
+              }
+            ]
+          },
+          {
+            "tab": "Themes",
+            "icon": "palette",
+            "groups": [
+              {
+                "group": "Themes",
+                "pages": [
+                  "en/themes/overview",
+                  "en/themes/liquid",
+                  "en/themes/designs",
+                  "en/themes/code-layer"
+                ]
+              },
+              {
+                "group": "AI agents (MCP)",
+                "pages": [
+                  "en/themes/mcp",
+                  "en/themes/mcp-tools"
+                ]
               }
             ]
           },
@@ -146,7 +168,7 @@
             ]
           },
           {
-            "tab": "API Store",
+            "tab": "API Tabanlı Mağaza",
             "icon": "credit-card",
             "groups": [
               {
@@ -166,7 +188,7 @@
             ]
           },
           {
-            "tab": "User API",
+            "tab": "Dijital Mağaza",
             "icon": "store",
             "groups": [
               {

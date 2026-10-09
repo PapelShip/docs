@@ -1,0 +1,141 @@
+---
+title: "Designs"
+sidebarTitle: "Designs"
+description: "Upload your own HTML site as a design and connect it to products, cart and checkout with Liquid, data-ps attributes or the JavaScript SDK."
+---
+
+A design is your own website, uploaded as a ZIP, that PapelShip serves as your storefront. You keep full control of the markup and add commerce in three ways:
+
+1. **Liquid pages**: `pages/*.liquid` render with your store data on the server.
+2. **`data-ps` attributes**: plain HTML that PapelShip fills with product data on the server.
+3. **The SDK**: `window.PapelShip` for products, cart and checkout in the browser.
+
+## Package
+
+| Path | Holds |
+|---|---|
+| `pages/*.html`, `pages/*.liquid` | Pages. `.html` pages are static; `.liquid` pages render with store data. |
+| `partials/`, `snippets/` | Shared markup |
+| `assets/`, `media/` | CSS, JavaScript, images and fonts |
+| `config/design.json` | Page list with paths and SEO, plus your settings |
+| `seo/robots.txt`, `seo/sitemap-extra.txt` | Optional SEO files |
+
+Each page listed in `config/design.json` gets a path on your store.
+
+**Templates.** `pages/product.liquid` (or `.html`) is your product page and `pages/shop.liquid` your shop listing. Without them, PapelShip shows a neutral product or shop page inside your design.
+
+**Not found.** Add `pages/404.html` (or `.liquid`) for your own not-found page. Unknown addresses and unknown products show it.
+
+## Scan and review
+
+Every upload is scanned before it can go live. Code that attacks customers or the platform is blocked: card-data fields, hidden redirects, forms that post to other sites, requests to PapelShip APIs or other stores, and harmful scripts. Unusual code goes to a PapelShip review first. Fix the listed files and upload again.
+
+Edits to the live design are scanned again in the background.
+
+## data-ps attributes
+
+Mark elements and PapelShip fills them with product data on the server:
+
+```html
+<div data-ps-product="current">
+  <img data-ps="image" alt="">
+  <h1 data-ps="title"></h1>
+  <p><span data-ps="price"></span> <s data-ps="compare-price" data-ps-if="on-sale"></s></p>
+  <div data-ps="variants"></div>
+  <button data-ps="add" data-ps-if="in-stock">Add to cart</button>
+  <span data-ps-if="sold-out">Sold out</span>
+</div>
+```
+
+### Values
+
+| `data-ps` | Fills |
+|---|---|
+| `title` | Product title |
+| `price` | Current price |
+| `compare-price` | Compare-at price |
+| `stock` | Stock label |
+| `rating` | Average rating |
+| `badge` | Sale or campaign badge |
+| `description` | Plain-text description |
+| `image` | On an `<img>`: the product image |
+| `url` | On an `<a>`: link to the product page |
+| `buy` | Buy-now button, goes to checkout |
+| `add` | Add-to-cart button |
+| `variants` | On a `<div>`: variant picker. Add, buy and price beside it follow the choice. |
+
+### Conditions
+
+| `data-ps-if` | Keeps the element only when |
+|---|---|
+| `on-sale` | The product is on sale |
+| `in-stock` | The product is in stock |
+| `sold-out` | The product is sold out |
+
+### Containers
+
+| Attribute | Does |
+|---|---|
+| `data-ps-products="8"` | Repeats the first `<template>` child for N products (max 48) |
+| `data-ps-collection` | Limits the list to a collection handle |
+| `data-ps-sort` | `featured`, `newest`, `price-asc`, `price-desc`, `best-selling` |
+| `data-ps-ids` | Comma-separated product ids to show |
+| `data-ps-product` | One product: an id, a hash, or `current` on a product template |
+
+```html
+<div data-ps-products="8" data-ps-sort="newest">
+  <template>
+    <a data-ps="url"><img data-ps="image" alt=""><span data-ps="title"></span></a>
+    <span data-ps="price"></span>
+    <button data-ps="add" data-ps-if="in-stock">Add to cart</button>
+  </template>
+</div>
+```
+
+## Liquid pages
+
+`.liquid` pages use the same objects, filters and tags as Liquid themes, including `{% app_block %}`. See [Themes and Liquid](/en/themes/liquid). Static exports that use `{{ }}` for other template engines stay safe: only `.liquid` pages are rendered.
+
+## SDK
+
+Every design page gets the SDK automatically as `window.PapelShip`.
+
+| Method | Does |
+|---|---|
+| `products.list({ limit, ids, collection, sort })` | Promise of products |
+| `products.get(id)` | Promise of one product |
+| `cart.items`, `cart.count`, `cart.subtotal` | Cart state |
+| `cart.add(id, { variantId, quantity })` | Adds a line, returns a promise |
+| `cart.remove`, `cart.update(index, quantity)`, `cart.clear` | Changes the cart |
+| `cart.open`, `cart.close` | Opens or closes the cart drawer |
+| `cart.on`, `cart.off` | `change` and `add` events (`papelship:cart-change`, `papelship:cart-add`) |
+| `price` | Price lines with campaigns applied |
+| `checkout({ mode: 'page' \| 'embed' })` | Always the platform checkout |
+| `checkoutInvoice` | Opens an existing invoice |
+| `formatMoney(cents, currency)` | Formats a price |
+| `bind` | Re-scans the page after you add markup |
+| `on`, `off` | `papelship:*` events |
+
+```js
+PapelShip.products.list({ limit: 8, sort: 'newest' }).then(function (items) {
+  var grid = document.getElementById('grid')
+  items.forEach(function (p) {
+    var a = document.createElement('a')
+    a.href = p.url
+    a.textContent = p.title + ' ' + PapelShip.formatMoney(p.price_cents, p.currency)
+    grid.appendChild(a)
+  })
+})
+```
+
+## Components
+
+The code editor's **Insert component** menu writes ready-made, editable code: product grid, product card, product page, price, buy button, add to cart, cart count, cart drawer, embedded checkout and collection list. Click a component in the preview to change its settings again.
+
+## Store pages
+
+Checkout, cart, sign-in, account and order tracking render inside your design with a layout you pick in the panel. To design them yourself, add `pages/checkout.liquid`, `pages/cart.liquid`, `pages/login.liquid`, `pages/account.liquid` or `pages/track.liquid` (or `.html`) with exactly one locked block, for example `<div data-app-block="checkout_form"></div>`. The blocks are listed in [Platform pages](/en/themes/liquid#platform-pages).
+
+<Note>
+Customers always pay on the PapelShip checkout page or its embedded popup. Designs can't replace checkout or collect card data.
+</Note>
