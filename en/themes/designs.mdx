@@ -30,7 +30,7 @@ Each page listed in `config/design.json` gets a path on your store.
 
 Every upload is scanned before it can go live. Code that attacks customers or the platform is blocked: card-data fields, hidden redirects, forms that post to other sites, requests to PapelShip APIs or other stores, and harmful scripts. Unusual code goes to a PapelShip review first. Fix the listed files and upload again.
 
-Edits to the live design are scanned again in the background.
+Edits are saved as drafts; your store keeps the published version. **Publish** scans exactly the files it sends live: blocked code refuses the publish, and findings that need review wait for a PapelShip review while the store keeps the current version, then go live once approved.
 
 ## data-ps attributes
 
