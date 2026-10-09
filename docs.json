@@ -95,6 +95,28 @@
             ]
           },
           {
+            "tab": "Themes",
+            "icon": "palette",
+            "groups": [
+              {
+                "group": "Themes",
+                "pages": [
+                  "en/themes/overview",
+                  "en/themes/liquid",
+                  "en/themes/designs",
+                  "en/themes/code-layer"
+                ]
+              },
+              {
+                "group": "AI agents (MCP)",
+                "pages": [
+                  "en/themes/mcp",
+                  "en/themes/mcp-tools"
+                ]
+              }
+            ]
+          },
+          {
             "tab": "qPapel Protection",
             "icon": "shield-halved",
             "groups": [

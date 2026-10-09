@@ -1,0 +1,48 @@
+---
+title: "Code layer for React themes"
+sidebarTitle: "Code layer"
+description: "Add code sections, CSS and JavaScript on top of Nightfall, Ship, Circuit, Arsenal, MarketPro and Vanguard without leaving the visual editor."
+---
+
+The built-in themes Nightfall, Ship, Circuit, Arsenal, MarketPro and Vanguard stay exactly as they are. The code layer lets you add your own code on top of them and keep editing visually.
+
+## Theme code package
+
+Each store gets one **theme code package** per built-in theme. You open it in the code editor like any theme copy. A package holds only:
+
+| Folder | Holds |
+|---|---|
+| `sections/` | Code sections (`.liquid` with a `{% schema %}` block) |
+| `snippets/` | Partials for your sections |
+| `assets/` | `theme.css`, loaded after the theme styles, and `theme.js`, loaded deferred on theme pages |
+| `locales/` | Translations for your sections |
+
+Theme JavaScript never loads on checkout, sign-in or account pages.
+
+## Code sections in the visual editor
+
+Every `sections/<name>.liquid` with a `{% schema %}` block appears in the visual editor's **Add section** list. Its settings form comes from the schema, so a code section stays fully editable without code. Reorder, hide, duplicate and delete work like built-in sections.
+
+When you change the schema in code, the form updates right away. New settings get their defaults; removed settings are ignored and their values kept.
+
+## Edit code of a built-in section
+
+Choose **Edit code** on a built-in section to eject it. Its Liquid twin is copied into your package with the same markup and class names, so it looks identical and keeps its settings. **Revert to built-in** brings the original section back.
+
+## Publish
+
+Live pages show the package's **published** version. Saved files show in the visual editor and the code editor previews only.
+
+1. Edit and save files in the code editor, or let an AI agent save drafts.
+2. Check the preview.
+3. Press **Publish** in the code editor toolbar or **Publish theme code** in the visual editor.
+
+Publishing validates every package file first. If anything fails, nothing changes on the live store.
+
+<Note>
+AI agents connected through MCP can save package files but never publish them. See [AI agents (MCP)](/en/themes/mcp).
+</Note>
+
+## Security
+
+Package files are scanned like designs, on the source and on the rendered output. Rich text and HTML settings are sanitised on the server.
