@@ -1,0 +1,137 @@
+---
+title: "App block reference"
+sidebarTitle: "App blocks"
+description: "Every platform block: arguments, aliases, what it renders, popup / drawer / navigation behaviour, and which theme kinds support it."
+---
+
+AI agents get the same reference from the theme MCP: the `get_reference` tool (topic `app_blocks`) and the `papelship://reference/app-blocks` resource. The code editor, `validate` and `save_draft` warn about unknown blocks, unknown or wrongly typed arguments and blocks a theme kind does not support.
+
+Platform blocks (`{% app_block %}` / data-app-block): arguments, behaviour, support per kind; locked page blocks.
+
+```liquid
+{% app_block 'buy_now', product_id: product.id, mode: 'embed' %}
+```
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed"}'></div>
+```
+
+| Block | Behaviour | liquid | design | code | twin |
+|---|---|---|---|---|---|
+| `add_to_cart` | drawer | yes | yes | yes* | yes* |
+| `buy_now` | navigation | yes | yes | yes | yes |
+| `cart_count` | drawer | yes | yes | yes* | yes* |
+| `cart_drawer` | drawer | yes | yes | yes* | yes* |
+| `checkout_button` | navigation | yes | yes | yes | yes |
+| `currency_selector` | inline | yes | yes | yes* | yes* |
+| `language_selector` | navigation | yes | yes | yes | yes |
+| `newsletter_form` | form | yes | yes | yes | yes |
+| `powered_by` | inline | yes | no | no | no |
+| `quick_view` | dialog | yes | yes | yes | yes |
+| `recently_viewed` | inline | yes | yes | yes* | yes* |
+| `reviews_widget` | inline | yes | yes | no | no |
+| `variant_picker` | inline | yes | yes | yes | yes |
+| `wishlist_button` | inline | yes | yes | yes | yes |
+
+`yes*`: works, with a note below. In code sections and ejected twins, cart blocks use the platform cart drawer, not the React theme's own drawer; the theme's cart badge stays in sync.
+
+## add_to_cart
+
+Add-to-cart button for one product. Adds to the shared storefront cart and opens the cart drawer. A product with several variants and no choice: the variant_picker beside it asks, else the product page opens.
+
+| Argument | Type | Required | Aliases | Default | Description |
+|---|---|---|---|---|---|
+| `product_id` | product | yes | `product` |  | Product id or hash id (product.id / product.hash_id). A product object is accepted too. |
+| `variant_id` | id |  | `variant` |  | Variant id; default: the chosen variant of a variant_picker beside it, else the default variant. |
+| `quantity` | integer |  |  | `1` | Quantity (1 or more). |
+| `label` | string |  |  |  | Button text (default "Add to cart", translated). Ignored when the placeholder has its own markup. |
+| `mode` | enum (`page`, `embed`) |  |  |  | No effect: add_to_cart always adds to the cart. Use buy_now for checkout. |
+
+## buy_now
+
+Buy-now button for one product. `mode: 'page'` (default) goes to the platform checkout with only this product (the cart is kept). `mode: 'embed'` opens the checkout popup over the page (platform iframe; card data never touches the theme) and falls back to the page when the widget cannot load.
+
+| Argument | Type | Required | Aliases | Default | Description |
+|---|---|---|---|---|---|
+| `product_id` | product | yes | `product` |  | Product id or hash id. A product object is accepted too. |
+| `variant_id` | id |  | `variant` |  | Variant id; default: the chosen variant of a variant_picker beside it. |
+| `quantity` | integer |  |  | `1` | Quantity (1 or more). |
+| `label` | string |  |  |  | Button text (default "Buy now", translated). |
+| `mode` | enum (`page`, `embed`) |  |  | `page` | `page` = checkout page; `embed` = checkout popup over the current page. |
+
+## cart_count
+
+Cart button with the item count ("Cart `<n>`"); your own markup keeps its look and a `[data-ps-count]` child receives the number. Click opens the cart drawer. No arguments.
+
+## cart_drawer
+
+Configures the slide-in cart drawer (lines, quantities, campaign discounts, free-shipping bar, upsell, checkout). Renders nothing in place; the first `cart_drawer` of the page sets the options.
+
+| Argument | Type | Default | Description |
+|---|---|---|---|
+| `upsell` | string |  | Collection handle or id whose products are offered in the drawer. |
+| `upsell_limit` | integer | `3` | Upsell products shown (1-6). |
+| `upsell_heading` | string |  | Upsell heading (default "You may also like"). |
+| `free_shipping` | boolean | `true` | `false` hides the free-shipping progress bar. |
+
+## checkout_button
+
+Checkout button for the whole cart (disabled while the cart is empty). `mode: 'page'` (default) goes to `<store>/checkout`; `mode: 'embed'` opens the checkout popup; the cart is emptied after payment.
+
+| Argument | Type | Default | Description |
+|---|---|---|---|
+| `label` | string |  | Button text (default "Checkout", translated). |
+| `mode` | enum (`page`, `embed`) | `page` | Checkout page or popup. |
+
+## currency_selector
+
+Display currency picker (hidden when fewer than two currencies). Stores the display currency (checkout always charges in the store currency) and emits `papelship:currency-change`. In code sections and twins pass `currencies`: those pages only know the store currency.
+
+| Argument | Type | Description |
+|---|---|---|
+| `label` | string | Label text. |
+| `currencies` | list | Currency codes (`"USD,EUR,TRY"` or an array); default: the store's display currencies. |
+
+## language_selector
+
+Store language picker (hidden when the store has one language). Sets the language cookie and reloads the page. Argument: `label`.
+
+## newsletter_form
+
+Newsletter sign-up with an explicit consent checkbox. Posts to the platform leads endpoint; previews never subscribe. Arguments: `label`, `placeholder`, `button`, `consent_text`.
+
+## powered_by
+
+The "Powered by PapelShip" credit (hidden on plans that allow hiding it). Liquid themes only: design pages and React theme footers get the credit from the platform automatically.
+
+## quick_view
+
+Quick-view button for one product: opens a dialog with images, price, variants and add-to-cart. Arguments: `product_id` (required, alias `product`), `label`.
+
+## recently_viewed
+
+The visitor's recently viewed products (from this browser); renders nothing when the list is empty. Products are recorded on Liquid product pages (React theme product pages do not record views). Arguments: `limit` (default 4, 1-20), `heading`.
+
+## reviews_widget
+
+Published reviews: the page product on product pages, else the store. Not supported in code sections or twins (those pages carry no review data; use the React theme's reviews section). Arguments: `heading`, `limit` (default 5, 1-50), `write` (default `true`; `false` hides the write-a-review link).
+
+## variant_picker
+
+Variant picker (radio groups) for one product. `add_to_cart` / `buy_now` of the same product in the nearest common container (or a `data-ps-scope` element) use the chosen variant; `data-ps` price / compare-price / stock texts follow it. Argument: `product_id` (required, alias `product`).
+
+## wishlist_button
+
+Favourite toggle for one product (a heart button with `aria-pressed`). Saved in the browser and synced to the customer account when signed in. Argument: `product_id` (numeric id; hash ids are not saved to the account).
+
+## Locked page blocks
+
+| Block | Page | Liquid theme file | Design file |
+|---|---|---|---|
+| `checkout_form` | Checkout page | `templates/checkout.liquid` | `pages/checkout.liquid` or `.html` |
+| `cart_view` | Cart page | `templates/cart.liquid` | `pages/cart.liquid` or `.html` |
+| `customer_login` | Login page | `templates/customers/login.liquid` | `pages/login.liquid` or `.html` |
+| `customer_account` | Account page | `templates/customers/account.liquid` | `pages/account.liquid` or `.html` |
+| `order_track` | Order tracking page | `templates/customers/track.liquid` | `pages/track.liquid` or `.html` |
+
+Each works only once, in its own override file. React theme code packages have no page overrides.

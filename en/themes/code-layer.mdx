@@ -35,6 +35,24 @@ Labels, radio/checkbox toggles, `<details>` and selects work in the visual edito
 
 Choose **Edit code** on a built-in section to eject it. Its Liquid twin is copied into your package with the same markup and class names, so it looks identical and keeps its settings. **Revert to built-in** brings the original section back.
 
+## Commerce and checkout
+
+Code sections sell with app blocks. They need no script:
+
+```liquid
+{% app_block 'add_to_cart', product_id: product.id %}
+{% app_block 'buy_now', product_id: product.id, mode: 'embed', label: 'Buy' %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+- `buy_now` and `checkout_button` go to the checkout page by default. `mode: 'embed'` opens the checkout popup over your page.
+- `add_to_cart` and `cart_count` open the platform cart drawer. The theme's cart badge stays in sync.
+- `reviews_widget` and `powered_by` do not work in code sections. `currency_selector` needs `currencies: 'USD,EUR'`.
+- Code sections have `shop`, `collections`, `all_products`, `request` and `localization`. They have no `product`, `collection` or `routes`.
+- `window.PapelShip` loads after the page has loaded, on pages whose code sections contain an app block or a `data-ps` binding. In `assets/theme.js`, wait for `papelship:sdk-ready`.
+
+See [Commerce and checkout](/en/themes/commerce) and [App blocks](/en/themes/app-blocks).
+
 ## Publish
 
 Live pages show the package's **published** version. Saved files show in the visual editor and the code editor previews only.

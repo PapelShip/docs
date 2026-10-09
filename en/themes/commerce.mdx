@@ -1,0 +1,80 @@
+---
+title: "Commerce and checkout"
+sidebarTitle: "Commerce & checkout"
+description: "Add to cart, buy now and checkout from any theme: the checkout page or the embedded checkout popup, with app blocks, data-ps attributes or window.PapelShip."
+---
+
+Every theme kind sells the same way: platform blocks put the buttons on the page, and payment always happens on the PapelShip checkout page or in its popup. A theme never collects card data.
+
+## Checkout page or popup
+
+`buy_now`, `checkout_button`, `data-ps="buy"` and `PapelShip.checkout()` take a `mode`:
+
+| mode | What happens |
+|---|---|
+| `page` (default) | The browser goes to the platform checkout page: `<store>/checkout`, or the buy-now URL for one product. |
+| `embed` | The checkout opens as a popup over the current page, in a PapelShip frame. If the popup cannot load, the checkout page opens instead. Paying the cart empties it. |
+
+`add_to_cart` always adds to the cart and opens the cart drawer.
+
+## Liquid themes and code sections
+
+App blocks need no script. Pass the product's `id` (or `hash_id`) as `product_id`:
+
+```liquid
+{% for p in all_products limit: 3 %}
+  <h3>{{ p.title | escape }}</h3>
+  <p>{{ p.price | money }}</p>
+  {% app_block 'add_to_cart', product_id: p.id %}
+  {% app_block 'buy_now', product_id: p.id, mode: 'embed', label: 'Buy' %}
+{% endfor %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+<Note>
+`product` works as an alias of `product_id`, and a product object is accepted too. `product_id` wins when both are given.
+</Note>
+
+## Uploaded designs (and any markup)
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed","label":"Buy"}'></div>
+
+<!-- or your own button -->
+<button type="button" data-ps="buy" data-ps-product-id="PRODUCT_ID" data-ps-mode="embed">Buy</button>
+```
+
+## From JavaScript
+
+`window.PapelShip` may load after your script. This helper works in every theme kind:
+
+```js
+function withPapelShip(fn) {
+  var done = false;
+  function go() { if (!done && window.PapelShip && window.PapelShip.version) { done = true; fn(window.PapelShip); } }
+  go();
+  if (!done) { window.addEventListener('papelship:sdk-ready', go); document.addEventListener('DOMContentLoaded', go); }
+}
+
+withPapelShip(function (ps) {
+  document.getElementById('buy').onclick = function () {
+    ps.checkout({ products: [{ id: 'PRODUCT_ID' }], mode: 'embed', onPaid: function (d) { console.log(d.invoiceId); } });
+  };
+});
+```
+
+## Where window.PapelShip is available
+
+| Theme kind | Loaded | Timing |
+|---|---|---|
+| Liquid theme | On every theme page | Deferred at the top of `<head>`. Deferred theme scripts (`script_tag`) can use it. |
+| Uploaded design | Only on pages with a `data-ps` binding or a `data-app-block` placeholder | Deferred at the top of `<head>`. Call it from `DOMContentLoaded`. A page that only uses script needs one placeholder, for example `<div data-app-block="cart_count" hidden></div>`. |
+| Code section / ejected twin | On pages whose code sections contain an app block or a `data-ps` binding, and always in the builder | Loaded after the page hydrates, after `assets/theme.js` runs. Wait for `papelship:sdk-ready`. Inline `<script>` is refused in code sections. |
+
+Inline `<script>` tags do not run on Liquid theme pages. Put scripts in `assets/*.js` and load them with `{{ 'x.js' | asset_url | script_tag }}`.
+
+## Testing
+
+The builder canvas selects elements when you click them, so buttons do nothing there. Turn on **Interact** in the builder top bar (press `I`, or hold `Alt`), or open the preview.
+
+See [App blocks](/en/themes/app-blocks) for every block, its arguments and where it works.

@@ -95,7 +95,7 @@ Escape every product and customer text with `| escape`. Titles and descriptions 
 | `{% section %}` | Renders a static section |
 | `{% sections %}` | Renders a section group |
 | `{% render %}` | Renders a snippet. Snippets can't see page variables, so pass what they need: `{% render 'card', product: product %}` |
-| `{% app_block %}` | Renders a store component, for example `{% app_block "add_to_cart", product: product.hash_id %}` |
+| `{% app_block %}` | Renders a platform block, for example `{% app_block 'add_to_cart', product_id: product.id %}` (`product` is an alias). See [App blocks](/en/themes/app-blocks) and [Commerce and checkout](/en/themes/commerce). |
 | `{% schema %}` | Section metadata, never rendered |
 
 App blocks: `add_to_cart`, `buy_now`, `cart_count`, `cart_drawer`, `checkout_button`, `powered_by`, `variant_picker`.

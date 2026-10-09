@@ -98,7 +98,11 @@ Mark elements and PapelShip fills them with product data on the server:
 
 ## SDK
 
-Every design page gets the SDK automatically as `window.PapelShip`.
+<Note>
+  The SDK is loaded only on design pages that contain a `data-ps` binding or a `data-app-block` placeholder. Call it from a `DOMContentLoaded` listener. See [Commerce and checkout](/en/themes/commerce).
+</Note>
+
+On those pages the SDK is available as `window.PapelShip`.
 
 | Method | Does |
 |---|---|
@@ -110,7 +114,7 @@ Every design page gets the SDK automatically as `window.PapelShip`.
 | `cart.open`, `cart.close` | Opens or closes the cart drawer |
 | `cart.on`, `cart.off` | `change` and `add` events (`papelship:cart-change`, `papelship:cart-add`) |
 | `price` | Price lines with campaigns applied |
-| `checkout({ mode: 'page' \| 'embed' })` | Always the platform checkout |
+| `checkout({ products?, mode: 'page' \| 'embed', onPaid? })` | `page` (default) goes to the platform checkout page; `embed` opens the checkout popup over your page |
 | `checkoutInvoice` | Opens an existing invoice |
 | `formatMoney(cents, currency)` | Formats a price |
 | `bind` | Re-scans the page after you add markup |

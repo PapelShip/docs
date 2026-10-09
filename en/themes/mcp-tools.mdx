@@ -10,12 +10,34 @@ Results are JSON wrapped in an untrusted-data block. Failures are tool errors wi
 
 ## Typical workflow
 
+1. `get_reference` (topic `overview`, then for example `commerce` or `app_blocks` with the theme kind) to learn what the platform supports.
 1. `list_themes` to find the copy, then `list_files`, `read_file` or `search`.
 2. `save_draft` with `baseHash` from your read.
 3. `validate` the file, and `scan` for an uploaded design.
 4. `preview_link` and give the link to the user. The user publishes in the panel.
 
 ## Read tools
+
+### get_reference
+
+The platform reference, generated from the same registry the editor and `validate` use. No store data.
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `topic` | string | `overview` (default), `kinds`, `app_blocks`, `commerce`, `sdk`, `liquid`, `platform_pages`, `limits` or `pitfalls` |
+| `kind` | string | `liquid`, `design`, `code` or `twin`: only what applies to that theme kind. `list_themes` returns the kind. `twin` is an ejected built-in section |
+| `name` | string | With `app_blocks`, one block (for example `buy_now`). With `sdk`, one member (for example `checkout` or `cart`) |
+
+Returns compact JSON. For example, `{ "topic": "app_blocks", "name": "buy_now" }` returns its arguments with types, required flags and aliases, its behaviour, and its support per theme kind.
+
+### Resources
+
+The same reference is available as MCP resources (`resources/list`, `resources/read`, `resources/templates/list`):
+
+| URI | Content |
+| --- | --- |
+| `papelship://reference/<topic>` | One topic: `overview`, `kinds`, `app-blocks`, `commerce`, `sdk`, `liquid`, `platform-pages`, `limits`, `pitfalls` |
+| `papelship://reference/<topic>/<kind>` | The topic for one theme kind |
 
 ### list_themes
 
@@ -78,7 +100,7 @@ Without `path`: the theme settings from `config/settings_schema.json` and every 
 | `path` | string | One stored file |
 | `proposalId` | string | A proposal from `propose_edit` or `save_draft` |
 
-Without `path` and `proposalId`, validates the whole copy as publishing would. Returns `valid` and `problems` (`path`, `line`, `column`, `message`, `severity`). For theme code packages, a raw `section.id` in CSS or `id=`/`for=` is a `warning` (never makes `valid` false).
+Without `path` and `proposalId`, validates the whole copy as publishing would. Returns `valid` and `problems` (`path`, `line`, `column`, `message`, `severity`). For theme code packages, a raw `section.id` in CSS or `id=`/`for=` is a `warning` (never makes `valid` false). Also flags unknown app blocks, unknown or wrongly typed arguments (with a did-you-mean suggestion), blocks the theme kind does not support, unknown `PapelShip` calls, and SDK calls that never run there (for example inline scripts on Liquid theme pages).
 
 ### scan
 

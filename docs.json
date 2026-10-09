@@ -109,7 +109,9 @@
                   "en/themes/overview",
                   "en/themes/liquid",
                   "en/themes/designs",
-                  "en/themes/code-layer"
+                  "en/themes/code-layer",
+                  "en/themes/commerce",
+                  "en/themes/app-blocks"
                 ]
               },
               {
