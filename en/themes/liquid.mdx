@@ -1,0 +1,128 @@
+---
+title: "Themes and Liquid"
+sidebarTitle: "Liquid themes"
+description: "Structure of a PapelShip Liquid theme, the objects, filters and tags you can use, and how platform pages are themed."
+---
+
+A Liquid theme is a package of text files, rendered on the server with [Liquid](https://shopify.github.io/liquid/). If you know Shopify themes, the layout is familiar.
+
+## Folders
+
+| Folder | Holds |
+|---|---|
+| `layout/` | `theme.liquid`, the page shell. It outputs `{{ content_for_layout }}`. |
+| `templates/` | One template per page type, as JSON (`index.json`) or Liquid. |
+| `sections/` | Reusable page sections with a `{% schema %}` block. |
+| `blocks/` | Theme blocks that sections can contain. |
+| `snippets/` | Partials you include with `{% render %}`. |
+| `assets/` | CSS, JavaScript, SVG and fonts. |
+| `config/` | `settings_schema.json` (theme settings) and `settings_data.json` (their values). |
+| `locales/` | Translation files, for example `en.default.json`. |
+
+Every theme needs `layout/theme.liquid`, `templates/index.json` and `config/settings_schema.json`.
+
+## Sections and schema
+
+A section declares its settings and blocks in a `{% schema %}` block. The visual editor builds its settings form from it.
+
+```liquid sections/hero.liquid
+<section class="hero">
+  <h1>{{ section.settings.heading | escape }}</h1>
+  {% for block in section.blocks %}
+    <p>{{ block.settings.text | escape }}</p>
+  {% endfor %}
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Welcome" }
+  ],
+  "blocks": [
+    { "type": "line", "name": "Line", "settings": [{ "type": "text", "id": "text", "label": "Text" }] }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}
+```
+
+Rich text and HTML setting values are sanitised on the server when they are saved.
+
+## Objects
+
+| Object | Fields |
+|---|---|
+| `shop` | `name`, `slug`, `logo`, `currency`, `locale`, `languages`, `url`, `settings` |
+| `product` | On product templates: `id`, `hash_id`, `title`, `handle`, `url`, `price`, `compare_at_price`, `on_sale`, `available`, `featured_image`, `images`, `description`, `short_description`, `rating`, `rating_count`, `options`, `variants`, `variant_count`, `default_variant_id`, `requires_shipping`, `campaign`, `meta` |
+| `collection` | On collection templates: `title`, `handle`, `url`, `products_count`, `products` |
+| `collections` | All collections, each with the collection fields |
+| `all_products` | Every product of the store, each with the product fields |
+| `settings` | Theme setting values |
+| `request` | `locale`, `page_type`, `path`, `design_mode` |
+| `localization` | `language`, `available_languages`, `currency` |
+
+## Filters
+
+| Filter | Does |
+|---|---|
+| `money` | Formats cents as a price |
+| `money_with_currency` | Price with the currency code |
+| `money_without_currency` | Number only |
+| `t` | Translates a key from your locale files |
+| `image_url` | Image URL, optionally resized |
+| `image_tag` | A complete `<img>` tag |
+| `asset_url` | URL of a file in `assets/` |
+| `stylesheet_tag` | A `<link rel="stylesheet">` tag |
+| `script_tag` | A `<script>` tag |
+| `handleize` | Makes a URL-safe handle |
+| `json` | Safe JSON for scripts |
+| `product_url` | Link to a product page |
+| `collection_url` | Link to a collection page |
+| `store_url` | Link to a store path |
+| `escape` | Escapes text for HTML |
+
+<Warning>
+Escape every product and customer text with `| escape`. Titles and descriptions are written by people.
+</Warning>
+
+## Tags
+
+| Tag | Does |
+|---|---|
+| `{% section %}` | Renders a static section |
+| `{% sections %}` | Renders a section group |
+| `{% render %}` | Renders a snippet. Snippets can't see page variables, so pass what they need: `{% render 'card', product: product %}` |
+| `{% app_block %}` | Renders a store component, for example `{% app_block "add_to_cart", product: product.hash_id %}` |
+| `{% schema %}` | Section metadata, never rendered |
+
+App blocks: `add_to_cart`, `buy_now`, `cart_count`, `cart_drawer`, `checkout_button`, `powered_by`, `variant_picker`.
+
+## Platform pages
+
+Checkout, cart, sign-in, account and order tracking always run on PapelShip. You can design the page around them with a template that contains exactly one locked block:
+
+| Page | Template | Locked block |
+|---|---|---|
+| Checkout | `templates/checkout.liquid` | `checkout_form` |
+| Cart | `templates/cart.liquid` | `cart_view` |
+| Sign-in | `templates/customers/login.liquid` | `customer_login` |
+| Account | `templates/customers/account.liquid` | `customer_account` |
+| Order tracking | `templates/customers/track.liquid` | `order_track` |
+
+```liquid templates/checkout.liquid
+<div class="checkout-shell">
+  <h1>{{ 'checkout.title' | t }}</h1>
+  {% app_block "checkout_form" %}
+</div>
+```
+
+The block must sit directly in the template, not in a snippet. Theme JavaScript never loads on these pages, and card fields are always the platform's.
+
+## Publishing
+
+1. Edit a copy in **Themes › Code editor**. Saving validates the file and keeps a version.
+2. Preview the copy in the editor.
+3. Publish the copy. Publishing validates every file of the theme first.
+
+AI agents can save drafts but can't publish. See [AI agents (MCP)](/en/themes/mcp).

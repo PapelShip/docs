@@ -1,0 +1,94 @@
+---
+title: "Crypto payments"
+description: "Build your own crypto checkout with dedicated deposit addresses."
+---
+
+Direct crypto invoices give each order its own HD-wallet deposit address. Use them when you want the checkout on your own site or in a Discord bot.
+
+## Create a crypto invoice
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.papelship.com/api/api-store/v1/crypto-invoice \
+  -H "Authorization: Bearer psa_your_api_key" \
+  -H "Idempotency-Key: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 50.00,
+    "currency": "USD",
+    "coin_type": "LTC",
+    "customer_email": "buyer@example.com",
+    "redirect_url": "https://yourdomain.com/order/success",
+    "webhook_url": "https://yourserver.com/api/crypto-callback",
+    "expires_in": 60
+  }'
+```
+
+```javascript Node.js
+const res = await fetch("https://app.papelship.com/api/api-store/v1/crypto-invoice", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.PAPELSHIP_API_KEY}`,
+    "Content-Type": "application/json",
+    "Idempotency-Key": orderIdempotencyKey,
+  },
+  body: JSON.stringify({ amount: 50, currency: "USD", coin_type: "LTC", expires_in: 60 }),
+});
+const { invoice } = await res.json();
+```
+</CodeGroup>
+
+<ResponseField name="invoice" type="object">
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="invoice_id" type="string">Unique invoice ID. Store it with your order.</ResponseField>
+    <ResponseField name="deposit_address" type="string">Unique address the customer sends funds to.</ResponseField>
+    <ResponseField name="expected_crypto_amount" type="number">Exact amount of crypto to send, based on the live rate.</ResponseField>
+    <ResponseField name="qr_code_url" type="string">Ready-to-display QR code image with address and amount.</ResponseField>
+    <ResponseField name="payment_url" type="string">Hosted fallback page for this invoice.</ResponseField>
+    <ResponseField name="status" type="string">Starts as `payment_pending`.</ResponseField>
+    <ResponseField name="expires_at" type="string">When the quoted rate and address expire.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Choose a network
+
+Tokens like `USDT` and `USDC` live on several chains. Set `network` to pick one, for example `TRC20`, `ERC20`, or `SOL`. Show the network clearly to your customer.
+
+<Warning>
+  Funds sent on the wrong network may be lost. Always display the coin **and** the network next to the deposit address.
+</Warning>
+
+## Track confirmations
+
+Poll the status endpoint until the invoice is paid:
+
+```bash
+curl "https://app.papelship.com/api/api-store/v1/payment-links/check?invoiceId=cRyPtO9912a8f0012" \
+  -H "Authorization: Bearer psa_your_api_key"
+```
+
+The `crypto_details` object shows on-chain progress:
+
+```json
+"crypto_details": {
+  "coin": "LTC",
+  "network": "LTC MAINNET",
+  "address": "Ltc1q99a812bf00192837410293847561928374",
+  "crypto_amount": 0.584795,
+  "confirmations": 2,
+  "required_confirmations": 2,
+  "tx_hash": "a1075db55d416d3ca199f55b603e87854619"
+}
+```
+
+<Tip>
+  Poll every 10–30 seconds while the customer is on your checkout page, and stop at `expires_at`. Show `confirmations` / `required_confirmations` as a progress bar.
+</Tip>
+
+## Invoice statuses
+
+| Status | Meaning |
+| :--- | :--- |
+| `awaiting_method` | Payment link created. The customer has not picked a method yet. |
+| `payment_pending` | Waiting for the customer's payment or for confirmations. |
+| `paid` | Payment confirmed. `is_paid` is `true`. Fulfill the order. |

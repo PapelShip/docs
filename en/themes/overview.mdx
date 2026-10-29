@@ -1,0 +1,42 @@
+---
+title: "Themes overview"
+sidebarTitle: "Overview"
+description: "The three ways to build a PapelShip storefront in code: Liquid themes, uploaded designs and the code layer for React themes."
+---
+
+PapelShip storefronts can be built visually, in code, or both. You edit everything in the store panel under **Themes**, and every code change goes through the same code editor, version history and security scanner.
+
+<CardGroup cols={3}>
+  <Card title="Liquid themes" icon="code" href="/en/themes/liquid">
+    Shopify-style theme packages: layouts, templates, sections, snippets, assets and settings.
+  </Card>
+  <Card title="Designs" icon="file-code" href="/en/themes/designs">
+    Upload your own HTML site and connect it to products, cart and checkout.
+  </Card>
+  <Card title="Code layer" icon="layer-group" href="/en/themes/code-layer">
+    Add code sections, CSS and JavaScript on top of a built-in React theme.
+  </Card>
+</CardGroup>
+
+## Theme copies
+
+Every Liquid theme, design and theme code package is a **copy** of your store. A store can keep up to 20 copies.
+
+- Edits save to the copy you edit. A copy that is not live never changes your storefront.
+- The live copy changes only when you publish or activate it in the panel.
+- Every save keeps a version. You can restore any of the last 50 versions of a file.
+
+| Limit | Value |
+|---|---|
+| File size | 512 KB |
+| Files per copy | 400 |
+| Copy size | 10 MB |
+| Copies per store | 20 |
+
+## Previews
+
+Previews render your saved files and your unsaved editor drafts inside the panel. They are never public: the storefront shows a copy that is not live only inside the panel preview frame, with a signed token that expires after 30 minutes.
+
+## Work with an AI agent
+
+Connect Claude, Cursor, VS Code or another MCP client to your themes. The agent reads your theme code and saves its edits as drafts; you review and publish. See [AI agents (MCP)](/en/themes/mcp).

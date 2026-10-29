@@ -1,0 +1,67 @@
+---
+title: "PapelShip geliştirici platformu"
+sidebarTitle: "Giriş"
+description: "PapelShip API'leri ile ödeme alın, mağazanızı yönetin ve yazılımınızı koruyun."
+mode: "wide"
+---
+
+<div className="not-prose rounded-2xl border border-zinc-950/10 dark:border-white/10 bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-950 px-8 py-10 mb-10">
+  <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">PapelShip Developers</p>
+  <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-zinc-950 dark:text-white">Ödeme, e-ticaret ve lisanslamayı ürününüze entegre edin</h1>
+  <p className="mt-4 max-w-2xl text-base text-zinc-600 dark:text-zinc-400">Her türlü checkout'tan ödeme almak, mağazanızı otomatikleştirmek ve masaüstü yazılımlarınızı lisanslayıp korumak için üç REST API.</p>
+  <div className="mt-7 flex flex-wrap gap-3">
+    <a href="/tr/quickstart" className="rounded-lg bg-zinc-950 dark:bg-white px-4 py-2.5 text-sm font-medium text-white dark:text-zinc-950 no-underline hover:opacity-90">Hemen başlayın →</a>
+    <a href="/tr/guides/authentication" className="rounded-lg border border-zinc-950/15 dark:border-white/15 px-4 py-2.5 text-sm font-medium text-zinc-950 dark:text-white no-underline hover:bg-zinc-950/5 dark:hover:bg-white/5">Kimlik doğrulama</a>
+  </div>
+</div>
+
+## Ürünler
+
+<CardGroup cols={3}>
+  <Card title="API Store" icon="credit-card" href="/tr/api-store/overview">
+    Hosted ödeme linkleri, doğrudan kripto faturaları, anlık ödeme durumu ve iadeler.
+  </Card>
+  <Card title="User API" icon="store" href="/tr/user-api/overview">
+    Ürün, kategori, kupon, müşteri, fatura ve analitik yönetimi.
+  </Card>
+  <Card title="qPapel Protection" icon="shield-halved" href="/tr/qpapel/overview">
+    Lisans anahtarları, HWID bağlama, uzaktan ayarlar, anti-cheat kuralları ve Discord logları.
+  </Card>
+</CardGroup>
+
+## Geliştirmeye başlayın
+
+<Steps>
+  <Step title="API anahtarınızı alın">
+    [PapelShip paneline](https://app.papelship.com) giriş yapın ve mağazanız için bir API anahtarı oluşturun.
+  </Step>
+  <Step title="İlk isteğinizi gönderin">
+    Beş dakikadan kısa sürede ödeme linki oluşturmak için [hızlı başlangıç](/tr/quickstart) rehberini izleyin.
+  </Step>
+  <Step title="Canlıya alın">
+    Yayına almadan önce [kimlik doğrulama](/tr/guides/authentication), [hatalar](/tr/guides/errors) ve [idempotency](/tr/guides/idempotency) sayfalarını inceleyin.
+  </Step>
+</Steps>
+
+## Base URL'ler
+
+| API | Base URL |
+| :--- | :--- |
+| API Store | `https://app.papelship.com/api/api-store` |
+| User API | `https://app.papelship.com/api_user/api/v1` |
+| qPapel Protection | `https://app.papelship.com/api/qpapel/v1` |
+
+<Info>
+  Tüm API'ler HTTPS üzerinden JSON alır ve döndürür. Düz HTTP istekleri desteklenmez.
+</Info>
+
+## Yardıma mı ihtiyacınız var?
+
+<CardGroup cols={2}>
+  <Card title="Panel" icon="gauge" href="https://app.papelship.com">
+    API anahtarı oluşturun, ödeme yöntemlerini ayarlayın ve faturaları görüntüleyin.
+  </Card>
+  <Card title="E-posta desteği" icon="envelope" href="mailto:support@papelship.com">
+    PapelShip ekibine support@papelship.com adresinden ulaşın.
+  </Card>
+</CardGroup>

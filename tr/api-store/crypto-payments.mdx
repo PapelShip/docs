@@ -1,0 +1,94 @@
+---
+title: "Kripto ödemeleri"
+description: "Özel deposit adresleriyle kendi kripto checkout'unuzu oluşturun."
+---
+
+Doğrudan kripto faturaları her siparişe kendi HD cüzdan deposit adresini verir. Checkout'u kendi sitenizde veya bir Discord botunda göstermek istediğinizde kullanın.
+
+## Kripto faturası oluşturun
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.papelship.com/api/api-store/v1/crypto-invoice \
+  -H "Authorization: Bearer psa_your_api_key" \
+  -H "Idempotency-Key: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 50.00,
+    "currency": "USD",
+    "coin_type": "LTC",
+    "customer_email": "buyer@example.com",
+    "redirect_url": "https://yourdomain.com/order/success",
+    "webhook_url": "https://yourserver.com/api/crypto-callback",
+    "expires_in": 60
+  }'
+```
+
+```javascript Node.js
+const res = await fetch("https://app.papelship.com/api/api-store/v1/crypto-invoice", {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.PAPELSHIP_API_KEY}`,
+    "Content-Type": "application/json",
+    "Idempotency-Key": orderIdempotencyKey,
+  },
+  body: JSON.stringify({ amount: 50, currency: "USD", coin_type: "LTC", expires_in: 60 }),
+});
+const { invoice } = await res.json();
+```
+</CodeGroup>
+
+<ResponseField name="invoice" type="object">
+  <Expandable title="alanlar" defaultOpen>
+    <ResponseField name="invoice_id" type="string">Benzersiz fatura ID'si. Siparişinizle saklayın.</ResponseField>
+    <ResponseField name="deposit_address" type="string">Müşterinin ödeme göndereceği benzersiz adres.</ResponseField>
+    <ResponseField name="expected_crypto_amount" type="number">Canlı kura göre gönderilmesi gereken tam kripto tutarı.</ResponseField>
+    <ResponseField name="qr_code_url" type="string">Adres ve tutarı içeren, gösterime hazır QR kod görseli.</ResponseField>
+    <ResponseField name="payment_url" type="string">Bu fatura için yedek hosted sayfa.</ResponseField>
+    <ResponseField name="status" type="string">`payment_pending` olarak başlar.</ResponseField>
+    <ResponseField name="expires_at" type="string">Kurun ve adresin geçerliliğini yitirdiği zaman.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Ağ seçin
+
+`USDT` ve `USDC` gibi tokenlar birden fazla zincirde bulunur. Birini seçmek için `network` alanını ayarlayın, örneğin `TRC20`, `ERC20` veya `SOL`. Ağı müşterinize açıkça gösterin.
+
+<Warning>
+  Yanlış ağdan gönderilen fonlar kaybolabilir. Deposit adresinin yanında her zaman coin **ve** ağı gösterin.
+</Warning>
+
+## Onayları takip edin
+
+Fatura ödenene kadar durum endpoint'ini sorgulayın:
+
+```bash
+curl "https://app.papelship.com/api/api-store/v1/payment-links/check?invoiceId=cRyPtO9912a8f0012" \
+  -H "Authorization: Bearer psa_your_api_key"
+```
+
+`crypto_details` nesnesi zincir üstü ilerlemeyi gösterir:
+
+```json
+"crypto_details": {
+  "coin": "LTC",
+  "network": "LTC MAINNET",
+  "address": "Ltc1q99a812bf00192837410293847561928374",
+  "crypto_amount": 0.584795,
+  "confirmations": 2,
+  "required_confirmations": 2,
+  "tx_hash": "a1075db55d416d3ca199f55b603e87854619"
+}
+```
+
+<Tip>
+  Müşteri checkout sayfanızdayken her 10–30 saniyede bir sorgulayın ve `expires_at` zamanında durun. `confirmations` / `required_confirmations` oranını ilerleme çubuğu olarak gösterin.
+</Tip>
+
+## Fatura durumları
+
+| Durum | Anlamı |
+| :--- | :--- |
+| `awaiting_method` | Ödeme linki oluşturuldu. Müşteri henüz yöntem seçmedi. |
+| `payment_pending` | Müşterinin ödemesi veya onaylar bekleniyor. |
+| `paid` | Ödeme onaylandı. `is_paid` değeri `true`. Siparişi teslim edin. |

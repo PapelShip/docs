@@ -1,0 +1,73 @@
+---
+title: "Authentication"
+description: "Authenticate requests to each PapelShip API with your API key."
+---
+
+Every request must include an API key. Each API accepts a slightly different set of headers.
+
+<Tabs>
+  <Tab title="API Store">
+    Send your secret key (`psa_...`) as a Bearer token or in the `X-API-Key` header.
+
+    ```bash
+    # Preferred
+    Authorization: Bearer psa_your_api_key
+
+    # Alternative
+    X-API-Key: psa_your_api_key
+    ```
+  </Tab>
+  <Tab title="User API">
+    Send your API key **and** your store hash on every request.
+
+    ```bash
+    x-api-key: your_api_key
+    x-store-hash: your_store_hash
+    ```
+
+    | Header | Description |
+    | :--- | :--- |
+    | `x-api-key` | Your personal API key from dashboard settings. |
+    | `x-store-hash` | The unique identifier of your store. |
+  </Tab>
+  <Tab title="qPapel Protection">
+    Send your developer key (`pk_live_...`) in one of three ways.
+
+    ```bash
+    # Preferred
+    Authorization: Bearer pk_live_your_key
+
+    # Alternative
+    x-api-key: pk_live_your_key
+
+    # Legacy (supported for older loaders)
+    api-key: pk_live_your_key
+    ```
+  </Tab>
+</Tabs>
+
+## Test your credentials
+
+Call the User API connectivity endpoint to confirm your key and store hash work:
+
+```bash
+curl https://app.papelship.com/api_user/api/v1/test-routing \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```
+
+A valid request returns `"success": true`. An invalid key returns `401 Unauthorized`.
+
+## Keep your keys safe
+
+<AccordionGroup>
+  <Accordion title="Only use keys on your server" icon="server">
+    API keys grant full access to your store and licenses. Never embed them in frontend JavaScript, mobile apps, or distributed desktop binaries.
+  </Accordion>
+  <Accordion title="Store keys in environment variables" icon="lock">
+    Load keys from environment variables or a secrets manager. Never commit them to source control.
+  </Accordion>
+  <Accordion title="Rotate a leaked key immediately" icon="rotate">
+    If a key is exposed, revoke it in the dashboard and create a new one.
+  </Accordion>
+</AccordionGroup>

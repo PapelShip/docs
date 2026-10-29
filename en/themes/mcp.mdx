@@ -1,0 +1,135 @@
+---
+title: "AI agents (MCP)"
+sidebarTitle: "Set up an agent"
+description: "Connect Claude, Claude Code, Cursor, VS Code or any MCP client to your store's themes with one URL."
+---
+
+PapelShip runs a [Model Context Protocol](https://modelcontextprotocol.io) server for your themes. Connect an AI agent with one URL, approve it in your browser, and the agent can read your theme code and save edits as drafts. You review and publish.
+
+**Server URL:** `https://app.papelship.com/mcp`
+
+The URL is the same for every store. When you connect, you sign in to PapelShip and choose the store the agent may work on.
+
+## What the agent can do
+
+| Can | Can't |
+|---|---|
+| Read the files of your theme copies, designs and theme code packages | Publish, activate or delete themes |
+| Search, validate and scan files | Change the live theme. Edits to the live copy wait for your approval. |
+| Save edits as drafts, with version history | See orders, customers, payments or settings |
+| Share a preview link | Reach any other store |
+
+### Where drafts go
+
+| Copy | `save_draft` result |
+|---|---|
+| A copy that is not live | Saved to the copy. The previous content stays in its version history. |
+| A theme code package | Saved to the package. Live pages keep the published version until you publish. |
+| The live copy | Nothing is written. The change becomes a pending proposal that you accept or reject in the code editor, and it shows in the preview for 30 minutes. |
+
+## Connect a client
+
+<Tabs>
+  <Tab title="Claude">
+    Works in claude.ai, Claude Desktop and the Claude mobile apps.
+
+    1. Open **Settings › Connectors** and choose **Add custom connector**.
+    2. Name it `PapelShip` and paste `https://app.papelship.com/mcp`.
+    3. Select **Add**, then **Connect**.
+    4. Sign in to PapelShip, pick your store and select **Allow access**.
+  </Tab>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http papelship https://app.papelship.com/mcp
+    ```
+
+    Run `/mcp` in Claude Code, choose **papelship** and **Authenticate**. Your browser opens the PapelShip approval page.
+  </Tab>
+  <Tab title="Cursor">
+    [Add to Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=papelship&config=eyJ1cmwiOiJodHRwczovL2FwcC5wYXBlbHNoaXAuY29tL21jcCJ9)
+
+    Or add it to `~/.cursor/mcp.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "papelship": { "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+
+    Cursor shows **Needs login** next to the server. Select it to approve in your browser.
+  </Tab>
+  <Tab title="VS Code">
+    [Add to VS Code](vscode:mcp/install?%7B%22name%22%3A%22papelship%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fapp.papelship.com%2Fmcp%22%7D)
+
+    Or add it to `.vscode/mcp.json`:
+
+    ```json
+    {
+      "servers": {
+        "papelship": { "type": "http", "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+
+    Start the server from the file or the **MCP: List Servers** command, then sign in when asked. Use the tools in Copilot agent mode.
+  </Tab>
+  <Tab title="Other clients">
+    Any client with Streamable HTTP and OAuth support works:
+
+    ```json
+    {
+      "mcpServers": {
+        "papelship": { "type": "http", "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+The store panel has the same steps with copy buttons under **Themes › Docs**.
+
+## Approve access
+
+The approval page shows the app's name and where it returns to. Choose:
+
+- **Store**: the one store the app may use. You see stores you own and stores where your team role includes **Theme & Design › Edit**.
+- **Save edits as drafts** (`themes:write`): clear it to give read-only access.
+
+## Connected apps and revoking
+
+**Themes › Docs › Connected apps** lists every app connected to the store, who connected it and when it was last used. **Revoke** stops the app at its next request.
+
+Access also stops when the person who approved it leaves the team, loses **Theme & Design › Edit**, or their account is suspended.
+
+## API key instead of OAuth
+
+For clients without OAuth, create a store API key with the **Themes** type in **Developers › API keys** and send it as a Bearer token:
+
+```bash
+claude mcp add --transport http papelship https://app.papelship.com/mcp \
+  --header "Authorization: Bearer $PAPELSHIP_THEMES_KEY"
+```
+
+A Themes key works only for the store that created it and has the same rights as an OAuth connection. Keep it in an environment variable, never in a file you share or commit. `https://app.papelship.com/api/mcp/themes` remains as an older alias of the same server.
+
+## Limits
+
+| Limit | Value |
+|---|---|
+| Requests per connection or key | 120 per minute |
+| Requests per store, all connections | 300 per minute |
+| Tool calls | Count as Store API calls of your plan |
+| Access token | 1 hour, renewed automatically |
+| Connection | Stays signed in while used at least every 30 days |
+
+Every tool call is logged with the app, tool and file.
+
+## Security
+
+- Theme files are store data, not instructions. The server marks every tool result as untrusted data so text inside a theme can't redirect the agent.
+- Previews are never public: preview links open in the PapelShip panel.
+- Tokens are stored hashed. A reused refresh token ends the connection.
+
+See the [tool reference](/en/themes/mcp-tools) for every tool and its arguments.

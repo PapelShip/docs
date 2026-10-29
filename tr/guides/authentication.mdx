@@ -1,0 +1,73 @@
+---
+title: "Kimlik doğrulama"
+description: "Her PapelShip API'sine yapılan istekleri API anahtarınızla doğrulayın."
+---
+
+Her istek bir API anahtarı içermelidir. Her API biraz farklı header setleri kabul eder.
+
+<Tabs>
+  <Tab title="API Store">
+    Gizli anahtarınızı (`psa_...`) Bearer token olarak veya `X-API-Key` header'ında gönderin.
+
+    ```bash
+    # Önerilen
+    Authorization: Bearer psa_your_api_key
+
+    # Alternatif
+    X-API-Key: psa_your_api_key
+    ```
+  </Tab>
+  <Tab title="User API">
+    Her istekte API anahtarınızı **ve** store hash değerinizi gönderin.
+
+    ```bash
+    x-api-key: your_api_key
+    x-store-hash: your_store_hash
+    ```
+
+    | Header | Açıklama |
+    | :--- | :--- |
+    | `x-api-key` | Panel ayarlarındaki kişisel API anahtarınız. |
+    | `x-store-hash` | Mağazanızın benzersiz tanımlayıcısı. |
+  </Tab>
+  <Tab title="qPapel Protection">
+    Geliştirici anahtarınızı (`pk_live_...`) üç yoldan biriyle gönderin.
+
+    ```bash
+    # Önerilen
+    Authorization: Bearer pk_live_your_key
+
+    # Alternatif
+    x-api-key: pk_live_your_key
+
+    # Eski yöntem (eski loader'lar için desteklenir)
+    api-key: pk_live_your_key
+    ```
+  </Tab>
+</Tabs>
+
+## Bilgilerinizi test edin
+
+Anahtarınızın ve store hash değerinizin çalıştığını doğrulamak için User API bağlantı testini çağırın:
+
+```bash
+curl https://app.papelship.com/api_user/api/v1/test-routing \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```
+
+Geçerli bir istek `"success": true` döndürür. Geçersiz bir anahtar `401 Unauthorized` döndürür.
+
+## Anahtarlarınızı güvende tutun
+
+<AccordionGroup>
+  <Accordion title="Anahtarları yalnızca sunucuda kullanın" icon="server">
+    API anahtarları mağazanıza ve lisanslarınıza tam erişim sağlar. Asla frontend JavaScript'e, mobil uygulamalara veya dağıtılan masaüstü binary'lerine gömmeyin.
+  </Accordion>
+  <Accordion title="Anahtarları ortam değişkenlerinde saklayın" icon="lock">
+    Anahtarları ortam değişkenlerinden veya bir secret manager'dan yükleyin. Asla kaynak koda commit etmeyin.
+  </Accordion>
+  <Accordion title="Sızan anahtarı hemen yenileyin" icon="rotate">
+    Bir anahtar açığa çıkarsa panelden iptal edin ve yenisini oluşturun.
+  </Accordion>
+</AccordionGroup>

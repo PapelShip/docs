@@ -1,0 +1,135 @@
+---
+title: "MCP tool reference"
+sidebarTitle: "Tool reference"
+description: "Every tool of the PapelShip theme MCP server, its arguments and what it returns."
+---
+
+All tools work on the one store you approved. A theme id of another store answers `not_found`. Write tools (`save_draft`, `propose_edit`) are listed only when the connection has the `themes:write` scope.
+
+Results are JSON wrapped in an untrusted-data block. Failures are tool errors with a `code`: `invalid_input`, `not_found`, `forbidden`, `conflict`, `limit`, `busy`, `unsupported` or `internal`.
+
+## Typical workflow
+
+1. `list_themes` to find the copy, then `list_files`, `read_file` or `search`.
+2. `save_draft` with `baseHash` from your read.
+3. `validate` the file, and `scan` for an uploaded design.
+4. `preview_link` and give the link to the user. The user publishes in the panel.
+
+## Read tools
+
+### list_themes
+
+The store's theme copies: Liquid themes, uploaded designs and theme code packages, with `id`, `name`, `kind`, `live` and `updatedAt`. No arguments.
+
+### list_files
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required |
+| `prefix` | string | Only paths that start with it, for example `sections/` |
+
+Returns `files` (`path`, `size`, `kind`, `contentHash`), at most 400, and `truncated`.
+
+### read_file
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required |
+| `path` | string | Required, for example `sections/hero.liquid` |
+| `startLine`, `endLine` | integer | Optional 1-based line window |
+
+Returns `content`, `contentHash`, `startLine`, `endLine` and `totalLines`. Binary media returns `binary: true` without content.
+
+### read_files
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required |
+| `paths` | string[] | Required, 1–20 paths |
+
+Returns `files` with `content` and `contentHash` each, at most 1 MB in total. Missing files have `missing: true`; files past the size budget have `skipped`.
+
+### search
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required |
+| `query` | string | Required, literal text, 1–200 characters |
+| `caseSensitive` | boolean | Default `false` |
+| `pathPrefix` | string | Limit to a folder |
+| `maxResults` | integer | 1–100 |
+
+Returns hits with `path`, `line`, `column` and a line preview.
+
+### get_schema
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required |
+| `path` | string | A section file |
+
+Without `path`: the theme settings from `config/settings_schema.json` and every section with its name, setting ids and block types. With `path`: the section's full `{% schema %}` JSON.
+
+### validate
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required |
+| `path` | string | One stored file |
+| `proposalId` | string | A proposal from `propose_edit` or `save_draft` |
+
+Without `path` and `proposalId`, validates the whole copy as publishing would. Returns `valid` and `problems` (`path`, `line`, `column`, `message`, `severity`).
+
+### scan
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required, an uploaded design |
+| `proposalId` | string | Scan with a proposal applied |
+
+Dry run of the design security scanner. Nothing is recorded. Liquid themes answer `unsupported`.
+
+### preview_link
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required |
+| `page` | string | Page path, for example `/` or `/shop` |
+
+Returns `url`, a link to the preview in the PapelShip panel. The user must be signed in. It shows the copy's saved files and the drafts `save_draft` left on the live copy.
+
+## Write tools
+
+### save_draft
+
+Requires `themes:write`.
+
+| Argument | Type | |
+|---|---|---|
+| `themeId` | integer | Required |
+| `path` | string | Required |
+| `content` | string | Full new content, up to 512 KB. Creates the file if it doesn't exist. |
+| `edits` | `{ find, replace }[]` | 1–50 search and replace pairs. Each `find` must match exactly once. |
+| `baseHash` | string | `contentHash` from your read. A file changed since then answers `conflict`. |
+| `note` | string | Kept in the file history |
+
+Pass exactly one of `content` or `edits`. Saves are validated like editor saves; an invalid file answers `invalid_input` with the first problem.
+
+| `mode` | When | Effect |
+|---|---|---|
+| `copy` | The copy is not live | Saved, with a new version. `saved: true` |
+| `code_package_draft` | A theme code package | Saved. Live pages keep the published version. `saved: true` |
+| `proposal` | The live copy | Nothing written. A pending proposal (`proposalId`) for the owner to accept, and a 30-minute preview draft. `saved: false` |
+
+Every result includes `problems` from the editor diagnostics.
+
+### propose_edit
+
+Requires `themes:write`. Same arguments as `save_draft` plus a required one-line `summary`; `note` is not used. Never saves: the proposal waits for the owner to accept it in the code editor and expires after 24 hours. Use it when you want the owner to review every change.
+
+## Protocol
+
+- Transport: Streamable HTTP, JSON responses, no sessions. `GET` answers `405`.
+- Protocol versions: `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`.
+- Batches: up to 10 messages. Every message counts toward the rate limit.
+- Authorization: OAuth 2.1 with PKCE, discovered from `https://app.papelship.com/.well-known/oauth-protected-resource/mcp`, or a Themes API key as a Bearer token.

@@ -1,0 +1,36 @@
+---
+title: "User API'ye genel bakış"
+sidebarTitle: "Genel bakış"
+description: "Mağazanızın ürünlerini, siparişlerini ve müşterilerini programatik olarak yönetin."
+---
+
+User API, mağaza sahiplerine paneldeki her şeye programatik erişim sağlar.
+
+**Base URL:** `https://app.papelship.com/api_user/api/v1`
+
+`x-api-key` ve `x-store-hash` header'larıyla kimlik doğrulayın. Bkz. [Kimlik doğrulama](/tr/guides/authentication).
+
+## Kaynaklar
+
+<CardGroup cols={3}>
+  <Card title="Analitik" icon="chart-line">Herhangi bir tarih aralığı için gelir, sipariş ve müşteri toplamları.</Card>
+  <Card title="Ürünler" icon="box">Ürünleri ve fiyatlarını oluşturun, güncelleyin ve silin.</Card>
+  <Card title="Kategoriler ve gruplar" icon="folder-tree">Ürünleri kategori ve koleksiyonlara ayırın.</Card>
+  <Card title="Kuponlar" icon="ticket">Yüzdelik veya sabit indirim kodları oluşturun.</Card>
+  <Card title="Müşteriler" icon="users">Müşterileri ve satın alma geçmişlerini görüntüleyin.</Card>
+  <Card title="Faturalar" icon="receipt">Siparişleri listeleyin, tamamlayın ve iade olarak işaretleyin.</Card>
+</CardGroup>
+
+## Fiyatlar kuruş (cent) cinsindendir
+
+Tüm `*_cents` alanları en küçük para birimi cinsinden tam sayıdır. Örneğin `price_cents: 2999` değeri $29.99 demektir.
+
+## Sayfalama
+
+`GET /products` gibi liste endpoint'leri `limit` (varsayılan `50`) ve `offset` (varsayılan `0`) kabul eder:
+
+```bash
+curl "https://app.papelship.com/api_user/api/v1/products?limit=50&offset=100&status=active" \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```

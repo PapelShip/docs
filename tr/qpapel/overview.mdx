@@ -1,0 +1,34 @@
+---
+title: "qPapel Protection'a genel bakış"
+sidebarTitle: "Genel bakış"
+description: "Masaüstü uygulamalarınızı ve loader'larınızı lisanslayın, yapılandırın ve koruyun."
+---
+
+qPapel Protection, masaüstü yazılımlar için bir lisanslama ve anti-tamper altyapısıdır. Web API ile her şeyi kendi panelinizden veya botunuzdan otomatikleştirebilirsiniz.
+
+**Base URL:** `https://app.papelship.com/api/qpapel/v1`
+
+<CardGroup cols={2}>
+  <Card title="Lisans anahtarları" icon="key" href="/tr/qpapel/license-keys">
+    Müşteri anahtarlarını oluşturun, banlayın, dondurun, uzatın ve HWID sıfırlayın.
+  </Card>
+  <Card title="Reseller anahtarları" icon="handshake">
+    Reseller hesaplarına anahtar tahsis edin ve sürelerini yönetin.
+  </Card>
+  <Card title="Uzaktan ayarlar" icon="sliders">
+    İstemcilere çalışma zamanı ayarı gönderin ve build SHA-256 hash'lerini doğrulayın.
+  </Card>
+  <Card title="Staff URL'leri" icon="user-shield">
+    Moderatörlere kapsamı ve süresi sınırlı panel erişimi verin.
+  </Card>
+  <Card title="Discord entegrasyonları" icon="discord">
+    Güvenlik loglarını bir kanala aktarın ve rol yetkilerini eşleyin.
+  </Card>
+  <Card title="İstemci güvenliği" icon="shield-halved">
+    Process ve pencereleri engelleyin, cihaz banlayın, korumalı string ve dosyalar sunun.
+  </Card>
+</CardGroup>
+
+## Ürün tanımlayıcıları
+
+Bazı endpoint'ler sayısal bir `product_id` alır. Diğerleri ürünün `cheat_value` değerini, örneğin `cs2_cheat` gibi bir string alır. Her endpoint'in referansı hangisini beklediğini gösterir.

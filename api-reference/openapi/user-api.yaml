@@ -1,0 +1,1146 @@
+openapi: 3.0.3
+info:
+  title: PapelShip User API
+  description: |
+    # Introduction
+    Welcome to the PapelShip User API. This API allows store owners to programmatically manage their store's inventory, orders, and customers.
+
+    # Authentication
+    All API requests must be authenticated using your **API Key** and **Store Hash**.
+    Include these in the request headers:
+    
+    | Header | Description |
+    | :--- | :--- |
+    | `x-api-key` | Your personal API Key found in dashboard settings. |
+    | `x-store-hash` | The unique identifier for your store. |
+
+  version: 1.0.0
+  contact:
+    name: PapelShip Support
+    url: https://app.papelship.com/support
+    email: support@papelship.com
+
+servers:
+  - url: https://app.papelship.com/api_user/api/v1
+    description: Production Server
+
+# Grouping for consistent Sidebar navigation (Redoc/GitBook support)
+x-tag-groups:
+  - name: Store Management
+    tags:
+      - Analytics
+      - Products
+      - Categories
+      - Groups
+      - Coupons
+      - Customers
+      - Invoices
+      - Reviews
+  - name: Checkout & Payments
+    tags:
+      - Checkout
+      - Payment Methods
+  - name: System
+    tags:
+      - System
+
+tags:
+  - name: Analytics
+    description: 📊 View store performance, revenue, and visitor statistics.
+  - name: Products
+    description: 📦 Manage your product inventory, pricing, and details.
+  - name: Categories
+    description: 📂 Organize products into categories.
+  - name: Groups
+    description: 📑 Create and manage product groups/collections.
+  - name: Coupons
+    description: 🎟️ Manage discount codes and promotions.
+  - name: Customers
+    description: 👥 View customer details and purchase history.
+  - name: Invoices
+    description: 🧾 Manage orders, process refunds, and view transaction details.
+  - name: Reviews
+    description: ⭐ Access customer feedback and ratings.
+  - name: Checkout
+    description: 🛒 Programmatic checkout and order creation.
+  - name: Payment Methods
+    description: 💳 Configure crypto wallets and payment gateways.
+  - name: System
+    description: ⚙️ System status and health checks.
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: Your PapelShip API Key
+    StoreHashAuth:
+      type: apiKey
+      in: header
+      name: x-store-hash
+      description: Your Store Hash ID
+
+  schemas:
+    Analytics:
+      type: object
+      properties:
+        revenue:
+          type: object
+          properties:
+            cents:
+              type: integer
+            currency:
+              type: string
+        orders:
+          type: object
+          properties:
+            total:
+              type: integer
+            completed:
+              type: integer
+        customers:
+          type: object
+          properties:
+            total:
+              type: integer
+        period:
+          type: object
+          properties:
+            from:
+              type: string
+              nullable: true
+            to:
+              type: string
+              nullable: true
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        name:
+          type: string
+          example: "Software"
+        slug:
+          type: string
+          example: "software"
+        icon:
+          type: string
+          nullable: true
+          example: "fa-solid fa-code"
+        active:
+          type: integer
+          enum: [0, 1]
+          example: 1
+        parent_id:
+          type: integer
+          nullable: true
+        position:
+          type: integer
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+
+    CheckoutRequest:
+      type: object
+      required:
+        - order_id
+        - items
+      properties:
+        order_id:
+          type: integer
+          description: The ID of the existing pending order
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - product_id
+            properties:
+              product_id:
+                type: integer
+              quantity:
+                type: integer
+                default: 1
+
+    Coupon:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 12
+        hash_id:
+          type: string
+          example: "X8Y9Z0A1"
+        code:
+          type: string
+          example: "SUMMER2024"
+        type:
+          type: string
+          enum: [fixed, percent]
+          example: "percent"
+        value:
+          type: number
+          example: 20
+        max_uses:
+          type: integer
+          nullable: true
+          example: 100
+        used_count:
+          type: integer
+          example: 5
+        valid_from:
+          type: string
+          format: date-time
+          nullable: true
+        valid_to:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [active, inactive]
+          example: "active"
+        created_at:
+          type: string
+          format: date-time
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductShort'
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        total_purchases:
+          type: integer
+        status:
+          type: string
+        last_login:
+          type: string
+          format: date-time
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 25
+        name:
+          type: string
+          example: "Featured Products"
+        slug:
+          type: string
+          example: "featured-products"
+        image_url:
+          type: string
+          nullable: true
+          example: "https://example.com/image.png"
+        unlisted:
+          type: integer
+          enum: [0, 1]
+          example: 0
+        product_count:
+          type: integer
+          example: 3
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductShort'
+
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5001
+        invoice_id:
+          type: string
+          example: "INV-2024-001"
+        customer_email:
+          type: string
+          format: email
+          example: "customer@example.com"
+        total_cents:
+          type: integer
+          example: 4999
+        currency:
+          type: string
+          example: "USD"
+        status:
+          type: string
+          example: "completed"
+        payment_method:
+          type: string
+          example: "stripe"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-12-20T12:00:00Z"
+        items_count:
+          type: integer
+          example: 1
+
+    InvoiceDetailed:
+      allOf:
+        - $ref: '#/components/schemas/Invoice'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  product_id:
+                    type: integer
+                  quantity:
+                    type: integer
+                  price_cents:
+                    type: integer
+                  name:
+                    type: string
+
+    PaymentMethods:
+      type: object
+      properties:
+        crypto:
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+                example: "LTC"
+              address:
+                type: string
+                example: "LtcWalletAddress..."
+              network:
+                type: string
+                example: "LTC"
+              is_enabled:
+                type: integer
+                example: 1
+        gateways:
+          type: object
+          description: Key-value map of enabled gateways and their public settings
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 101
+        hash_id:
+          type: string
+          example: "a1b2c3d4e5f6"
+        name:
+          type: string
+          example: "Premium License Key"
+        slug:
+          type: string
+          example: "premium-license-key"
+        type:
+          type: string
+          enum: [file, serials, dynamic, subscription, donation, contact]
+          example: "serials"
+        price_cents:
+          type: integer
+          description: Price in cents (e.g., 1000 = $10.00)
+          example: 2999
+        currency:
+          type: string
+          example: "USD"
+        status:
+          type: string
+          enum: [active, draft, hidden]
+          example: "active"
+        active:
+          type: integer
+          enum: [0, 1]
+          example: 1
+        sales_count:
+          type: integer
+          example: 5
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+        details:
+          type: object
+          properties:
+            short_description:
+              type: string
+            description_html:
+              type: string
+    
+    ProductShort:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        customer_email:
+          type: string
+        invoice_id:
+          type: integer
+        rating:
+          type: integer
+        comment:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        is_flagged:
+          type: boolean
+
+security:
+  - ApiKeyAuth: []
+    StoreHashAuth: []
+
+paths:
+  /analytics:
+    get:
+      tags:
+        - Analytics
+      operationId: getAnalytics
+      summary: Get Store Analytics
+      description: Retrieve dashboard analytics including revenue, order counts, and visitor stats.
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+          description: Start date (YYYY-MM-DD)
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+          description: End date (YYYY-MM-DD)
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  analytics:
+                    $ref: '#/components/schemas/Analytics'
+
+  /products:
+    get:
+      tags:
+        - Products
+      operationId: listProducts
+      summary: List All Products
+      description: Retrieve a paginated list of all products in your store.
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Filter by name or slug
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by status (active, draft, hidden)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+    post:
+      tags:
+        - Products
+      operationId: createProduct
+      summary: Create New Product
+      description: Create a new product in your inventory.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                type:
+                  type: string
+                  enum: [file, serials, dynamic, service]
+                  default: file
+                price_cents:
+                  type: integer
+                  default: 0
+      responses:
+        '200':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  product:
+                    $ref: '#/components/schemas/Product'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      operationId: getProduct
+      summary: Get Product Details
+      description: Retrieve full details for a single product by numeric ID or Hash ID.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: The product ID (e.g. 101) or Hash ID (e.g. abc123xyz)
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  product:
+                    $ref: '#/components/schemas/Product'
+    put:
+      tags:
+        - Products
+      operationId: updateProduct
+      summary: Update Product Details
+      description: Update details of an existing product.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  product:
+                    $ref: '#/components/schemas/Product'
+    delete:
+      tags:
+        - Products
+      operationId: deleteProduct
+      summary: Delete Product
+      description: Permanently remove a product from your store.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /categories:
+    get:
+      tags:
+        - Categories
+      operationId: listCategories
+      summary: List All Categories
+      description: List all product categories.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+    post:
+      tags:
+        - Categories
+      operationId: createCategory
+      summary: Create New Category
+      description: Create a new product category.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '200':
+          description: Category created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  category:
+                    $ref: '#/components/schemas/Category'
+
+  /groups:
+    get:
+      tags:
+        - Groups
+      operationId: listGroups
+      summary: List All Groups
+      description: List all product groups.
+      responses:
+        '200':
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Group'
+    post:
+      tags:
+        - Groups
+      operationId: createGroup
+      summary: Create New Group
+      description: Create a new product group.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Group created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  group:
+                    $ref: '#/components/schemas/Group'
+
+  /groups/{id}:
+    get:
+      tags:
+        - Groups
+      operationId: getGroup
+      summary: Get Group Details
+      description: Get details of a specific group and its products.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Group details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  group:
+                    $ref: '#/components/schemas/Group'
+    delete:
+      tags:
+        - Groups
+      operationId: deleteGroup
+      summary: Delete Group
+      description: Delete a product group.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /coupons:
+    get:
+      tags:
+        - Coupons
+      operationId: listCoupons
+      summary: List All Coupons
+      description: List all available coupons.
+      responses:
+        '200':
+          description: List of coupons
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  coupons:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Coupon'
+    post:
+      tags:
+        - Coupons
+      operationId: createCoupon
+      summary: Create New Coupon
+      description: Create a new coupon.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - value
+              properties:
+                code:
+                  type: string
+                value:
+                  type: number
+      responses:
+        '200':
+          description: Coupon created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                   
+  /coupons/{id}:
+    get:
+      tags:
+        - Coupons
+      operationId: getCoupon
+      summary: Get Coupon Details
+      description: Get details of a specific coupon.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Coupon details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  coupon:
+                    $ref: '#/components/schemas/Coupon'
+    delete:
+      tags:
+        - Coupons
+      operationId: deleteCoupon
+      summary: Delete Coupon
+      description: Delete a coupon.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /customers:
+    get:
+      tags:
+        - Customers
+      operationId: listCustomers
+      summary: List All Customers
+      description: List all customers associated with your store.
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  customers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Customer'
+
+  /customers/{id}:
+    get:
+      tags:
+        - Customers
+      operationId: getCustomer
+      summary: Get Customer Details
+      description: Get details of a specific customer and their recent orders.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  customer:
+                    $ref: '#/components/schemas/Customer'
+
+  /invoices:
+    get:
+      tags:
+        - Invoices
+      operationId: listInvoices
+      summary: List All Invoices
+      description: List all invoices/orders.
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of invoices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  invoices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+
+  /invoices/{invoiceId}:
+    get:
+      tags:
+        - Invoices
+      operationId: getInvoice
+      summary: Get Invoice Details
+      description: Get details of a specific invoice.
+      parameters:
+        - in: path
+          name: invoiceId
+          schema:
+            type: string
+          required: true
+          description: Numeric ID or Invoice ID (INV-...)
+      responses:
+        '200':
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  invoice:
+                    $ref: '#/components/schemas/InvoiceDetailed'
+
+  /invoices/{invoiceId}/complete:
+    post:
+      tags:
+        - Invoices
+      operationId: completeInvoice
+      summary: Mark Invoice as Completed
+      description: Manually mark an invoice as completed.
+      parameters:
+        - in: path
+          name: invoiceId
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /invoices/{invoiceId}/refund:
+    post:
+      tags:
+        - Invoices
+      operationId: refundInvoice
+      summary: Mark Invoice as Refunded
+      description: Mark an invoice as refunded.
+      parameters:
+        - in: path
+          name: invoiceId
+          schema:
+            type: string
+          required: true
+      responses:
+        '200':
+          description: Refunded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /invoices/{invoiceId}/items:
+    patch:
+      tags:
+        - Invoices
+      operationId: updateInvoiceItems
+      summary: Replace Invoice Items
+      description: Replace the items in an invoice with new ones.
+      parameters:
+        - in: path
+          name: invoiceId
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Items updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /checkout:
+    post:
+      tags:
+        - Checkout
+      operationId: createCheckout
+      summary: Process Checkout
+      description: Initiate a checkout session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Checkout processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /payment-methods:
+    get:
+      tags:
+        - Payment Methods
+      operationId: listPaymentMethods
+      summary: List Payment Methods
+      description: List all enabled payment methods and gateways.
+      responses:
+        '200':
+          description: List of payment methods
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  payment_methods:
+                    $ref: '#/components/schemas/PaymentMethods'
+
+  /reviews:
+    get:
+      tags:
+        - Reviews
+      operationId: listReviews
+      summary: List All Reviews
+      description: List all product reviews from customers.
+      responses:
+        '200':
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+
+  /test-routing:
+    get:
+      tags:
+        - System
+      operationId: testRouting
+      summary: Test Connectivity
+      description: Simple echo endpoint to verify API access and routing.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
