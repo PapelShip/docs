@@ -90,7 +90,8 @@
                   "en/papelpay/card-form"
                 ]
               }
-            ]
+            ],
+            "icon": "credit-card"
           },
           {
             "tab": "Themes",
@@ -197,7 +198,8 @@
                   "tr/papelpay/card-form"
                 ]
               }
-            ]
+            ],
+            "icon": "credit-card"
           },
           {
             "tab": "qPapel Protection",
@@ -320,5 +322,14 @@
       "destination": "/tr/user-api/overview",
       "permanent": true
     }
-  ]
+  ],
+  "fonts": {
+    "heading": {
+      "family": "Fustat",
+      "weight": 700
+    },
+    "body": {
+      "family": "Fustat"
+    }
+  }
 }
