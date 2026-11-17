@@ -1,0 +1,82 @@
+---
+title: "PapelPay kart ödemeleriyle abonelik satın"
+sidebarTitle: "Abonelikler"
+description: "Store API ile her dönem yenilenen PapelPay siparişleri oluşturun: auto_renew gönderin, subscription nesnesini okuyun, ödemeden sonra yenilemeleri izleyin ya da durdurun."
+icon: "rotate"
+keywords: ["papelpay", "abonelik", "auto_renew", "yenileme", "tekrarlayan ödeme"]
+---
+
+Abonelik ayarı açık ve dönemi belirlenmiş bir ürün abonelik olarak satın alınabilir. Müşteri PapelPay ile öderse kart, iptal edene kadar her dönem yeniden çekilir. Başka bir ödeme yönteminde müşteri, her dönem bitmeden e-postayla bir yenileme faturası alır. Bu sayfa bu seçimi Store API'den nasıl yöneteceğinizi anlatır.
+
+## Abonelik mi tek seferlik mi
+
+Siparişi oluştururken `auto_renew` gönderin:
+
+| Değer | Sonuç |
+| :-- | :-- |
+| `true` | Sipariş abonelik olarak satın alınır. Müşteri ödeme sayfasında kapatamaz. |
+| `false` | Sipariş tek seferlik satın alınır. Ödeme sayfasında abonelik seçeneği görünmez. |
+| Gönderilmezse | Müşteri ödeme sayfasında seçer. Abonelik önceden seçili gelir. |
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_anahtariniz" \
+  -H "x-store-hash: magaza_kimliginiz" \
+  -H "Idempotency-Key: WEB-2087" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_email": "alici@example.com",
+    "items": [{ "product_id": "Pr0Mnth1yX9a" }],
+    "auto_renew": true,
+    "payment_method": "PAPELPAY"
+  }'
+```
+
+`auto_renew: true` için siparişte tam olarak bir ürün satırı olmalı ve o ürünün abonelik ayarı dönemiyle birlikte açık olmalıdır. Değilse çağrı `SUBSCRIPTION_NOT_AVAILABLE` (`422`) ile başarısız olur ve sipariş oluşmaz.
+
+## subscription nesnesi
+
+Siparişin oluşturma ve detay cevaplarında `subscription` bulunur. Sipariş abonelik olamıyorsa `null` olur.
+
+```json
+"subscription": {
+  "enabled": true,
+  "locked": true,
+  "interval_days": 30,
+  "interval": "month",
+  "discount_percent": 20,
+  "discount_applies_to": "automatic_payments",
+  "discount_cents": 0,
+  "subscription_id": null,
+  "auto_renewal_id": null
+}
+```
+
+| Alan | Anlamı |
+| :-- | :-- |
+| `enabled` | `true`: abonelik olarak satın alınır. `false`: tek seferlik. |
+| `locked` | Oluştururken `auto_renew` ile sabitlendi. Müşteri ödeme sayfasında değiştiremez. |
+| `interval_days`, `interval` | Faturalandırma dönemi. Standart dönemlerde `interval` `day`, `week`, `month` ya da `year` olur, diğerlerinde `null`. |
+| `discount_percent` | Üründe tanımlı abone indirimi. |
+| `discount_applies_to` | `automatic_payments`: yalnızca kart otomatik yenilendiğinde. `all_payment_methods`: her yöntemde. |
+| `discount_cents` | Şu an `total_cents` içine dahil olan indirim. Müşteri indirimin geçerli olduğu bir ödeme yöntemi seçene kadar `0` kalır. |
+| `subscription_id` | Ödemeden sonra abonelik kaydı. |
+| `auto_renewal_id` | PapelPay kart ödemesinden sonra kartın otomatik yenilemesi. |
+
+## Ödemeden sonra
+
+İlk ödeme siparişi tamamlar ve aboneliği başlatır. Her yenileme yeni bir ödenmiş sipariş oluşturur ve aboneliği uzatır. Abonelikleri şu uçlarla okuyup durdurabilirsiniz:
+
+| İşlem | Uç |
+| :-- | :-- |
+| Abonelikleri listele | `GET /subscriptions` |
+| Birini ödemeleriyle oku | `GET /subscriptions/{subscriptionId}` |
+| İptal et | `POST /subscriptions/{subscriptionId}/cancel` |
+| Otomatik kart yenilemelerini listele | `GET /subscriptions/auto-renewals` |
+| Gelecek kart çekimlerini durdur | `POST /subscriptions/auto-renewals/{renewalId}/cancel` |
+
+Otomatik yenilemeyi durdurmak, gelecek çekimleri ödenmiş dönemin sonunda bitirir. İptal hiçbir zaman müşteriye iade yapmaz.
+
+<Note>
+  Abonelik kart ödemeleri USD olarak çekilir.
+</Note>

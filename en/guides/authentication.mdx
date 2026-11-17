@@ -6,17 +6,6 @@ description: "Authenticate requests to each PapelShip API with your API key."
 Every request must include an API key. Each API accepts a slightly different set of headers.
 
 <Tabs>
-  <Tab title="API Store">
-    Send your secret key (`psa_...`) as a Bearer token or in the `X-API-Key` header.
-
-    ```bash
-    # Preferred
-    Authorization: Bearer psa_your_api_key
-
-    # Alternative
-    X-API-Key: psa_your_api_key
-    ```
-  </Tab>
   <Tab title="User API">
     Send your API key **and** your store hash on every request.
 

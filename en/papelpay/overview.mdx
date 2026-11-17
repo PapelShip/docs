@@ -1,0 +1,125 @@
+---
+title: "Take card payments with PapelPay"
+sidebarTitle: "Overview"
+description: "Charge cards for Store API orders with PapelPay: start the payment, send the customer to checkout or show the card form on your site, and confirm by webhook."
+icon: "credit-card"
+keywords: ["papelpay", "card payments", "checkout", "store api", "subscriptions"]
+---
+
+PapelPay is the card payment method of your PapelShip store. With the Store API you create an order, start its PapelPay payment, and let the customer pay by card on your hosted checkout or in a card form on your own site. Orders for products sold as a subscription are charged again every billing period.
+
+<Info>
+  PapelPay must be active on your store. Apply for it in the dashboard under **PapelPay**; the endpoints on this page return `PAPELPAY_NOT_ENABLED` until your store is approved.
+</Info>
+
+## How a card payment works
+
+<Steps>
+  <Step title="Create the order">
+    Call `POST /api/v1/invoices` with the customer and the products, as in [Create and manage orders](/en/user-api/orders). Add `auto_renew` to sell a subscription product as a subscription or as a one-time purchase. See [Subscriptions](/en/papelpay/subscriptions).
+  </Step>
+  <Step title="Start the card payment">
+    Call `POST /api/v1/invoices/{invoiceId}/papelpay`, or send `"payment_method": "PAPELPAY"` when you create the order to do both in one call. The response contains a `payment` object.
+  </Step>
+  <Step title="Let the customer pay">
+    Send the customer to `payment.payment_url`, your hosted checkout opened on the card form. To keep the customer on your site, mount `payment.embed_url` with the JavaScript SDK. See [Card form on your site](/en/papelpay/card-form).
+  </Step>
+  <Step title="Confirm the order">
+    When the card is charged, the order becomes `completed` and PapelShip delivers the products. Listen for the `order.completed` webhook, or read the order with `GET /api/v1/invoices/{invoiceId}`. See [Webhooks](/en/user-api/webhooks).
+  </Step>
+</Steps>
+
+## Start the card payment
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20/papelpay \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 4d2b7f1e-8a3c-4e9b-b1d0-5c6a7e8f9a01" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_ip": "203.0.113.10", "locale": "en" }'
+```
+
+```javascript Node.js
+const res = await fetch(
+  `https://app.papelship.com/api/v1/invoices/${invoiceId}/papelpay`,
+  {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.PAPELSHIP_API_KEY,
+      "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+      "Idempotency-Key": `${invoiceId}:papelpay`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ customer_ip: req.ip, locale: "en" }),
+  }
+);
+const { payment } = await res.json();
+```
+
+</CodeGroup>
+
+```json Response (200)
+{
+  "success": true,
+  "payment": {
+    "object": "papelpay_payment",
+    "invoice_id": "c35ffd-19a1b2c3d4e-8c7a20",
+    "session_id": "ch_7Hq2Lm9xP4",
+    "status": "pending",
+    "mode": "subscription",
+    "interval_days": 30,
+    "amount_cents": 2399,
+    "currency": "USD",
+    "payment_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+    "embed_url": "https://invoice.papelship.com/api/payment/papelpay/embed/ch_7Hq2Lm9xP4",
+    "embeddable": true,
+    "expires_at": "2026-11-17T15:00:00.000Z"
+  },
+  "invoice": { "id": "c35ffd-19a1b2c3d4e-8c7a20", "status": "payment_pending" }
+}
+```
+
+| Body field | Notes |
+| :-- | :-- |
+| `customer_ip` | The buyer's IP address. Turns on the card checks (VPN, repeated declines) for this payment. |
+| `locale` | Language of error messages, for example `en` or `tr`. |
+
+Calling the endpoint again while the payment is open returns the same `session_id`. Use the order ID in your `Idempotency-Key`.
+
+## The payment object
+
+| Field | Meaning |
+| :-- | :-- |
+| `mode` | `subscription`: the card is charged again every `interval_days` until the customer cancels. `one_time`: a single charge. |
+| `interval_days` | Billing period in days for subscriptions, otherwise `null`. |
+| `amount_cents`, `currency` | The amount charged now. Card payments may be charged in USD. |
+| `payment_url` | Your hosted checkout, opened on the card form. The same page as the order's `checkout_url`. |
+| `embed_url` | The card form alone, for your own page. `null` when your store's card payments can't be embedded; use `payment_url` then. |
+| `embeddable` | `true` when `embed_url` is set. |
+| `expires_at` | The order expires unpaid at this time. |
+
+## Errors
+
+| Code | Status | Meaning |
+| :-- | :-- | :-- |
+| `PAPELPAY_NOT_ENABLED` | `422` | PapelPay is not active on your store. |
+| `PAYMENT_METHOD_DISABLED` | `422` | The order lists `PAPELPAY` in `disabled_payment_methods`. |
+| `INVOICE_NOT_PAYABLE` | `409` | The order is paid, cancelled, refunded or expired. |
+| `CARD_CHECKOUT_BLOCKED` | `403` | The card checks stopped this buyer. `details.reason` says why; `details.existing_invoice_id` names an open order for the same purchase. |
+| `PAPELPAY_UNAVAILABLE` | `503` | Card payments are paused for a moment. Retry later. |
+
+When you send `"payment_method": "PAPELPAY"` on create and the card payment can't start, the order still exists. The error's `details.invoice_id` names it, so you can retry with `POST /invoices/{invoiceId}/papelpay`.
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Subscriptions" icon="rotate" href="/en/papelpay/subscriptions">
+    Sell a product as a subscription and follow its renewals.
+  </Card>
+  <Card title="Card form on your site" icon="code" href="/en/papelpay/card-form">
+    Show the card form on your own checkout page.
+  </Card>
+</Columns>

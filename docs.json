@@ -1,12 +1,12 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "aspen",
+  "theme": "palm",
   "name": "PapelShip Developers",
-  "description": "Developer documentation for PapelShip payments, store management, and qPapel software protection APIs.",
+  "description": "Developer documentation for the PapelShip Store API, PapelPay card payments and qPapel software protection.",
   "colors": {
-    "primary": "#0A0A0A",
-    "light": "#FAFAFA",
-    "dark": "#0A0A0A"
+    "primary": "#CB6441",
+    "light": "#E0835F",
+    "dark": "#CB6441"
   },
   "favicon": "/favicon.svg",
   "logo": {
@@ -56,26 +56,6 @@
             ]
           },
           {
-            "tab": "API-based Store",
-            "icon": "credit-card",
-            "groups": [
-              {
-                "group": "Guides",
-                "pages": [
-                  "en/api-store/overview",
-                  "en/api-store/crypto-payments"
-                ]
-              },
-              {
-                "group": "Endpoints",
-                "openapi": {
-                  "source": "api-reference/openapi/api-store.json",
-                  "directory": "en/reference/api-store"
-                }
-              }
-            ]
-          },
-          {
             "tab": "Digital Store",
             "icon": "store",
             "groups": [
@@ -96,6 +76,19 @@
                   "source": "api-reference/openapi/user-api.yaml",
                   "directory": "en/reference/user-api"
                 }
+              }
+            ]
+          },
+          {
+            "tab": "PapelPay",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": [
+                  "en/papelpay/overview",
+                  "en/papelpay/subscriptions",
+                  "en/papelpay/card-form"
+                ]
               }
             ]
           },
@@ -170,26 +163,6 @@
             ]
           },
           {
-            "tab": "API Tabanlı Mağaza",
-            "icon": "credit-card",
-            "groups": [
-              {
-                "group": "Rehberler",
-                "pages": [
-                  "tr/api-store/overview",
-                  "tr/api-store/crypto-payments"
-                ]
-              },
-              {
-                "group": "Endpoint'ler",
-                "openapi": {
-                  "source": "api-reference/openapi/api-store.json",
-                  "directory": "tr/reference/api-store"
-                }
-              }
-            ]
-          },
-          {
             "tab": "Dijital Mağaza",
             "icon": "store",
             "groups": [
@@ -210,6 +183,19 @@
                   "source": "api-reference/openapi/user-api.yaml",
                   "directory": "tr/reference/user-api"
                 }
+              }
+            ]
+          },
+          {
+            "tab": "PapelPay",
+            "groups": [
+              {
+                "group": "Rehberler",
+                "pages": [
+                  "tr/papelpay/overview",
+                  "tr/papelpay/subscriptions",
+                  "tr/papelpay/card-form"
+                ]
               }
             ]
           },
@@ -235,32 +221,22 @@
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Dashboard",
-          "href": "https://app.papelship.com",
-          "icon": "gauge"
-        },
-        {
-          "anchor": "Support",
-          "href": "mailto:support@papelship.com",
-          "icon": "life-ring"
-        }
-      ]
-    }
+    ]
   },
   "navbar": {
     "links": [
       {
         "label": "Support",
         "href": "mailto:support@papelship.com"
+      },
+      {
+        "href": "https://app.papelship.com",
+        "label": "Dashboard"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
+      "label": "Start building",
       "href": "https://app.papelship.com"
     }
   },
@@ -282,14 +258,11 @@
   "background": {
     "color": {
       "light": "#FFFFFF",
-      "dark": "#09090B"
+      "dark": "#111111"
     }
   },
   "appearance": {
-    "default": "dark"
-  },
-  "fonts": {
-    "family": "Inter"
+    "default": "system"
   },
   "styling": {
     "codeblocks": "system"
@@ -311,16 +284,41 @@
       "destination": "/en/guides/:slug*"
     },
     {
-      "source": "/api-store/:slug*",
-      "destination": "/en/api-store/:slug*"
-    },
-    {
       "source": "/user-api/:slug*",
       "destination": "/en/user-api/:slug*"
     },
     {
       "source": "/qpapel/:slug*",
       "destination": "/en/qpapel/:slug*"
+    },
+    {
+      "source": "/papelpay/:slug*",
+      "destination": "/en/papelpay/:slug*"
+    },
+    {
+      "source": "/api-store/:slug*",
+      "destination": "/en/user-api/overview",
+      "permanent": true
+    },
+    {
+      "source": "/en/api-store/:slug*",
+      "destination": "/en/user-api/overview",
+      "permanent": true
+    },
+    {
+      "source": "/tr/api-store/:slug*",
+      "destination": "/tr/user-api/overview",
+      "permanent": true
+    },
+    {
+      "source": "/en/reference/api-store/:slug*",
+      "destination": "/en/user-api/overview",
+      "permanent": true
+    },
+    {
+      "source": "/tr/reference/api-store/:slug*",
+      "destination": "/tr/user-api/overview",
+      "permanent": true
     }
   ]
 }

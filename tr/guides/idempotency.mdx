@@ -1,29 +1,40 @@
 ---
 title: "Idempotency"
-description: "Ödeme isteklerini mükerrer fatura oluşturmadan güvenle tekrar deneyin."
+description: "Store API oluşturma ve işlem isteklerini Idempotency-Key ile güvenle tekrar deneyin; zaman aşımı ikinci bir sipariş, iade ya da ödeme oluşturmaz."
 ---
 
-Ağ hataları olur. Bir istek zaman aşımına uğradığında PapelShip'in faturayı oluşturup oluşturmadığını bilemezsiniz. Idempotency anahtarları güvenle tekrar denemenizi sağlar.
+Ağ hataları olur. Bir istek zaman aşımına uğradığında PapelShip'in siparişi oluşturup oluşturmadığını bilemezsiniz. `Idempotency-Key` header'ı, Store API çağrısını güvenle tekrar denemenizi sağlar.
 
 ## Nasıl çalışır
 
-Oluşturma isteğine bir `Idempotency-Key` header'ı ekleyin. Aynı anahtarı tekrar gönderirseniz PapelShip ikinci bir fatura veya deposit adresi oluşturmak yerine ilk sonucu döndürür.
+Oluşturma ya da işlem isteğine bir `Idempotency-Key` header'ı (en fazla 255 karakter) ekleyin. PapelShip ilk cevabı 24 saat saklar. Aynı anahtar ve aynı gövdeyle yapılan tekrar deneme, isteği yeniden çalıştırmak yerine saklanan cevabı alır.
 
 ```bash
-curl -X POST https://app.papelship.com/api/api-store/v1/crypto-invoice \
-  -H "Authorization: Bearer psa_your_api_key" \
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_anahtariniz" \
+  -H "x-store-hash: magaza_kimliginiz" \
   -H "Idempotency-Key: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d" \
   -H "Content-Type: application/json" \
-  -d '{ "amount": 50, "coin_type": "LTC" }'
+  -d '{ "customer_email": "alici@example.com", "items": [{ "product_id": "a1B2c3D4e5F6" }] }'
 ```
 
-## Desteklenen endpoint'ler
+| Kod | Durum | Anlamı |
+| :-- | :-- | :-- |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | Bu anahtarla yapılan ilk istek hâlâ çalışıyor. Biraz sonra tekrar deneyin. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | Anahtar farklı bir gövdeyle zaten kullanıldı. Farklı bir istek için yeni anahtar kullanın. |
 
-- [`POST /payment-links`](/tr/api-store/overview)
-- [`POST /v1/crypto-invoice`](/tr/api-store/crypto-payments)
+## Desteklenen uçlar
+
+Anahtar Store API'nin oluşturma ve işlem uçlarında çalışır, örneğin:
+
+- `POST /invoices` (sipariş oluşturma)
+- `POST /invoices/{invoiceId}/papelpay` (kart ödemesini başlatma)
+- `POST /invoices/{invoiceId}/complete` ve `POST /invoices/{invoiceId}/refund`
+- `POST /orders/{invoiceId}/shipments`
+- `POST /products` ve `POST /coupons`
 
 ## En iyi uygulamalar
 
-- Her istek için değil, her sipariş için bir UUID v4 üretin.
+- Her istek için değil, her sipariş için bir anahtar üretin. Kendi sipariş kimliğiniz iyi bir seçimdir.
 - Anahtarı siparişinizle saklayın, böylece her deneme aynı anahtarı kullanır.
 - Bir anahtarı asla farklı bir sipariş veya tutar için tekrar kullanmayın.

@@ -23,13 +23,21 @@ PapelShip uses standard HTTP status codes. Every JSON response includes a `succe
 | `404` | Resource not found. | Check the ID in the URL or query. |
 | `500` | Server error. | Retry with exponential backoff. |
 
-## Common API Store errors
+## Store API errors
 
-| Error | Cause |
-| :--- | :--- |
-| Crypto method disabled | Crypto payments are turned off for your store. Enable them in the dashboard. |
-| Coin not enabled | The requested `coin_type` is not configured for your store. |
-| Invoice not found | The `invoiceId` does not exist or belongs to another store. |
+Store API errors also carry a machine-readable `code`, optional `details` and a `request_id` to quote to support:
+
+```json Store API error
+{
+  "success": false,
+  "code": "PRODUCT_NOT_FOUND",
+  "error": "Product a1B2c3D4e5F6 not found in this store",
+  "details": { "field": "items[0].product_id" },
+  "request_id": "req_8fK2mQ1xZ7pL0vN3"
+}
+```
+
+Branch on `code`, not on the message. See [Store API errors](/en/user-api/errors) for every code.
 
 <Tip>
   Retry only on network failures and `5xx` responses. Send the same `Idempotency-Key` on each retry. See [Idempotency](/en/guides/idempotency).

@@ -1,0 +1,82 @@
+---
+title: "Sell subscriptions with PapelPay card payments"
+sidebarTitle: "Subscriptions"
+description: "Create Store API orders that renew every period with PapelPay: set auto_renew, read the subscription object, and follow or stop renewals after payment."
+icon: "rotate"
+keywords: ["papelpay", "subscription", "auto_renew", "recurring", "renewal"]
+---
+
+A product with subscriptions turned on and a billing period can be bought as a subscription. When the customer pays with PapelPay, the card is charged again every period until they cancel. With any other payment method, the customer gets a renewal invoice by email before each period ends. This page shows how to control that choice from the Store API.
+
+## Choose subscription or one-time
+
+Send `auto_renew` when you create the order:
+
+| Value | Result |
+| :-- | :-- |
+| `true` | The order is bought as a subscription. The customer can't turn it off at checkout. |
+| `false` | The order is a one-time purchase. The checkout shows no subscription option. |
+| Left out | The customer chooses at checkout. Subscription is preselected. |
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: WEB-2087" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_email": "buyer@example.com",
+    "items": [{ "product_id": "Pr0Mnth1yX9a" }],
+    "auto_renew": true,
+    "payment_method": "PAPELPAY"
+  }'
+```
+
+`auto_renew: true` needs an order with exactly one product line, and that product must have subscriptions turned on with a billing period. Otherwise the call fails with `SUBSCRIPTION_NOT_AVAILABLE` (`422`) and no order is created.
+
+## The subscription object
+
+Create and detail responses of an order include `subscription`. It is `null` when the order can't be a subscription.
+
+```json
+"subscription": {
+  "enabled": true,
+  "locked": true,
+  "interval_days": 30,
+  "interval": "month",
+  "discount_percent": 20,
+  "discount_applies_to": "automatic_payments",
+  "discount_cents": 0,
+  "subscription_id": null,
+  "auto_renewal_id": null
+}
+```
+
+| Field | Meaning |
+| :-- | :-- |
+| `enabled` | `true`: bought as a subscription. `false`: one-time purchase. |
+| `locked` | Set by `auto_renew` on create. The customer can't switch it at checkout. |
+| `interval_days`, `interval` | Billing period. `interval` is `day`, `week`, `month` or `year` for standard periods, otherwise `null`. |
+| `discount_percent` | Subscriber discount set on the product. |
+| `discount_applies_to` | `automatic_payments`: only when the card renews automatically. `all_payment_methods`: with any method. |
+| `discount_cents` | Discount currently included in `total_cents`. It stays `0` until the customer picks a payment method it applies to. |
+| `subscription_id` | After payment, the subscription record. |
+| `auto_renewal_id` | After a PapelPay card payment, the automatic renewal of the card. |
+
+## After payment
+
+The first payment completes the order and starts the subscription. Each renewal creates a new paid order and extends the subscription. Read and stop subscriptions with these endpoints:
+
+| Action | Endpoint |
+| :-- | :-- |
+| List subscriptions | `GET /subscriptions` |
+| Read one, with its payments | `GET /subscriptions/{subscriptionId}` |
+| Cancel | `POST /subscriptions/{subscriptionId}/cancel` |
+| List automatic card renewals | `GET /subscriptions/auto-renewals` |
+| Stop future card charges | `POST /subscriptions/auto-renewals/{renewalId}/cancel` |
+
+Stopping an automatic renewal ends future charges at the end of the paid period. Cancelling never refunds the customer.
+
+<Note>
+  Subscription card payments are charged in USD.
+</Note>

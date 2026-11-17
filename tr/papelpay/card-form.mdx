@@ -1,0 +1,84 @@
+---
+title: "PapelPay kart formunu sitenizde gösterin"
+sidebarTitle: "Sitenizde kart formu"
+description: "PapelPay kart formunu JavaScript SDK ile kendi ödeme sayfanıza yerleştirin: seçenekler, olaylar, görünüm, izinli alan adları ve ödemeyi doğrulama."
+icon: "code"
+keywords: ["papelpay", "embed", "kart formu", "javascript sdk", "papelship-widget", "iframe"]
+---
+
+PapelShip JavaScript SDK, PapelPay kart formunu kendi ödeme sayfanızın içine yerleştirir; müşteri sitenizden ayrılmaz. Form PapelShip'ten bir çerçeve içinde yüklenir: kart bilgileri sunucunuza ya da sayfanıza hiç uğramaz.
+
+## Başlamadan önce
+
+- Kart ödemesini sunucunuzda `POST /api/v1/invoices/{invoiceId}/papelpay` ile başlatın ve `payment.embed_url` adresini sayfanıza iletin. Bkz. [Genel bakış](/tr/papelpay/overview).
+- Ödeme sayfanızın alan adını panelde **PapelPay > Alan adları** bölümüne ekleyip doğrulayın. Mağazanızın doğrulanmış özel alan adı ve onun alt alan adları da çalışır.
+- Geliştirme sırasında `localhost` ve `127.0.0.1` ayar gerektirmeden çalışır.
+
+<Warning>
+  Doğrulanmamış bir alan adında çerçeve formun yerine bir uyarı gösterir ve `onError` `origin_not_allowed` alır.
+</Warning>
+
+## Formu yerleştirin
+
+```html odeme.html
+<div id="card"></div>
+
+<script src="https://app.papelship.com/scripts/papelship-widget.js"></script>
+<script>
+  const card = PapelShip.papelpay.mount("#card", {
+    embedUrl: payment.embed_url,
+    invoiceId: payment.invoice_id,
+    locale: "tr",
+    appearance: { mode: "light", surface: "#ffffff", border: "#e5e7eb", text: "#111827", font: "inter", radius: 10 },
+    onReady: () => console.log("Kart formu yüklendi"),
+    onPaid: ({ invoiceId }) => {
+      window.location.href = `/siparis/${invoiceId}/tesekkurler`;
+    },
+    onDeclined: ({ message }) => hataGoster(message),
+    onError: ({ code }) => hataGoster(code),
+  });
+</script>
+```
+
+Çerçeve içeriğine göre büyüyüp küçülür. `mount` `{ iframe, destroy }` döner; formu kaldırmak için, örneğin müşteri başka bir ödeme yöntemi seçtiğinde, `card.destroy()` çağırın.
+
+## Seçenekler
+
+| Seçenek | Açıklama |
+| :-- | :-- |
+| `embedUrl` | Zorunlu. Store API'den gelen `payment.embed_url`. Başka bir adres `invalid_embed_url` ile reddedilir. |
+| `invoiceId` | İsteğe bağlı. Her olayda geri gelir; siparişinizle eşleştirmenizi sağlar. |
+| `locale` | Formun dili, örneğin `tr` ya da `en`. |
+| `appearance.mode` | `light` ya da `dark`. |
+| `appearance.surface`, `appearance.border`, `appearance.text` | `#ffffff` gibi hex renkler. |
+| `appearance.font` | `inter`, `system` ya da `fustat`. |
+| `appearance.radius` | Piksel olarak köşe yuvarlaklığı, `0` ile `24` arası. |
+| `height` | Form kendi yüksekliğini bildirene kadarki başlangıç yüksekliği (varsayılan `420`). |
+| `title` | Çerçevenin erişilebilir başlığı (varsayılan `Card payment`). |
+
+## Olaylar
+
+| Geri çağrı | Ne zaman | Veri |
+| :-- | :-- | :-- |
+| `onReady` | Form yüklendi. | `{ invoiceId }` |
+| `onPaid` | Kart çekildi. Bir kez tetiklenir. | `{ invoiceId }` |
+| `onDeclined` | Kart reddedildi. Müşteri başka bir kart deneyebilir. | `{ invoiceId, message }` |
+| `onError` | Form ödeme alamıyor. | `{ invoiceId, code }` |
+
+Aynı olaylar `PapelShip.on("papelpay:paid", fn)`, `papelpay:declined`, `papelpay:error` ve `papelpay:ready` ile genel olarak da dinlenebilir; `window` üzerinde `papelship:papelpay:paid` gibi `CustomEvent` olarak da yayılır.
+
+| `onError` kodu | Anlamı | Ne yapmalı |
+| :-- | :-- | :-- |
+| `origin_not_allowed` | Sayfanızın alan adı bu mağaza için doğrulanmamış. | **PapelPay > Alan adları** bölümüne ekleyin. |
+| `not_embeddable` | Mağazanızın kart ödemeleri çerçevede gösterilemiyor. | Müşteriyi `payment.payment_url` adresine gönderin. |
+| `session_expired` | Ödeme oturumunun süresi doldu. | Ödemeyi yeniden başlatıp yeni `embed_url` adresini yerleştirin. |
+| `session_ended` | Ödeme oturumu kapandı. | Ödenip ödenmediğini görmek için siparişi okuyun. |
+| `invalid_embed_url` | `embedUrl` bir PapelPay `embed_url` adresi değil. | `payment.embed_url` adresini değiştirmeden verin. |
+
+## Ödemeyi sunucunuzda doğrulayın
+
+`onPaid` sayfanıza kartın çekildiğini söyler. Kendiniz bir şey teslim etmeden önce siparişi sunucunuzda doğrulayın: `order.completed` webhook'unu bekleyin ya da `GET /api/v1/invoices/{invoiceId}` ile okuyup `status` değerinin `completed` olduğunu kontrol edin. Bkz. [Webhook'lar](/tr/user-api/webhooks).
+
+<Tip>
+  Kendi iframe sandbox ya da izin politikanızı kullanıyorsanız ödeme özelliklerine izin verin: SDK, cüzdan ödemeleri için çerçevesine `allow="payment *"` ekler.
+</Tip>

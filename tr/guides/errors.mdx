@@ -23,13 +23,21 @@ PapelShip standart HTTP durum kodlarını kullanır. Her JSON yanıtı bir `succ
 | `404` | Kaynak bulunamadı. | URL veya sorgudaki ID'yi kontrol edin. |
 | `500` | Sunucu hatası. | Exponential backoff ile tekrar deneyin. |
 
-## Sık görülen API Store hataları
+## Store API hataları
 
-| Hata | Nedeni |
-| :--- | :--- |
-| Crypto method disabled | Mağazanızda kripto ödemeleri kapalı. Panelden etkinleştirin. |
-| Coin not enabled | İstenen `coin_type` mağazanız için yapılandırılmamış. |
-| Invoice not found | `invoiceId` mevcut değil veya başka bir mağazaya ait. |
+Store API hataları ayrıca makine tarafından okunabilir bir `code`, isteğe bağlı `details` ve desteğe iletebileceğiniz bir `request_id` içerir:
+
+```json Store API hatası
+{
+  "success": false,
+  "code": "PRODUCT_NOT_FOUND",
+  "error": "Product a1B2c3D4e5F6 not found in this store",
+  "details": { "field": "items[0].product_id" },
+  "request_id": "req_8fK2mQ1xZ7pL0vN3"
+}
+```
+
+Mesaja değil `code` değerine göre karar verin. Tüm kodlar için bkz. [Store API hataları](/tr/user-api/errors).
 
 <Tip>
   Yalnızca ağ hatalarında ve `5xx` yanıtlarında tekrar deneyin. Her denemede aynı `Idempotency-Key` değerini gönderin. Bkz. [Idempotency](/tr/guides/idempotency).

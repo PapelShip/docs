@@ -1,0 +1,84 @@
+---
+title: "Show the PapelPay card form on your site"
+sidebarTitle: "Card form on your site"
+description: "Mount the PapelPay card form in your own checkout page with the JavaScript SDK: options, events, appearance, allowed domains and how to confirm payment."
+icon: "code"
+keywords: ["papelpay", "embed", "card form", "javascript sdk", "papelship-widget", "iframe"]
+---
+
+The PapelShip JavaScript SDK mounts the PapelPay card form inside your own checkout page, so the customer never leaves your site. The form loads in a frame from PapelShip: card details never touch your server or your page.
+
+## Before you start
+
+- Start the card payment on your server with `POST /api/v1/invoices/{invoiceId}/papelpay` and pass `payment.embed_url` to your page. See [Overview](/en/papelpay/overview).
+- Add the domain of your checkout page in the dashboard under **PapelPay > Domains** and verify it. A verified custom domain of your store works too, and so do its subdomains.
+- `localhost` and `127.0.0.1` work without setup while you develop.
+
+<Warning>
+  On a domain that isn't verified, the frame shows a notice instead of the form and `onError` receives `origin_not_allowed`.
+</Warning>
+
+## Mount the form
+
+```html checkout.html
+<div id="card"></div>
+
+<script src="https://app.papelship.com/scripts/papelship-widget.js"></script>
+<script>
+  const card = PapelShip.papelpay.mount("#card", {
+    embedUrl: payment.embed_url,
+    invoiceId: payment.invoice_id,
+    locale: "en",
+    appearance: { mode: "light", surface: "#ffffff", border: "#e5e7eb", text: "#111827", font: "inter", radius: 10 },
+    onReady: () => console.log("Card form loaded"),
+    onPaid: ({ invoiceId }) => {
+      window.location.href = `/order/${invoiceId}/thanks`;
+    },
+    onDeclined: ({ message }) => showError(message),
+    onError: ({ code }) => showError(code),
+  });
+</script>
+```
+
+The frame grows and shrinks with its content. `mount` returns `{ iframe, destroy }`; call `card.destroy()` to remove the form, for example when the customer picks another payment method.
+
+## Options
+
+| Option | Notes |
+| :-- | :-- |
+| `embedUrl` | Required. `payment.embed_url` from the Store API. Any other URL is refused with `invalid_embed_url`. |
+| `invoiceId` | Optional. Returned in every event so you can match it to your order. |
+| `locale` | Language of the form, for example `en` or `tr`. |
+| `appearance.mode` | `light` or `dark`. |
+| `appearance.surface`, `appearance.border`, `appearance.text` | Hex colors such as `#ffffff`. |
+| `appearance.font` | `inter`, `system` or `fustat`. |
+| `appearance.radius` | Corner radius in pixels, from `0` to `24`. |
+| `height` | Starting height in pixels before the form reports its own (default `420`). |
+| `title` | Accessible title of the frame (default `Card payment`). |
+
+## Events
+
+| Callback | When | Data |
+| :-- | :-- | :-- |
+| `onReady` | The form has loaded. | `{ invoiceId }` |
+| `onPaid` | The card was charged. Fires once. | `{ invoiceId }` |
+| `onDeclined` | The card was declined. The customer can try another card. | `{ invoiceId, message }` |
+| `onError` | The form can't take a payment. | `{ invoiceId, code }` |
+
+The same events are available globally with `PapelShip.on("papelpay:paid", fn)`, `papelpay:declined`, `papelpay:error` and `papelpay:ready`, and as `papelship:papelpay:paid` (and so on) `CustomEvent`s on `window`.
+
+| `onError` code | Meaning | What to do |
+| :-- | :-- | :-- |
+| `origin_not_allowed` | Your page's domain isn't verified for this store. | Add it under **PapelPay > Domains**. |
+| `not_embeddable` | Your store's card payments can't be shown in a frame. | Send the customer to `payment.payment_url`. |
+| `session_expired` | The payment session expired. | Start the payment again and mount the new `embed_url`. |
+| `session_ended` | The payment session was closed. | Read the order to see whether it was paid. |
+| `invalid_embed_url` | `embedUrl` is not a PapelPay `embed_url`. | Pass `payment.embed_url` unchanged. |
+
+## Confirm the payment on your server
+
+`onPaid` tells your page that the card was charged. Before you deliver anything yourself, confirm the order on your server: wait for the `order.completed` webhook or read `GET /api/v1/invoices/{invoiceId}` and check that `status` is `completed`. See [Webhooks](/en/user-api/webhooks).
+
+<Tip>
+  Allow card payment features in the frame's parent if you use your own iframe sandbox or permissions policy: the SDK sets `allow="payment *"` on its frame for wallet payments.
+</Tip>

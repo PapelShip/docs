@@ -1,29 +1,40 @@
 ---
 title: "Idempotency"
-description: "Retry payment requests safely without creating duplicate invoices."
+description: "Retry Store API create and action requests safely with an Idempotency-Key, so a timeout never creates a second order, refund or payment."
 ---
 
-Network failures happen. When a request times out, you cannot tell whether PapelShip created the invoice. Idempotency keys let you retry safely.
+Network failures happen. When a request times out, you can't tell whether PapelShip created the order. An `Idempotency-Key` header lets you retry the Store API call safely.
 
 ## How it works
 
-Add an `Idempotency-Key` header to a create request. If you send the same key again, PapelShip returns the original result instead of creating a second invoice or deposit address.
+Add an `Idempotency-Key` header (up to 255 characters) to a create or action request. PapelShip stores the first response for 24 hours. A retry with the same key and the same body gets that stored response instead of running the request again.
 
 ```bash
-curl -X POST https://app.papelship.com/api/api-store/v1/crypto-invoice \
-  -H "Authorization: Bearer psa_your_api_key" \
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
   -H "Idempotency-Key: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d" \
   -H "Content-Type: application/json" \
-  -d '{ "amount": 50, "coin_type": "LTC" }'
+  -d '{ "customer_email": "buyer@example.com", "items": [{ "product_id": "a1B2c3D4e5F6" }] }'
 ```
 
-## Supported endpoints
+| Code | Status | Meaning |
+| :-- | :-- | :-- |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | The first request with this key is still running. Retry shortly. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | The key was already used with a different body. Use a new key for a different request. |
 
-- [`POST /payment-links`](/en/api-store/overview)
-- [`POST /v1/crypto-invoice`](/en/api-store/crypto-payments)
+## Endpoints that accept it
+
+The key works on the Store API's create and action endpoints, including:
+
+- `POST /invoices` (create an order)
+- `POST /invoices/{invoiceId}/papelpay` (start the card payment)
+- `POST /invoices/{invoiceId}/complete` and `POST /invoices/{invoiceId}/refund`
+- `POST /orders/{invoiceId}/shipments`
+- `POST /products` and `POST /coupons`
 
 ## Best practices
 
-- Generate one UUID v4 per order, not per request.
+- Generate one key per order, not per request. Your own order ID works well.
 - Store the key with your order so every retry reuses it.
 - Never reuse a key for a different order or amount.

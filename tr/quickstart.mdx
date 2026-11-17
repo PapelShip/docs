@@ -1,112 +1,106 @@
 ---
 title: "Hızlı başlangıç"
-description: "Birkaç dakika içinde hosted ödeme linki oluşturun ve ödemeyi doğrulayın."
+description: "PapelShip Store API ile ilk siparişinizi oluşturun, müşteriyi ödeme sayfasına gönderin ve ödemeyi webhook ya da sipariş okuyarak doğrulayın."
 ---
 
-Bu rehber API Store ile uçtan uca bir ödeme akışını anlatır: ödeme linki oluşturun, müşterinizi checkout'a yönlendirin ve ödemeyi doğrulayın.
+Bu rehber PapelShip Store API ile uçtan uca bir siparişi anlatır: ürünlerinizden biri için sipariş oluşturun, müşteriyi barındırılan ödeme sayfasına gönderin ve ödemeye güvenmeden önce doğrulayın.
 
 ## Gereksinimler
 
-- En az bir mağazası olan bir PapelShip hesabı
-- Bir API anahtarı (`psa_...`), sayısal **API Key ID** değeri ve 12 karakterlik **Store Hash ID**
+- En az bir ürünü olan bir PapelShip mağazası
+- `orders:write` iznine sahip bir Store API anahtarı (`pk_live_...`) ve `x-store-hash` header'ı için mağaza kimliğiniz
 
 <Tip>
-  Üç değeri de [PapelShip panelinde](https://app.papelship.com) mağazanızın API ayarları altında bulabilirsiniz.
+  İkisini de [PapelShip panelinde](https://app.papelship.com) mağazanızın API ayarları altında bulabilirsiniz. Bkz. [Kimlik doğrulama](/tr/guides/authentication).
 </Tip>
 
 <Steps>
-  <Step title="Ödeme linki oluşturun">
-    Sipariş tutarını ödeme linki endpoint'ine gönderin. Tekrar denemelerde mükerrer fatura oluşmaması için `Idempotency-Key` header'ı ekleyin.
+  <Step title="Sipariş oluşturun">
+    Müşterinin e-postasını ve ürünleri gönderin. Tekrar denemelerde ikinci bir sipariş oluşmaması için `Idempotency-Key` header'ı ekleyin.
 
     <CodeGroup>
     ```bash cURL
-    curl -X POST https://app.papelship.com/api/api-store/payment-links \
-      -H "Authorization: Bearer psa_your_api_key" \
+    curl -X POST https://app.papelship.com/api/v1/invoices \
+      -H "x-api-key: pk_live_anahtariniz" \
+      -H "x-store-hash: magaza_kimliginiz" \
+      -H "Idempotency-Key: WEB-1042" \
       -H "Content-Type: application/json" \
-      -H "Idempotency-Key: 7b9e8f1a-3c2d-4e5f-6a7b-8c9d0e1f2a3b" \
       -d '{
-        "storeHashId": "0bHQn0bU2dei",
-        "apiKeyId": 42,
-        "amount": 49.99,
-        "currency": "USD",
-        "customer_email": "buyer@example.com",
-        "description": "Sipariş #1042",
-        "redirect_url": "https://yourdomain.com/checkout/success"
+        "customer_email": "alici@example.com",
+        "items": [{ "product_id": "a1B2c3D4e5F6", "quantity": 1 }],
+        "metadata": { "order_ref": "WEB-1042" }
       }'
     ```
 
     ```javascript Node.js
-    const res = await fetch("https://app.papelship.com/api/api-store/payment-links", {
+    const res = await fetch("https://app.papelship.com/api/v1/invoices", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.PAPELSHIP_API_KEY}`,
+        "x-api-key": process.env.PAPELSHIP_API_KEY,
+        "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+        "Idempotency-Key": order.id,
         "Content-Type": "application/json",
-        "Idempotency-Key": crypto.randomUUID(),
       },
       body: JSON.stringify({
-        storeHashId: "0bHQn0bU2dei",
-        apiKeyId: 42,
-        amount: 49.99,
-        currency: "USD",
-        customer_email: "buyer@example.com",
-        redirect_url: "https://yourdomain.com/checkout/success",
+        customer_email: order.email,
+        items: [{ product_id: "a1B2c3D4e5F6", quantity: 1 }],
+        metadata: { order_ref: order.id },
       }),
     });
-    const { invoice, checkout_url } = await res.json();
+    const { invoice } = await res.json();
     ```
 
     ```python Python
-    import os, uuid, requests
-
+    import os, requests
+    
     res = requests.post(
-        "https://app.papelship.com/api/api-store/payment-links",
+        "https://app.papelship.com/api/v1/invoices",
         headers={
-            "Authorization": f"Bearer {os.environ['PAPELSHIP_API_KEY']}",
-            "Idempotency-Key": str(uuid.uuid4()),
+            "x-api-key": os.environ["PAPELSHIP_API_KEY"],
+            "x-store-hash": os.environ["PAPELSHIP_STORE_ID"],
+            "Idempotency-Key": order_id,
         },
         json={
-            "storeHashId": "0bHQn0bU2dei",
-            "apiKeyId": 42,
-            "amount": 49.99,
-            "currency": "USD",
-            "customer_email": "buyer@example.com",
-            "redirect_url": "https://yourdomain.com/checkout/success",
+            "customer_email": "alici@example.com",
+            "items": [{"product_id": "a1B2c3D4e5F6", "quantity": 1}],
+            "metadata": {"order_ref": order_id},
         },
     )
-    data = res.json()
+    invoice = res.json()["invoice"]
     ```
     </CodeGroup>
   </Step>
 
-  <Step title="Müşterinizi yönlendirin">
-    Yanıtta bir `checkout_url` döner. Müşterinizi kart, Papara, havale veya kripto ile ödeme yapması için bu adrese gönderin.
+  <Step title="Müşteriyi ödeme sayfasına gönderin">
+    Cevapta `checkout_url` ile birlikte sipariş gelir. Müşteriyi, mağazanızın kabul ettiği herhangi bir yöntemle ödemesi için bu adrese yönlendirin.
 
-    ```json Yanıt
+    ```json Cevap (201)
     {
       "success": true,
       "invoice": {
-        "id": "aB9xK12Lp9012345678901234",
-        "amount": 49.99,
+        "id": "c35ffd-19a1b2c3d4e-8c7a20",
+        "status": "pending",
         "currency": "USD",
-        "status": "awaiting_method",
-        "expires_at": "2026-08-09T02:18:00.000Z"
-      },
-      "checkout_url": "https://app.papelship.com/checkout-gateway/aB9xK12Lp9012345678901234"
+        "total_cents": 3499,
+        "checkout_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+        "expires_at": "2026-10-04T15:00:00.000Z"
+      }
     }
     ```
 
-    `invoice.id` değerini siparişinizle birlikte saklayın. Ödemeyi kontrol etmek için buna ihtiyacınız olacak.
+    `invoice.id` değerini siparişinizle saklayın. Ödenmeyen siparişlerin süresi 3 saatte dolar. Kartı hemen çekmek ya da kart formunu kendi sitenizde göstermek için bkz. [PapelPay](/tr/papelpay/overview).
   </Step>
 
   <Step title="Ödemeyi doğrulayın">
-    Müşteri `redirect_url` adresinize döndüğünde ödemeyi sunucunuzda doğrulayın. Yalnızca yönlendirmeye güvenmeyin.
+    Yalnızca müşterinin sitenize dönmesine güvenmeyin. `order.completed` webhook'unu dinleyin ya da siparişi sunucunuzda okuyun:
 
     ```bash
-    curl "https://app.papelship.com/api/api-store/v1/payment-links/check?invoiceId=aB9xK12Lp9012345678901234" \
-      -H "Authorization: Bearer psa_your_api_key"
+    curl https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20 \
+      -H "x-api-key: pk_live_anahtariniz" \
+      -H "x-store-hash: magaza_kimliginiz"
     ```
 
-    Siparişi yalnızca `payment.is_paid` değeri `true` olduğunda teslim edin.
+    `status` değeri `completed` olduğunda sipariş ödenmiş ve teslim edilmiştir.
   </Step>
 </Steps>
 
@@ -116,11 +110,12 @@ Bu rehber API Store ile uçtan uca bir ödeme akışını anlatır: ödeme linki
 
 ## Sonraki adımlar
 
-<CardGroup cols={2}>
-  <Card title="Kripto faturaları" icon="bitcoin-sign" href="/tr/api-store/crypto-payments">
-    Özel deposit adresi ve QR kod ile kendi checkout'unuzu gösterin.
+<Columns cols={2}>
+  <Card title="Siparişler" icon="receipt" href="/tr/user-api/orders">
+    Fiziksel ürünler, durumlar, iptal ve iadeler.
   </Card>
-  <Card title="API Store referansı" icon="code" href="/tr/api-store/overview">
-    Tüm endpoint, parametre ve yanıtları inceleyin.
+
+  <Card title="PapelPay" icon="credit-card" href="/tr/papelpay/overview">
+    Kartla ödeme, abonelikler ve sitenizde kart formu.
   </Card>
-</CardGroup>
+</Columns>

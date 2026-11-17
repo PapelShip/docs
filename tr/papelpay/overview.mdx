@@ -1,0 +1,125 @@
+---
+title: "PapelPay ile kartla ödeme alın"
+sidebarTitle: "Genel bakış"
+description: "Store API siparişlerinde PapelPay ile kart ödemesi alın: ödemeyi başlatın, müşteriyi ödeme sayfasına ya da sitenizdeki kart formuna yönlendirin, webhook ile doğrulayın."
+icon: "credit-card"
+keywords: ["papelpay", "kart ödemesi", "checkout", "store api", "abonelik"]
+---
+
+PapelPay, PapelShip mağazanızın kartla ödeme yöntemidir. Store API ile sipariş oluşturur, siparişin PapelPay ödemesini başlatır ve müşterinin kartla ödemesini barındırılan ödeme sayfanızda ya da kendi sitenizdeki kart formunda alırsınız. Abonelik olarak satılan ürünlerin siparişlerinde kart her dönem yeniden çekilir.
+
+<Info>
+  Mağazanızda PapelPay'in açık olması gerekir. Panelde **PapelPay** bölümünden başvurun; mağazanız onaylanana kadar bu sayfadaki uçlar `PAPELPAY_NOT_ENABLED` döner.
+</Info>
+
+## Kart ödemesi nasıl işler
+
+<Steps>
+  <Step title="Siparişi oluşturun">
+    [Sipariş oluşturma ve yönetme](/tr/user-api/orders) sayfasındaki gibi müşteri ve ürünlerle `POST /api/v1/invoices` çağırın. Abonelik ürününü abonelik ya da tek seferlik satmak için `auto_renew` ekleyin. Bkz. [Abonelikler](/tr/papelpay/subscriptions).
+  </Step>
+  <Step title="Kart ödemesini başlatın">
+    `POST /api/v1/invoices/{invoiceId}/papelpay` çağırın ya da siparişi oluştururken `"payment_method": "PAPELPAY"` gönderip ikisini tek çağrıda yapın. Cevapta bir `payment` nesnesi gelir.
+  </Step>
+  <Step title="Müşterinin ödemesini alın">
+    Müşteriyi `payment.payment_url` adresine, yani kart formuyla açılan ödeme sayfanıza gönderin. Müşteriyi kendi sitenizde tutmak için `payment.embed_url` adresini JavaScript SDK ile yerleştirin. Bkz. [Sitenizde kart formu](/tr/papelpay/card-form).
+  </Step>
+  <Step title="Siparişi doğrulayın">
+    Kart çekildiğinde sipariş `completed` olur ve PapelShip ürünleri teslim eder. `order.completed` webhook'unu dinleyin ya da siparişi `GET /api/v1/invoices/{invoiceId}` ile okuyun. Bkz. [Webhook'lar](/tr/user-api/webhooks).
+  </Step>
+</Steps>
+
+## Kart ödemesini başlatın
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20/papelpay \
+  -H "x-api-key: pk_live_anahtariniz" \
+  -H "x-store-hash: magaza_kimliginiz" \
+  -H "Idempotency-Key: 4d2b7f1e-8a3c-4e9b-b1d0-5c6a7e8f9a01" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_ip": "203.0.113.10", "locale": "tr" }'
+```
+
+```javascript Node.js
+const res = await fetch(
+  `https://app.papelship.com/api/v1/invoices/${invoiceId}/papelpay`,
+  {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.PAPELSHIP_API_KEY,
+      "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+      "Idempotency-Key": `${invoiceId}:papelpay`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ customer_ip: req.ip, locale: "tr" }),
+  }
+);
+const { payment } = await res.json();
+```
+
+</CodeGroup>
+
+```json Cevap (200)
+{
+  "success": true,
+  "payment": {
+    "object": "papelpay_payment",
+    "invoice_id": "c35ffd-19a1b2c3d4e-8c7a20",
+    "session_id": "ch_7Hq2Lm9xP4",
+    "status": "pending",
+    "mode": "subscription",
+    "interval_days": 30,
+    "amount_cents": 2399,
+    "currency": "USD",
+    "payment_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+    "embed_url": "https://invoice.papelship.com/api/payment/papelpay/embed/ch_7Hq2Lm9xP4",
+    "embeddable": true,
+    "expires_at": "2026-11-17T15:00:00.000Z"
+  },
+  "invoice": { "id": "c35ffd-19a1b2c3d4e-8c7a20", "status": "payment_pending" }
+}
+```
+
+| Gövde alanı | Açıklama |
+| :-- | :-- |
+| `customer_ip` | Alıcının IP adresi. Bu ödeme için kart kontrollerini (VPN, art arda reddedilen kartlar) açar. |
+| `locale` | Hata mesajlarının dili, örneğin `tr` ya da `en`. |
+
+Ödeme açıkken uç tekrar çağrılırsa aynı `session_id` döner. `Idempotency-Key` içinde sipariş kimliğini kullanın.
+
+## payment nesnesi
+
+| Alan | Anlamı |
+| :-- | :-- |
+| `mode` | `subscription`: kart, müşteri iptal edene kadar her `interval_days` günde yeniden çekilir. `one_time`: tek çekim. |
+| `interval_days` | Aboneliklerde gün olarak dönem, diğerlerinde `null`. |
+| `amount_cents`, `currency` | Şimdi çekilecek tutar. Kart ödemeleri USD olarak çekilebilir. |
+| `payment_url` | Kart formuyla açılan ödeme sayfanız. Siparişin `checkout_url` adresiyle aynı sayfadır. |
+| `embed_url` | Kendi sayfanız için yalnızca kart formu. Mağazanızın kart ödemeleri gömülemiyorsa `null` olur; o zaman `payment_url` kullanın. |
+| `embeddable` | `embed_url` doluysa `true`. |
+| `expires_at` | Sipariş bu saate kadar ödenmezse süresi dolar. |
+
+## Hatalar
+
+| Kod | Durum | Anlamı |
+| :-- | :-- | :-- |
+| `PAPELPAY_NOT_ENABLED` | `422` | Mağazanızda PapelPay açık değil. |
+| `PAYMENT_METHOD_DISABLED` | `422` | Sipariş `disabled_payment_methods` içinde `PAPELPAY` içeriyor. |
+| `INVOICE_NOT_PAYABLE` | `409` | Sipariş ödenmiş, iptal edilmiş, iade edilmiş ya da süresi dolmuş. |
+| `CARD_CHECKOUT_BLOCKED` | `403` | Kart kontrolleri bu alıcıyı durdurdu. Nedeni `details.reason` içinde; `details.existing_invoice_id` aynı satın alma için açık bir siparişi gösterir. |
+| `PAPELPAY_UNAVAILABLE` | `503` | Kart ödemeleri kısa süreliğine duraklatıldı. Sonra tekrar deneyin. |
+
+Sipariş oluştururken `"payment_method": "PAPELPAY"` gönderdiyseniz ve kart ödemesi başlatılamadıysa sipariş yine de oluşur. Hatanın `details.invoice_id` alanı siparişi gösterir; `POST /invoices/{invoiceId}/papelpay` ile tekrar deneyebilirsiniz.
+
+## Sonraki adımlar
+
+<Columns cols={2}>
+  <Card title="Abonelikler" icon="rotate" href="/tr/papelpay/subscriptions">
+    Bir ürünü abonelik olarak satın ve yenilemelerini takip edin.
+  </Card>
+  <Card title="Sitenizde kart formu" icon="code" href="/tr/papelpay/card-form">
+    Kart formunu kendi ödeme sayfanızda gösterin.
+  </Card>
+</Columns>
