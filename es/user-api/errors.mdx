@@ -1,0 +1,68 @@
+---
+title: "Errores de la User API"
+sidebarTitle: "Errores"
+description: "Códigos de estado y códigos de error que devuelve la User API."
+---
+
+Los errores devuelven `success: false`, un `code` estable, un `error` legible y un `request_id`.
+
+```json
+{
+  "success": false,
+  "code": "INSUFFICIENT_SCOPE",
+  "error": "This API key needs the orders:write permission",
+  "required_scope": "orders:write",
+  "request_id": "req_7YbK2mQ9xP1cRt4v"
+}
+```
+
+Reintente solo las respuestas `429` (después de `Retry-After`) y `5xx`, con el mismo `Idempotency-Key`.
+
+## Autenticación y límites
+
+| Código | Estado | Solución |
+| :-- | :-- | :-- |
+| `MISSING_API_KEY` | `401` | Envíe `x-api-key`. |
+| `MISSING_STORE_HASH` | `401` | Envíe `x-store-hash`. |
+| `INVALID_API_KEY` | `401` | La clave es incorrecta o fue revocada. |
+| `API_KEY_EXPIRED` | `401` | Cree una clave nueva o amplíe su vigencia. |
+| `IP_NOT_ALLOWED` | `403` | Llame desde una IP permitida o edite la clave. |
+| `STORE_NOT_ALLOWED` | `403` | La clave pertenece a otra cuenta o está limitada a otras tiendas. |
+| `STORE_NOT_FOUND` | `404` | Revise `x-store-hash`. |
+| `INSUFFICIENT_SCOPE` | `403` | Otorgue a la clave el permiso indicado en `required_scope`. |
+| `STORE_API_NOT_IN_PLAN` | `403` | Su plan no incluye la Store API. |
+| `RATE_LIMITED` | `429` | Más de 300 solicitudes en un minuto. |
+| `STORE_API_MONTHLY_QUOTA_EXCEEDED` | `429` | Cuota mensual agotada. Se restablece el día 1 (UTC). |
+
+## Solicitudes
+
+| Código | Estado | Significado |
+| :-- | :-- | :-- |
+| `INVALID_JSON` | `400` | El cuerpo no es un JSON válido. |
+| `PAYLOAD_TOO_LARGE` | `413` | El cuerpo es demasiado grande. |
+| `VALIDATION_FAILED` | `422` | Falta un campo o no es válido. `details.field` lo indica. |
+| `NOT_FOUND` | `404` | No existe ese registro en esta tienda. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | El `Idempotency-Key` se usó con un cuerpo distinto. |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | La primera solicitud con esta clave todavía se está ejecutando. |
+| `ENDPOINT_RETIRED` | `410` | El endpoint se eliminó. El mensaje indica el reemplazo. |
+| `FEATURE_NOT_ENABLED` | `403` | La tienda no está aprobada para esta función (productos físicos, afiliados). |
+| `INTERNAL_ERROR` | `500` | Error de nuestra parte. Reintente y, si persiste, contacte con soporte indicando el `request_id`. |
+
+## Códigos de recursos
+
+| Código | Estado | Significado |
+| :-- | :-- | :-- |
+| `PRODUCT_NOT_FOUND` | `404` | Un artículo del pedido hace referencia a un producto fuera de su tienda. |
+| `OUT_OF_STOCK` | `409` | No hay inventario suficiente para el pedido. |
+| `TOTAL_MISMATCH` | `409` | `expected_total_cents` difiere del precio real. |
+| `INVOICE_PAID` | `409` | Los pedidos pagados no se pueden cancelar. Reembólselos en su lugar. |
+| `PAYMENT_IN_PROGRESS` | `409` | Se está procesando un pago. |
+| `INVOICE_CLOSED` | `409` | Los pedidos cancelados o caducados no se pueden completar. |
+| `INVOICE_NOT_PAID` | `409` | Solo los pedidos pagados se pueden reembolsar o entregar. |
+| `ALREADY_REFUNDED` / `REFUND_TOO_LARGE` | `409` | No queda nada, o queda menos, por reembolsar. |
+| `DELIVERY_FAILED` | `502` | Pagado, pero la entrega falló. Llame de nuevo a `/complete`. |
+| `SLUG_TAKEN`, `SKU_TAKEN`, `COUPON_CODE_TAKEN` | `409` | El valor ya se usa en su tienda. |
+| `PLAN_LIMIT_REACHED` | `403` | Se alcanzó el límite de productos de su plan. |
+| `NOT_PAID`, `OVER_SHIPPED`, `CLOSED` | `409` | No se puede crear el envío para este pedido o esta cantidad. |
+| `INVALID_TRANSITION` | `409` | Una devolución o un ticket no puede pasar a ese estado. |
+| `ENDPOINT_LIMIT_REACHED` | `409` | 16 endpoints de webhook por tienda. |

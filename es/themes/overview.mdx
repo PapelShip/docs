@@ -1,0 +1,44 @@
+---
+title: "Descripción general de los temas"
+sidebarTitle: "Descripción general"
+description: "Las tres formas de construir una tienda PapelShip con código: temas Liquid, diseños subidos y la capa de código para temas React."
+---
+
+Las tiendas de PapelShip pueden construirse de forma visual, con código o de ambas maneras. Todo se edita en el panel de la tienda, en **Temas**, y cada cambio de código pasa por el mismo editor de código, el mismo historial de versiones y el mismo escáner de seguridad.
+
+<CardGroup cols={3}>
+  <Card title="Temas Liquid" icon="code" href="/es/themes/liquid">
+    Paquetes de temas al estilo de Shopify: layouts, plantillas, secciones, snippets, recursos y configuración.
+  </Card>
+
+  <Card title="Diseños" icon="file-code" href="/es/themes/designs">
+    Suba su propio sitio HTML y conéctelo a los productos, el carrito y el checkout.
+  </Card>
+
+  <Card title="Capa de código" icon="layer-group" href="/es/themes/code-layer">
+    Agregue secciones de código, CSS y JavaScript sobre un tema React integrado.
+  </Card>
+</CardGroup>
+
+## Copias de tema
+
+Cada tema Liquid, diseño y paquete de código de tema es una **copia** de su tienda. Una tienda puede conservar hasta 20 copias.
+
+- Los cambios se guardan en la copia que edita. Una copia que no está publicada nunca modifica su tienda.
+- La copia publicada solo cambia cuando la publica o la activa en el panel.
+- Cada guardado conserva una versión. Puede restaurar cualquiera de las últimas 50 versiones de un archivo.
+
+| Límite | Valor |
+| --- | --- |
+| Tamaño de archivo | 512 KB |
+| Archivos por copia | 400 |
+| Tamaño de la copia | 10 MB |
+| Copias por tienda | 20 |
+
+## Vistas previas
+
+Las vistas previas muestran sus archivos guardados y los borradores no guardados del editor dentro del panel. Nunca son públicas: la tienda muestra una copia no publicada solo dentro del marco de vista previa del panel, con un token firmado que caduca a los 30 minutos.
+
+## Trabajar con un agente de IA
+
+Conecte Claude, Cursor, VS Code u otro cliente MCP a sus temas. El agente lee el código de su tema y guarda sus cambios como borradores; usted los revisa y los publica. Consulte [Agentes de IA (MCP)](/es/themes/mcp).

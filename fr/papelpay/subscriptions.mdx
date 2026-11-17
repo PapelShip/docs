@@ -1,0 +1,87 @@
+---
+title: "Vendre des abonnements avec les paiements par carte PapelPay"
+sidebarTitle: "Abonnements"
+description: "Créez avec PapelPay des commandes de la Store API qui se renouvellent à chaque période : définissez auto_renew, lisez l'objet subscription, puis suivez ou arrêtez les renouvellements après le paiement."
+icon: "rotate"
+keywords:
+  - "papelpay"
+  - "abonnement"
+  - "auto_renew"
+  - "récurrent"
+  - "renouvellement"
+---
+
+Un produit dont les abonnements sont activés et qui dispose d'une période de facturation peut être acheté sous forme d'abonnement. Lorsque le client paie avec PapelPay, la carte est débitée à nouveau à chaque période jusqu'à ce qu'il résilie. Avec tout autre moyen de paiement, le client reçoit une facture de renouvellement par e-mail avant la fin de chaque période. Cette page explique comment contrôler ce choix depuis la Store API.
+
+## Choisir entre abonnement et achat unique
+
+Envoyez `auto_renew` lors de la création de la commande :
+
+| Valeur | Résultat |
+| :-- | :-- |
+| `true` | La commande est achetée sous forme d'abonnement. Le client ne peut pas le désactiver lors du paiement. |
+| `false` | La commande est un achat unique. La page de paiement ne propose aucune option d'abonnement. |
+| Omis | Le client choisit lors du paiement. L'abonnement est présélectionné. |
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: WEB-2087" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_email": "buyer@example.com",
+    "items": [{ "product_id": "Pr0Mnth1yX9a" }],
+    "auto_renew": true,
+    "payment_method": "PAPELPAY"
+  }'
+```
+
+`auto_renew: true` nécessite une commande comportant exactement une ligne de produit, et ce produit doit avoir les abonnements activés avec une période de facturation. Sinon, l'appel échoue avec `SUBSCRIPTION_NOT_AVAILABLE` (`422`) et aucune commande n'est créée.
+
+## L'objet subscription
+
+Les réponses de création et de détail d'une commande incluent `subscription`. Il vaut `null` lorsque la commande ne peut pas être un abonnement.
+
+```json
+"subscription": {
+  "enabled": true,
+  "locked": true,
+  "interval_days": 30,
+  "interval": "month",
+  "discount_percent": 20,
+  "discount_applies_to": "automatic_payments",
+  "discount_cents": 0,
+  "subscription_id": null,
+  "auto_renewal_id": null
+}
+```
+
+| Champ | Signification |
+| :-- | :-- |
+| `enabled` | `true` : acheté sous forme d'abonnement. `false` : achat unique. |
+| `locked` | Défini par `auto_renew` à la création. Le client ne peut pas le modifier lors du paiement. |
+| `interval_days`, `interval` | Période de facturation. `interval` vaut `day`, `week`, `month` ou `year` pour les périodes standard, sinon `null`. |
+| `discount_percent` | Réduction pour les abonnés définie sur le produit. |
+| `discount_applies_to` | `automatic_payments` : uniquement lorsque la carte est renouvelée automatiquement. `all_payment_methods` : avec n'importe quel moyen de paiement. |
+| `discount_cents` | Réduction actuellement incluse dans `total_cents`. Elle reste à `0` tant que le client n'a pas choisi un moyen de paiement auquel elle s'applique. |
+| `subscription_id` | Après le paiement, l'enregistrement de l'abonnement. |
+| `auto_renewal_id` | Après un paiement par carte PapelPay, le renouvellement automatique de la carte. |
+
+## Après le paiement
+
+Le premier paiement finalise la commande et démarre l'abonnement. Chaque renouvellement crée une nouvelle commande payée et prolonge l'abonnement. Consultez et arrêtez les abonnements avec ces points de terminaison :
+
+| Action | Point de terminaison |
+| :-- | :-- |
+| Lister les abonnements | `GET /subscriptions` |
+| Lire un abonnement, avec ses paiements | `GET /subscriptions/{subscriptionId}` |
+| Résilier | `POST /subscriptions/{subscriptionId}/cancel` |
+| Lister les renouvellements automatiques par carte | `GET /subscriptions/auto-renewals` |
+| Arrêter les futurs débits de carte | `POST /subscriptions/auto-renewals/{renewalId}/cancel` |
+
+Arrêter un renouvellement automatique met fin aux débits futurs à la fin de la période payée. Une résiliation ne rembourse jamais le client.
+
+<Note>
+  Les paiements par carte des abonnements sont débités en USD.
+</Note>

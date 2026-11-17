@@ -1,0 +1,66 @@
+---
+title: "Вбудуйте платежі, комерцію та ліцензування у свій продукт"
+sidebarTitle: "Вступ"
+description: "Керуйте магазином зі своїх систем, приймайте оплату карткою на власному сайті, ліцензуйте та захищайте десктопне програмне забезпечення за допомогою API PapelShip."
+mode: "wide"
+---
+
+<div className="not-prose pb-10 mb-10 border-b border-zinc-950/10 dark:border-white/10">
+  <div className="flex flex-wrap gap-3">
+    <a href="/uk/quickstart" className="rounded-full bg-[#CB6441] px-5 py-2.5 text-sm font-medium text-white no-underline hover:opacity-90">Почати роботу</a>
+    <a href="/uk/guides/authentication" className="rounded-full border border-zinc-950/15 dark:border-white/15 px-5 py-2.5 text-sm font-medium text-zinc-950 dark:text-white no-underline hover:bg-zinc-950/5 dark:hover:bg-white/5">Автентифікація</a>
+  </div>
+</div>
+
+## Продукти
+
+<CardGroup cols={3}>
+  <Card title="User API" icon="store" href="/uk/user-api/overview">
+    Керуйте товарами, категоріями, купонами, клієнтами, рахунками та аналітикою.
+  </Card>
+
+  <Card title="PapelPay" icon="credit-card" href="/uk/papelpay/overview">
+    Оплата карткою та підписки для ваших замовлень, на вашій сторінці оформлення або на вашому власному сайті.
+  </Card>
+
+  <Card title="qPapel Protection" icon="shield-halved" href="/uk/qpapel/overview">
+    Ліцензійні ключі, прив'язка до HWID, віддалені налаштування, правила античиту та журнали в Discord.
+  </Card>
+</CardGroup>
+
+## Почніть розробку
+
+<Steps>
+  <Step title="Отримайте API-ключ">
+    Увійдіть до [панелі керування PapelShip](https://app.papelship.com) і створіть API-ключ для свого магазину.
+  </Step>
+  <Step title="Надішліть перший запит">
+    Скористайтеся [швидким стартом](/uk/quickstart), щоб створити перше замовлення та перенаправити клієнта на оформлення.
+  </Step>
+  <Step title="Запуск у робочому режимі">
+    Перед запуском ознайомтеся з розділами [автентифікація](/uk/guides/authentication), [помилки](/uk/guides/errors) та [ідемпотентність](/uk/guides/idempotency).
+  </Step>
+</Steps>
+
+## Базові URL
+
+| API | Базовий URL |
+| :-- | :-- |
+| User API | `https://app.papelship.com/api/v1` |
+| qPapel Protection | `https://app.papelship.com/api/qpapel/v1` |
+
+<Info>
+  Усі API приймають і повертають JSON через HTTPS. Запити через звичайний HTTP не підтримуються.
+</Info>
+
+## Потрібна допомога?
+
+<CardGroup cols={2}>
+  <Card title="Панель керування" icon="gauge" href="https://app.papelship.com">
+    Створюйте API-ключі, налаштовуйте способи оплати та переглядайте рахунки.
+  </Card>
+
+  <Card title="Підтримка електронною поштою" icon="envelope" href="mailto:support@papelship.com">
+    Зв'яжіться з командою PapelShip за адресою [support@papelship.com](mailto:support@papelship.com).
+  </Card>
+</CardGroup>

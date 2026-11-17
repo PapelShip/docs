@@ -1,0 +1,157 @@
+---
+title: "MCP-Tool-Referenz"
+sidebarTitle: "Tool-Referenz"
+description: "Alle Tools des PapelShip Theme-MCP-Servers, ihre Argumente und ihre Rückgabewerte."
+---
+
+Alle Tools arbeiten mit dem einen Shop, den Sie genehmigt haben. Eine Theme-ID eines anderen Shops liefert `not_found`. Schreib-Tools (`save_draft`, `propose_edit`) werden nur aufgeführt, wenn die Verbindung den Scope `themes:write` hat.
+
+Ergebnisse sind JSON, eingeschlossen in einen Block für nicht vertrauenswürdige Daten. Fehlschläge sind Tool-Fehler mit einem `code`: `invalid_input`, `not_found`, `forbidden`, `conflict`, `limit`, `busy`, `unsupported` oder `internal`.
+
+## Typischer Ablauf
+
+1. `get_reference` (Thema `overview`, dann zum Beispiel `commerce` oder `app_blocks` mit der Theme-Art), um zu erfahren, was die Plattform unterstützt.
+2. `list_themes`, um die Kopie zu finden, dann `list_files`, `read_file` oder `search`.
+3. `save_draft` mit `baseHash` aus Ihrem Lesevorgang.
+4. `validate` für die Datei und `scan` für ein hochgeladenes Design.
+5. `preview_link` und den Link an den Nutzer weitergeben. Der Nutzer veröffentlicht im Panel.
+
+## Lese-Tools
+
+### get_reference
+
+Die Plattformreferenz, generiert aus derselben Registry, die der Editor und `validate` verwenden. Keine Shop-Daten.
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `topic` | string | `overview` (Standard), `kinds`, `app_blocks`, `commerce`, `sdk`, `liquid`, `platform_pages`, `limits` oder `pitfalls` |
+| `kind` | string | `liquid`, `design`, `code` oder `twin`: nur das, was für diese Theme-Art gilt. `list_themes` liefert die Art. `twin` ist eine herausgelöste integrierte Section |
+| `name` | string | Mit `app_blocks` ein einzelner Block (zum Beispiel `buy_now`). Mit `sdk` ein einzelnes Mitglied (zum Beispiel `checkout` oder `cart`) |
+
+Liefert kompaktes JSON. Zum Beispiel liefert `{ "topic": "app_blocks", "name": "buy_now" }` seine Argumente mit Typen, Pflicht-Flags und Aliasen, sein Verhalten und seine Unterstützung pro Theme-Art.
+
+### Ressourcen
+
+Dieselbe Referenz ist als MCP-Ressourcen verfügbar (`resources/list`, `resources/read`, `resources/templates/list`):
+
+| URI | Inhalt |
+| --- | --- |
+| `papelship://reference/<topic>` | Ein Thema: `overview`, `kinds`, `app-blocks`, `commerce`, `sdk`, `liquid`, `platform-pages`, `limits`, `pitfalls` |
+| `papelship://reference/<topic>/<kind>` | Das Thema für eine Theme-Art |
+
+### list_themes
+
+Die Theme-Kopien des Shops: Liquid Themes, hochgeladene Designs und Theme-Code-Pakete, mit `id`, `name`, `kind`, `live` und `updatedAt`. Keine Argumente.
+
+### list_files
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich |
+| `prefix` | string | Nur Pfade, die damit beginnen, zum Beispiel `sections/` |
+
+Liefert `files` (`path`, `size`, `kind`, `contentHash`), höchstens 400, und `truncated`.
+
+### read_file
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich |
+| `path` | string | Erforderlich, zum Beispiel `sections/hero.liquid` |
+| `startLine`, `endLine` | integer | Optionaler Zeilenbereich, beginnend bei 1 |
+
+Liefert `content`, `contentHash`, `startLine`, `endLine` und `totalLines`. Binäre Medien liefern `binary: true` ohne Inhalt.
+
+### read_files
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich |
+| `paths` | string[] | Erforderlich, 1 bis 20 Pfade |
+
+Liefert `files` mit jeweils `content` und `contentHash`, insgesamt höchstens 1 MB. Fehlende Dateien haben `missing: true`; Dateien jenseits des Größenbudgets haben `skipped`.
+
+### search
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich |
+| `query` | string | Erforderlich, wörtlicher Text, 1 bis 200 Zeichen |
+| `caseSensitive` | boolean | Standard `false` |
+| `pathPrefix` | string | Auf einen Ordner beschränken |
+| `maxResults` | integer | 1 bis 100 |
+
+Liefert Treffer mit `path`, `line`, `column` und einer Zeilenvorschau.
+
+### get_schema
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich |
+| `path` | string | Eine Section-Datei |
+
+Ohne `path`: die Theme-Einstellungen aus `config/settings_schema.json` und jede Section mit ihrem Namen, ihren Einstellungs-IDs und Blocktypen. Mit `path`: das vollständige `{% schema %}`-JSON der Section. Beide Antworten enthalten `sectionObject`: die Section-Felder und den Hinweis zu `section.css_id`.
+
+### validate
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich |
+| `path` | string | Eine gespeicherte Datei |
+| `proposalId` | string | Ein Vorschlag aus `propose_edit` oder `save_draft` |
+
+Ohne `path` und `proposalId` wird die gesamte Kopie so validiert, wie es beim Veröffentlichen geschieht. Liefert `valid` und `problems` (`path`, `line`, `column`, `message`, `severity`). Bei Theme-Code-Paketen ist eine unveränderte `section.id` in CSS oder `id=`/`for=` eine `warning` (setzt `valid` nie auf false). Markiert außerdem unbekannte App-Blöcke, unbekannte oder falsch typisierte Argumente (mit einem Meinten-Sie-Vorschlag), Blöcke, die die Theme-Art nicht unterstützt, unbekannte `PapelShip`-Aufrufe und SDK-Aufrufe, die dort nie ausgeführt werden (zum Beispiel Inline-Skripte auf Liquid-Theme-Seiten).
+
+### scan
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich, ein hochgeladenes Design |
+| `proposalId` | string | Scan mit angewendetem Vorschlag |
+
+Testlauf des Sicherheitsscanners für Designs. Es wird nichts gespeichert. Liquid Themes liefern `unsupported`.
+
+### preview_link
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich |
+| `page` | string | Seitenpfad, zum Beispiel `/` oder `/shop` |
+
+Liefert `url`, einen Link zur Vorschau im PapelShip Panel. Der Nutzer muss angemeldet sein. Sie zeigt die gespeicherten Dateien (Entwürfe) der Kopie. Testen Sie Klicks, Umschalter und Links auf dieser Seite; die Arbeitsfläche des visuellen Editors wählt beim Klicken aus.
+
+## Schreib-Tools
+
+### save_draft
+
+Erfordert `themes:write`.
+
+| Argument | Typ |  |
+| --- | --- | --- |
+| `themeId` | integer | Erforderlich |
+| `path` | string | Erforderlich |
+| `content` | string | Vollständiger neuer Inhalt, bis zu 512 KB. Erstellt die Datei, falls sie nicht existiert. |
+| `edits` | `{ find, replace }[]` | 1 bis 50 Such- und Ersetzungspaare. Jedes `find` muss genau einmal übereinstimmen. |
+| `baseHash` | string | `contentHash` aus Ihrem Lesevorgang. Eine seitdem geänderte Datei liefert `conflict`. |
+| `note` | string | Wird im Dateiverlauf aufbewahrt |
+
+Übergeben Sie genau eines von `content` oder `edits`. Speichervorgänge werden wie Speichervorgänge im Editor validiert; eine ungültige Datei liefert `invalid_input` mit dem ersten Problem.
+
+| `mode` | Wann | Wirkung |
+| --- | --- | --- |
+| `copy` | Die Kopie ist nicht live | Gespeichert, mit einer neuen Version. `saved: true` |
+| `code_package_draft` | Ein Theme-Code-Paket | Gespeichert. Live-Seiten behalten die veröffentlichte Version. `saved: true` |
+| `live_copy_draft` | Die Live-Theme-Kopie oder das Live-Design | Als Entwurf gespeichert. Der Shop behält die veröffentlichte Version bis zum Veröffentlichen. `saved: true` |
+
+Jedes Ergebnis enthält `problems` aus der Editor-Diagnose, zum Beispiel die Warnung zu `section.css_id` in Code-Paketen.
+
+### propose_edit
+
+Erfordert `themes:write`. Dieselben Argumente wie `save_draft` plus eine erforderliche einzeilige `summary`; `note` wird nicht verwendet. Speichert nie: Der Vorschlag wartet darauf, dass der Inhaber ihn im Code-Editor annimmt, und läuft nach 24 Stunden ab. Verwenden Sie es, wenn der Inhaber jede Änderung prüfen soll.
+
+## Protokoll
+
+- Transport: Streamable HTTP, JSON-Antworten, keine Sitzungen. `GET` liefert `405`.
+- Protokollversionen: `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`.
+- Batches: bis zu 10 Nachrichten. Jede Nachricht zählt zum Rate Limit.
+- Autorisierung: OAuth 2.1 mit PKCE, ermittelt über `https://app.papelship.com/.well-known/oauth-protected-resource/mcp`, oder ein Themes-API-Schlüssel als Bearer-Token.

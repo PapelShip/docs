@@ -1,0 +1,63 @@
+---
+title: "Expédier les commandes physiques"
+sidebarTitle: "Expédition"
+description: "Listez les commandes à expédier, créez des expéditions avec suivi, mettez à jour le statut de livraison et gérez les retours."
+---
+
+Si votre boutique vend des produits physiques, utilisez ces points de terminaison pour connecter votre entrepôt ou votre logiciel d'expédition. Votre boutique doit être approuvée pour les produits physiques dans **Settings › Physical goods**.
+
+## 1. Trouver les commandes à expédier
+
+```bash
+curl "https://app.papelship.com/api/v1/orders?status=to_ship" \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+`to_ship` liste les commandes payées dont des articles n'ont pas encore été expédiés, de la plus ancienne à la plus récente. Autres filtres : `in_transit`, `delivered`, `issues` (livraisons échouées, retours) et `all`.
+
+`GET /orders/{invoiceId}` renvoie l'adresse, chaque article avec `shipped_quantity`, les expéditions, les retours et les notes.
+
+## 2. Créer une expédition
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "carrier_code": "dhl_express", "tracking_number": "1234567890" }'
+```
+
+- Omettez `items` pour expédier tout ce qui reste. Pour une expédition partielle, envoyez `items: [{ "invoice_item_id": 55, "qty": 1 }]`.
+- Le client reçoit un e-mail avec le lien de suivi. Envoyez `notify_customer: false` pour ne pas l'envoyer.
+- Le lien de suivi est construit à partir du transporteur. `GET /shipping` liste les codes des transporteurs.
+
+## 3. Mettre à jour le statut
+
+```bash
+curl -X PATCH https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments/88 \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "delivered", "location": "London" }'
+```
+
+Statuts : `label_created`, `shipped`, `in_transit`, `out_for_delivery`, `delivered`, `failed_attempt`, `returned_to_sender`. Chacun est ajouté à l'historique de suivi visible par le client. Le `fulfillment_status` de la commande suit automatiquement les expéditions.
+
+## Retours
+
+Les clients demandent un retour depuis la page de leur commande, dans le délai de retour du produit. Traitez les demandes avec `PATCH /orders/{invoiceId}/returns/{returnId}` :
+
+| `action` | Effet |
+| :-- | :-- |
+| `approve` | Accepte la demande. `location_id` définit l'adresse d'envoi du colis. |
+| `reject` | Refuse la demande. `note` est obligatoire et envoyé au client. |
+| `receive` | Vous avez reçu le colis. `restock: true` remet les articles en stock. |
+| `refund` | Enregistre `refund_cents`. Remboursez vous-même le client, puis appelez `POST /invoices/{id}/refund`. |
+| `close` | Clôture le retour. |
+
+`GET /returns?status=requested` liste les demandes en cours pour toutes les commandes.
+
+## Paramètres d'expédition
+
+Consultez et modifiez les zones, les tarifs et les emplacements d'entrepôt avec `/shipping/zones` et `/shipping/locations`. Obtenez un devis pour un panier avec `POST /shipping/quote`.

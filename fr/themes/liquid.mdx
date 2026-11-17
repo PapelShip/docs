@@ -1,0 +1,132 @@
+---
+title: "Thèmes et Liquid"
+sidebarTitle: "Thèmes Liquid"
+description: "Structure d'un thème Liquid PapelShip, les objets, filtres et balises que vous pouvez utiliser, et la personnalisation des pages de la plateforme."
+---
+
+Un thème Liquid est un paquet de fichiers texte, rendu côté serveur avec [Liquid](https://shopify.github.io/liquid/). Si vous connaissez les thèmes Shopify, la structure vous sera familière.
+
+## Dossiers
+
+| Dossier | Contenu |
+| --- | --- |
+| `layout/` | `theme.liquid`, la structure de la page. Il affiche `{{ content_for_layout }}`. |
+| `templates/` | Un template par type de page, en JSON (`index.json`) ou en Liquid. |
+| `sections/` | Sections de page réutilisables, avec un bloc `{% schema %}`. |
+| `blocks/` | Blocs de thème que les sections peuvent contenir. |
+| `snippets/` | Fragments que vous incluez avec `{% render %}`. |
+| `assets/` | CSS, JavaScript, SVG et polices. |
+| `config/` | `settings_schema.json` (paramètres du thème) et `settings_data.json` (leurs valeurs). |
+| `locales/` | Fichiers de traduction, par exemple `en.default.json`. |
+
+Chaque thème doit contenir `layout/theme.liquid`, `templates/index.json` et `config/settings_schema.json`.
+
+## Sections et schema
+
+Une section déclare ses paramètres et ses blocs dans un bloc `{% schema %}`. L'éditeur visuel construit son formulaire de paramètres à partir de celui-ci.
+
+```liquid sections/hero.liquid
+<section class="hero">
+  <h1>{{ section.settings.heading | escape }}</h1>
+  {% for block in section.blocks %}
+    <p>{{ block.settings.text | escape }}</p>
+  {% endfor %}
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Welcome" }
+  ],
+  "blocks": [
+    { "type": "line", "name": "Line", "settings": [{ "type": "text", "id": "text", "label": "Text" }] }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}
+```
+
+Les valeurs des paramètres de texte enrichi et HTML sont nettoyées côté serveur lors de leur enregistrement.
+
+## Objets
+
+| Objet | Champs |
+| --- | --- |
+| `shop` | `name`, `slug`, `logo`, `currency`, `locale`, `languages`, `url`, `settings` |
+| `product` | Dans les templates de produit : `id`, `hash_id`, `title`, `handle`, `url`, `price`, `compare_at_price`, `on_sale`, `available`, `featured_image`, `images`, `description`, `short_description`, `rating`, `rating_count`, `options`, `variants`, `variant_count`, `default_variant_id`, `requires_shipping`, `campaign`, `meta` |
+| `collection` | Dans les templates de collection : `title`, `handle`, `url`, `products_count`, `products` |
+| `collections` | Toutes les collections, chacune avec les champs de collection |
+| `all_products` | Tous les produits de la boutique, chacun avec les champs de produit |
+| `settings` | Valeurs des paramètres du thème |
+| `section` | Dans une section : `id`, `css_id`, `type`, `settings`, `blocks` |
+| `request` | `locale`, `page_type`, `path`, `design_mode` |
+| `localization` | `language`, `available_languages`, `currency` |
+
+## Filtres
+
+| Filtre | Rôle |
+| --- | --- |
+| `money` | Formate des centimes en prix |
+| `money_with_currency` | Prix avec le code de devise |
+| `money_without_currency` | Nombre uniquement |
+| `t` | Traduit une clé de vos fichiers de langue |
+| `image_url` | URL d'image, redimensionnée si besoin |
+| `image_tag` | Une balise `<img>` complète |
+| `asset_url` | URL d'un fichier de `assets/` |
+| `stylesheet_tag` | Une balise `<link rel="stylesheet">` |
+| `script_tag` | Une balise `<script>` |
+| `handleize` | Crée un handle utilisable dans une URL |
+| `json` | JSON sûr pour les scripts |
+| `product_url` | Lien vers une page produit |
+| `collection_url` | Lien vers une page de collection |
+| `store_url` | Lien vers un chemin de la boutique |
+| `escape` | Échappe le texte pour le HTML |
+| `css_id` | Rend une valeur sûre pour les sélecteurs CSS et les attributs id |
+
+<Warning>
+  Échappez chaque texte de produit et de client avec `| escape`. Les titres et descriptions sont rédigés par des personnes.
+</Warning>
+
+## Balises
+
+| Balise | Rôle |
+| --- | --- |
+| `{% section %}` | Affiche une section statique |
+| `{% sections %}` | Affiche un groupe de sections |
+| `{% render %}` | Affiche un snippet. Les snippets ne voient pas les variables de la page, transmettez donc ce dont ils ont besoin : `{% render 'card', product: product %}` |
+| `{% app_block %}` | Affiche un bloc de la plateforme, par exemple `{% app_block 'add_to_cart', product_id: product.id %}` (`product` est un alias). Consultez [Blocs d'application](/fr/themes/app-blocks) et [Commerce et paiement](/fr/themes/commerce). |
+| `{% schema %}` | Métadonnées de la section, jamais affichées |
+
+Blocs d'application : `add_to_cart`, `buy_now`, `cart_count`, `cart_drawer`, `checkout_button`, `powered_by`, `variant_picker`.
+
+## Pages de la plateforme
+
+Le paiement, le panier, la connexion, le compte et le suivi de commande s'exécutent toujours sur PapelShip. Vous pouvez concevoir la page qui les entoure avec un template contenant exactement un bloc verrouillé :
+
+| Page | Template | Bloc verrouillé |
+| --- | --- | --- |
+| Paiement | `templates/checkout.liquid` | `checkout_form` |
+| Panier | `templates/cart.liquid` | `cart_view` |
+| Connexion | `templates/customers/login.liquid` | `customer_login` |
+| Compte | `templates/customers/account.liquid` | `customer_account` |
+| Suivi de commande | `templates/customers/track.liquid` | `order_track` |
+
+```liquid templates/checkout.liquid
+<div class="checkout-shell">
+  <h1>{{ 'checkout.title' | t }}</h1>
+  {% app_block "checkout_form" %}
+</div>
+```
+
+Le bloc doit se trouver directement dans le template, et non dans un snippet. Le JavaScript du thème n'est jamais chargé sur ces pages, et les champs de carte sont toujours ceux de la plateforme.
+
+## Publication
+
+Les enregistrements sont des brouillons : la boutique en ligne conserve la version publiée jusqu'à ce que vous publiiez.
+
+1. Modifiez une copie dans l'éditeur de code ou dans l'éditeur visuel. L'enregistrement (Ctrl+S) valide le fichier et conserve une version ; l'autre éditeur affiche immédiatement la modification.
+2. Prévisualisez la copie dans l'éditeur.
+3. Cliquez sur **Publish** dans l'un ou l'autre éditeur. Il liste les fichiers non publiés et valide d'abord tous les fichiers du thème.
+
+Les agents IA peuvent enregistrer des brouillons, mais ne peuvent pas publier. Consultez [Agents IA (MCP)](/fr/themes/mcp).

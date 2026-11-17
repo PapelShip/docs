@@ -1,0 +1,72 @@
+---
+title: "Лицензионные ключи"
+description: "Выдавайте лицензионные ключи клиентам и управляйте ими с привязкой к HWID."
+---
+
+## Типы ключей
+
+| `key_type` | Поведение |
+| :-- | :-- |
+| `time_limited` | Действует `days` дней. По умолчанию. |
+| `hour_limited` | `days` интерпретируется как часы. |
+| `single_use` | Может быть активирован один раз. |
+| `multi_use` | Может быть активирован до `max_uses` раз. |
+| `time_restricted` | Действует только в заданном временном окне. |
+
+## Создание ключей
+
+```bash
+curl -X POST https://app.papelship.com/api/qpapel/v1/keys \
+  -H "Authorization: Bearer pk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 101,
+    "days": 30,
+    "key_type": "time_limited",
+    "bind_hwid": true,
+    "auto_start": false,
+    "amount": 1,
+    "note": "Order #1042"
+  }'
+```
+
+<ParamField body="bind_hwid" default="true" type="boolean">
+  Привязывает ключ к первому компьютеру, на котором он активирован.
+</ParamField>
+
+<ParamField body="auto_start" default="false" type="boolean">
+  При значении `true` отсчет начинается сразу. При значении `false` он начинается при первом использовании.
+</ParamField>
+
+<ParamField body="amount" default="1" type="integer">
+  Генерирует до 100 ключей за один вызов.
+</ParamField>
+
+## Управление ключом
+
+<AccordionGroup>
+  <Accordion title="Сброс HWID" icon="rotate">
+    Позвольте клиенту перейти на новый ПК: `POST /keys/{id}/reset-hwid`.
+  </Accordion>
+
+  <Accordion title="Заморозка и разморозка" icon="snowflake">
+    Приостановите отсчет на время простоя с помощью `POST /keys/{id}/freeze`. Возобновите его через `DELETE /keys/{id}/freeze`.
+  </Accordion>
+
+  <Accordion title="Продление" icon="clock">
+    Добавьте дни с помощью `POST /keys/{id}/add-time` и `{ "days": 7 }`.
+  </Accordion>
+
+  <Accordion title="Блокировка и разблокировка" icon="ban">
+    Отзовите ключ с помощью `POST /keys/{id}/ban`, указав `reason`. Восстановите через `POST /keys/{id}/unban`.
+  </Accordion>
+</AccordionGroup>
+
+## Поиск истекающих ключей
+
+Получите список ключей, срок действия которых истекает в ближайшие семь дней, чтобы отправить напоминания о продлении:
+
+```bash
+curl "https://app.papelship.com/api/qpapel/v1/keys?expiresInDays=7&sortBy=end_time&sortOrder=ASC" \
+  -H "Authorization: Bearer pk_live_your_key"
+```

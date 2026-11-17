@@ -1,0 +1,80 @@
+---
+title: "Comercio y checkout"
+sidebarTitle: "Comercio y checkout"
+description: "Agregar al carrito, comprar ahora y checkout desde cualquier tema: la página de checkout o la ventana emergente de checkout incrustada, con bloques de aplicación, atributos data-ps o window.PapelShip."
+---
+
+Todos los tipos de tema venden de la misma forma: los bloques de la plataforma colocan los botones en la página, y el pago siempre se realiza en la página de checkout de PapelShip o en su ventana emergente. Un tema nunca recopila datos de tarjeta.
+
+## Página de checkout o ventana emergente
+
+`buy_now`, `checkout_button`, `data-ps="buy"` y `PapelShip.checkout()` aceptan un `mode`:
+
+| mode | Qué ocurre |
+| --- | --- |
+| `page` (por defecto) | El navegador va a la página de checkout de la plataforma: `<store>/checkout`, o la URL de compra inmediata para un solo producto. |
+| `embed` | El checkout se abre como ventana emergente sobre la página actual, en un marco de PapelShip. Si la ventana emergente no puede cargarse, se abre la página de checkout en su lugar. Al pagar el carrito, este se vacía. |
+
+`add_to_cart` siempre agrega al carrito y abre el panel del carrito.
+
+## Temas Liquid y secciones de código
+
+Los bloques de aplicación no necesitan ningún script. Pase el `id` (o `hash_id`) del producto como `product_id`:
+
+```liquid
+{% for p in all_products limit: 3 %}
+  <h3>{{ p.title | escape }}</h3>
+  <p>{{ p.price | money }}</p>
+  {% app_block 'add_to_cart', product_id: p.id %}
+  {% app_block 'buy_now', product_id: p.id, mode: 'embed', label: 'Buy' %}
+{% endfor %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+<Note>
+  `product` funciona como alias de `product_id`, y también se acepta un objeto de producto. `product_id` tiene prioridad cuando se indican ambos.
+</Note>
+
+## Diseños subidos (y cualquier marcado)
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed","label":"Buy"}'></div>
+
+<!-- o su propio botón -->
+<button type="button" data-ps="buy" data-ps-product-id="PRODUCT_ID" data-ps-mode="embed">Buy</button>
+```
+
+## Desde JavaScript
+
+`window.PapelShip` puede cargarse después de su script. Esta función auxiliar funciona en todos los tipos de tema:
+
+```js
+function withPapelShip(fn) {
+  var done = false;
+  function go() { if (!done && window.PapelShip && window.PapelShip.version) { done = true; fn(window.PapelShip); } }
+  go();
+  if (!done) { window.addEventListener('papelship:sdk-ready', go); document.addEventListener('DOMContentLoaded', go); }
+}
+
+withPapelShip(function (ps) {
+  document.getElementById('buy').onclick = function () {
+    ps.checkout({ products: [{ id: 'PRODUCT_ID' }], mode: 'embed', onPaid: function (d) { console.log(d.invoiceId); } });
+  };
+});
+```
+
+## Dónde está disponible window.PapelShip
+
+| Tipo de tema | Se carga | Momento |
+| --- | --- | --- |
+| Tema Liquid | En todas las páginas del tema | De forma diferida al inicio de `<head>`. Los scripts diferidos del tema (`script_tag`) pueden usarlo. |
+| Diseño subido | Solo en páginas con un enlace `data-ps` o un marcador de posición `data-app-block` | De forma diferida al inicio de `<head>`. Llámelo desde `DOMContentLoaded`. Una página que solo usa script necesita un marcador de posición, por ejemplo `<div data-app-block="cart_count" hidden></div>`. |
+| Sección de código / equivalente extraído | En páginas cuyas secciones de código contienen un bloque de aplicación o un enlace `data-ps`, y siempre en el editor | Se carga después de que la página se hidrata, tras ejecutarse `assets/theme.js`. Espere a `papelship:sdk-ready`. El `<script>` en línea se rechaza en las secciones de código. |
+
+Las etiquetas `<script>` en línea no se ejecutan en las páginas de temas Liquid. Coloque los scripts en `assets/*.js` y cárguelos con `{{ 'x.js' | asset_url | script_tag }}`.
+
+## Pruebas
+
+El lienzo del editor selecciona los elementos cuando hace clic en ellos, por lo que los botones no hacen nada ahí. Active **Interactuar** en la barra superior del editor (pulse `I`, o mantenga pulsado `Alt`), o abra la vista previa.
+
+Consulte [Bloques de aplicación](/es/themes/app-blocks) para ver todos los bloques, sus argumentos y dónde funcionan.

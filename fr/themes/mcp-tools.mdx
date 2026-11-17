@@ -1,0 +1,157 @@
+---
+title: "Référence des outils MCP"
+sidebarTitle: "Référence des outils"
+description: "Tous les outils du serveur MCP de thèmes PapelShip, leurs arguments et ce qu'ils renvoient."
+---
+
+Tous les outils agissent sur l'unique boutique que vous avez approuvée. Un identifiant de thème d'une autre boutique renvoie `not_found`. Les outils d'écriture (`save_draft`, `propose_edit`) ne sont listés que si la connexion dispose de la portée `themes:write`.
+
+Les résultats sont du JSON encapsulé dans un bloc de données non fiables. Les échecs sont des erreurs d'outil avec un `code` : `invalid_input`, `not_found`, `forbidden`, `conflict`, `limit`, `busy`, `unsupported` ou `internal`.
+
+## Déroulement type
+
+1. `get_reference` (sujet `overview`, puis par exemple `commerce` ou `app_blocks` avec le type de thème) pour découvrir ce que la plateforme prend en charge.
+2. `list_themes` pour trouver la copie, puis `list_files`, `read_file` ou `search`.
+3. `save_draft` avec le `baseHash` issu de votre lecture.
+4. `validate` sur le fichier, et `scan` pour un design importé.
+5. `preview_link`, puis transmettez le lien à l'utilisateur. L'utilisateur publie depuis le panneau.
+
+## Outils de lecture
+
+### get_reference
+
+La référence de la plateforme, générée à partir du même registre que celui utilisé par l'éditeur et par `validate`. Aucune donnée de boutique.
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `topic` | string | `overview` (par défaut), `kinds`, `app_blocks`, `commerce`, `sdk`, `liquid`, `platform_pages`, `limits` ou `pitfalls` |
+| `kind` | string | `liquid`, `design`, `code` ou `twin` : uniquement ce qui s'applique à ce type de thème. `list_themes` renvoie le type. `twin` désigne une section intégrée extraite |
+| `name` | string | Avec `app_blocks`, un seul bloc (par exemple `buy_now`). Avec `sdk`, un seul membre (par exemple `checkout` ou `cart`) |
+
+Renvoie du JSON compact. Par exemple, `{ "topic": "app_blocks", "name": "buy_now" }` renvoie ses arguments avec leurs types, leur caractère obligatoire et leurs alias, son comportement et sa prise en charge par type de thème.
+
+### Ressources
+
+La même référence est disponible sous forme de ressources MCP (`resources/list`, `resources/read`, `resources/templates/list`) :
+
+| URI | Contenu |
+| --- | --- |
+| `papelship://reference/<topic>` | Un sujet : `overview`, `kinds`, `app-blocks`, `commerce`, `sdk`, `liquid`, `platform-pages`, `limits`, `pitfalls` |
+| `papelship://reference/<topic>/<kind>` | Le sujet pour un type de thème |
+
+### list_themes
+
+Les copies de thème de la boutique : thèmes Liquid, designs importés et paquets de code de thème, avec `id`, `name`, `kind`, `live` et `updatedAt`. Aucun argument.
+
+### list_files
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire |
+| `prefix` | string | Uniquement les chemins qui commencent par cette valeur, par exemple `sections/` |
+
+Renvoie `files` (`path`, `size`, `kind`, `contentHash`), 400 au maximum, et `truncated`.
+
+### read_file
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire |
+| `path` | string | Obligatoire, par exemple `sections/hero.liquid` |
+| `startLine`, `endLine` | integer | Plage de lignes facultative, numérotée à partir de 1 |
+
+Renvoie `content`, `contentHash`, `startLine`, `endLine` et `totalLines`. Les médias binaires renvoient `binary: true` sans contenu.
+
+### read_files
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire |
+| `paths` | string[] | Obligatoire, de 1 à 20 chemins |
+
+Renvoie `files`, chacun avec `content` et `contentHash`, pour 1 Mo au maximum au total. Les fichiers manquants ont `missing: true` ; les fichiers qui dépassent le budget de taille ont `skipped`.
+
+### search
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire |
+| `query` | string | Obligatoire, texte littéral, de 1 à 200 caractères |
+| `caseSensitive` | boolean | `false` par défaut |
+| `pathPrefix` | string | Limite la recherche à un dossier |
+| `maxResults` | integer | De 1 à 100 |
+
+Renvoie les résultats avec `path`, `line`, `column` et un aperçu de la ligne.
+
+### get_schema
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire |
+| `path` | string | Un fichier de section |
+
+Sans `path` : les paramètres du thème issus de `config/settings_schema.json` et chaque section avec son nom, les identifiants de ses paramètres et ses types de blocs. Avec `path` : le JSON complet du `{% schema %}` de la section. Les deux réponses incluent `sectionObject` : les champs de section et la remarque sur `section.css_id`.
+
+### validate
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire |
+| `path` | string | Un fichier enregistré |
+| `proposalId` | string | Une proposition issue de `propose_edit` ou de `save_draft` |
+
+Sans `path` ni `proposalId`, valide l'ensemble de la copie comme le ferait la publication. Renvoie `valid` et `problems` (`path`, `line`, `column`, `message`, `severity`). Pour les paquets de code de thème, un `section.id` brut dans le CSS ou dans `id=`/`for=` est un `warning` (il ne rend jamais `valid` faux). Signale aussi les blocs d'application inconnus, les arguments inconnus ou mal typés (avec une suggestion de correction), les blocs que le type de thème ne prend pas en charge, les appels `PapelShip` inconnus et les appels au SDK qui ne s'exécutent jamais à cet endroit (par exemple les scripts en ligne sur les pages de thème Liquid).
+
+### scan
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire, un design importé |
+| `proposalId` | string | Analyse avec une proposition appliquée |
+
+Exécution à blanc du scanner de sécurité des designs. Rien n'est enregistré. Les thèmes Liquid renvoient `unsupported`.
+
+### preview_link
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire |
+| `page` | string | Chemin de la page, par exemple `/` ou `/shop` |
+
+Renvoie `url`, un lien vers l'aperçu dans le panneau PapelShip. L'utilisateur doit être connecté. Il affiche les fichiers enregistrés (brouillons) de la copie. Testez les clics, les bascules et les liens sur cette page ; le canevas de l'éditeur visuel sélectionne les éléments au clic.
+
+## Outils d'écriture
+
+### save_draft
+
+Nécessite `themes:write`.
+
+| Argument | Type |  |
+| --- | --- | --- |
+| `themeId` | integer | Obligatoire |
+| `path` | string | Obligatoire |
+| `content` | string | Nouveau contenu complet, jusqu'à 512 Ko. Crée le fichier s'il n'existe pas. |
+| `edits` | `{ find, replace }[]` | De 1 à 50 paires de recherche et remplacement. Chaque `find` doit correspondre exactement une fois. |
+| `baseHash` | string | Le `contentHash` issu de votre lecture. Un fichier modifié depuis renvoie `conflict`. |
+| `note` | string | Conservée dans l'historique du fichier |
+
+Transmettez exactement l'un des deux : `content` ou `edits`. Les enregistrements sont validés comme ceux de l'éditeur ; un fichier invalide renvoie `invalid_input` avec le premier problème.
+
+| `mode` | Quand | Effet |
+| --- | --- | --- |
+| `copy` | La copie n'est pas en ligne | Enregistré, avec une nouvelle version. `saved: true` |
+| `code_package_draft` | Un paquet de code de thème | Enregistré. Les pages en ligne conservent la version publiée. `saved: true` |
+| `live_copy_draft` | La copie de thème en ligne ou le design en ligne | Enregistré comme brouillon. La boutique conserve la version publiée jusqu'à la publication. `saved: true` |
+
+Chaque résultat inclut `problems`, issus des diagnostics de l'éditeur, par exemple l'avertissement `section.css_id` dans les paquets de code.
+
+### propose_edit
+
+Nécessite `themes:write`. Mêmes arguments que `save_draft`, plus un `summary` obligatoire d'une ligne ; `note` n'est pas utilisé. N'enregistre jamais : la proposition attend que le propriétaire l'accepte dans l'éditeur de code et expire au bout de 24 heures. Utilisez-le lorsque vous voulez que le propriétaire examine chaque modification.
+
+## Protocole
+
+- Transport : Streamable HTTP, réponses JSON, sans sessions. `GET` renvoie `405`.
+- Versions du protocole : `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`.
+- Lots : jusqu'à 10 messages. Chaque message compte dans la limite de débit.
+- Autorisation : OAuth 2.1 avec PKCE, découvert via `https://app.papelship.com/.well-known/oauth-protected-resource/mcp`, ou une clé API Themes comme jeton Bearer.

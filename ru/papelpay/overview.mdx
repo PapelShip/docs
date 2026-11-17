@@ -1,0 +1,131 @@
+---
+title: "Прием оплаты картой через PapelPay"
+sidebarTitle: "Обзор"
+description: "Списывайте оплату с карт за заказы Store API через PapelPay: запустите платеж, отправьте клиента на страницу оплаты или покажите форму карты на своем сайте и подтвердите оплату вебхуком."
+icon: "credit-card"
+keywords:
+  - "papelpay"
+  - "оплата картой"
+  - "оформление заказа"
+  - "store api"
+  - "подписки"
+---
+
+PapelPay является способом оплаты картой в вашем магазине PapelShip. С помощью Store API вы создаете заказ, запускаете для него платеж PapelPay, и клиент оплачивает картой на вашей размещенной странице оплаты или в форме карты на вашем собственном сайте. Заказы на товары, которые продаются по подписке, оплачиваются повторно в каждом расчетном периоде.
+
+<Info>
+  PapelPay должен быть активирован в вашем магазине. Подайте заявку в панели управления в разделе **PapelPay**; пока магазин не одобрен, эндпоинты на этой странице возвращают `PAPELPAY_NOT_ENABLED`.
+</Info>
+
+## Как работает оплата картой
+
+<Steps>
+  <Step title="Создайте заказ">
+    Вызовите `POST /api/v1/invoices` с данными клиента и товарами, как описано в разделе [Создание заказов и управление ими](/ru/user-api/orders). Добавьте `auto_renew`, чтобы продать товар с подпиской как подписку или как разовую покупку. См. [Подписки](/ru/papelpay/subscriptions).
+  </Step>
+  <Step title="Запустите оплату картой">
+    Вызовите `POST /api/v1/invoices/{invoiceId}/papelpay` или передайте `"payment_method": "PAPELPAY"` при создании заказа, чтобы выполнить оба действия одним вызовом. Ответ содержит объект `payment`.
+  </Step>
+  <Step title="Дайте клиенту оплатить">
+    Отправьте клиента на `payment.payment_url`: это ваша размещенная страница оплаты, открытая на форме карты. Чтобы клиент оставался на вашем сайте, подключите `payment.embed_url` с помощью JavaScript SDK. См. [Форма карты на вашем сайте](/ru/papelpay/card-form).
+  </Step>
+  <Step title="Подтвердите заказ">
+    Когда оплата с карты списана, заказ переходит в статус `completed`, и PapelShip доставляет товары. Слушайте вебхук `order.completed` или прочитайте заказ через `GET /api/v1/invoices/{invoiceId}`. См. [Вебхуки](/ru/user-api/webhooks).
+  </Step>
+</Steps>
+
+## Запустите оплату картой
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20/papelpay \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 4d2b7f1e-8a3c-4e9b-b1d0-5c6a7e8f9a01" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_ip": "203.0.113.10", "locale": "en" }'
+```
+
+```javascript Node.js
+const res = await fetch(
+  `https://app.papelship.com/api/v1/invoices/${invoiceId}/papelpay`,
+  {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.PAPELSHIP_API_KEY,
+      "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+      "Idempotency-Key": `${invoiceId}:papelpay`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ customer_ip: req.ip, locale: "en" }),
+  }
+);
+const { payment } = await res.json();
+```
+
+</CodeGroup>
+
+```json Ответ (200)
+{
+  "success": true,
+  "payment": {
+    "object": "papelpay_payment",
+    "invoice_id": "c35ffd-19a1b2c3d4e-8c7a20",
+    "session_id": "ch_7Hq2Lm9xP4",
+    "status": "pending",
+    "mode": "subscription",
+    "interval_days": 30,
+    "amount_cents": 2399,
+    "currency": "USD",
+    "payment_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+    "embed_url": "https://invoice.papelship.com/api/payment/papelpay/embed/ch_7Hq2Lm9xP4",
+    "embeddable": true,
+    "expires_at": "2026-11-17T15:00:00.000Z"
+  },
+  "invoice": { "id": "c35ffd-19a1b2c3d4e-8c7a20", "status": "payment_pending" }
+}
+```
+
+| Поле тела запроса | Примечания |
+| :-- | :-- |
+| `customer_ip` | IP-адрес покупателя. Включает для этого платежа проверки карты (VPN, повторные отказы). |
+| `locale` | Язык сообщений об ошибках, например `en` или `tr`. |
+
+Повторный вызов эндпоинта, пока платеж открыт, возвращает тот же `session_id`. Используйте ID заказа в своем `Idempotency-Key`.
+
+## Объект платежа
+
+| Поле | Значение |
+| :-- | :-- |
+| `mode` | `subscription`: с карты повторно списывается оплата каждые `interval_days`, пока клиент не отменит подписку. `one_time`: однократное списание. |
+| `interval_days` | Расчетный период подписки в днях, иначе `null`. |
+| `amount_cents`, `currency` | Сумма, списываемая сейчас. Оплата картой может списываться в USD. |
+| `payment_url` | Ваша размещенная страница оплаты, открытая на форме карты. Та же страница, что и `checkout_url` заказа. |
+| `embed_url` | Только форма карты, для вашей собственной страницы. `null`, если оплату картой вашего магазина нельзя встроить; в этом случае используйте `payment_url`. |
+| `embeddable` | `true`, если задан `embed_url`. |
+| `expires_at` | В это время неоплаченный заказ истекает. |
+
+## Ошибки
+
+| Код | Статус | Значение |
+| :-- | :-- | :-- |
+| `PAPELPAY_NOT_ENABLED` | `422` | PapelPay не активирован в вашем магазине. |
+| `PAYMENT_METHOD_DISABLED` | `422` | В заказе `PAPELPAY` указан в `disabled_payment_methods`. |
+| `INVOICE_NOT_PAYABLE` | `409` | Заказ оплачен, отменен, возвращен или истек. |
+| `CARD_CHECKOUT_BLOCKED` | `403` | Проверки карты остановили этого покупателя. Причина указана в `details.reason`; `details.existing_invoice_id` указывает на открытый заказ для той же покупки. |
+| `PAPELPAY_UNAVAILABLE` | `503` | Оплата картой временно приостановлена. Повторите попытку позже. |
+
+Если вы передали `"payment_method": "PAPELPAY"` при создании, а оплата картой не смогла запуститься, заказ все равно создан. Его ID указан в `details.invoice_id` ошибки, поэтому вы можете повторить попытку через `POST /invoices/{invoiceId}/papelpay`.
+
+## Следующие шаги
+
+<Columns cols={2}>
+  <Card title="Подписки" icon="rotate" href="/ru/papelpay/subscriptions">
+    Продавайте товар по подписке и отслеживайте ее продления.
+  </Card>
+
+  <Card title="Форма карты на вашем сайте" icon="code" href="/ru/papelpay/card-form">
+    Показывайте форму карты на собственной странице оформления заказа.
+  </Card>
+</Columns>

@@ -1,0 +1,145 @@
+---
+title: "Tasarımlar"
+sidebarTitle: "Tasarımlar"
+description: "Kendi HTML sitenizi tasarım olarak yükleyin ve Liquid, data-ps öznitelikleri veya JavaScript SDK ile ürünlere, sepete ve ödemeye bağlayın."
+---
+
+Tasarım, ZIP olarak yüklediğiniz ve PapelShip'in vitrininiz olarak sunduğu kendi web sitenizdir. Markup üzerinde tam kontrol sizde kalır ve ticaret özelliklerini üç yolla eklersiniz:
+
+1. **Liquid sayfaları**: `pages/*.liquid` sayfaları sunucuda mağaza verilerinizle işlenir.
+2. **`data-ps` öznitelikleri**: PapelShip'in sunucuda ürün verileriyle doldurduğu düz HTML.
+3. **SDK**: tarayıcıda ürünler, sepet ve ödeme için `window.PapelShip`.
+
+## Paket
+
+| Yol | İçerik |
+| --- | --- |
+| `pages/*.html`, `pages/*.liquid` | Sayfalar. `.html` sayfaları statiktir; `.liquid` sayfaları mağaza verileriyle işlenir. |
+| `partials/`, `snippets/` | Ortak markup |
+| `assets/`, `media/` | CSS, JavaScript, görseller ve yazı tipleri |
+| `config/design.json` | Yolları ve SEO bilgileriyle sayfa listesi ve ayarlarınız |
+| `seo/robots.txt`, `seo/sitemap-extra.txt` | İsteğe bağlı SEO dosyaları |
+
+`config/design.json` içinde listelenen her sayfa mağazanızda bir yol alır.
+
+**Şablonlar.** `pages/product.liquid` (veya `.html`) ürün sayfanız, `pages/shop.liquid` ise mağaza listeleme sayfanızdır. Bunlar yoksa PapelShip, tasarımınızın içinde nötr bir ürün veya mağaza sayfası gösterir.
+
+**Bulunamadı.** Kendi "bulunamadı" sayfanız için `pages/404.html` (veya `.liquid`) ekleyin. Bilinmeyen adresler ve bilinmeyen ürünler bu sayfayı gösterir.
+
+## Tarama ve inceleme
+
+Her yükleme yayına girmeden önce taranır. Müşterilere veya platforma saldıran kod engellenir: kart verisi alanları, gizli yönlendirmeler, başka sitelere gönderim yapan formlar, PapelShip API'lerine veya başka mağazalara yapılan istekler ve zararlı script'ler. Olağandışı kod önce PapelShip incelemesine gider. Listelenen dosyaları düzeltip yeniden yükleyin.
+
+Düzenlemeler taslak olarak kaydedilir; mağazanız yayınlanmış sürümü kullanmaya devam eder. **Yayınla**, tam olarak yayına gönderdiği dosyaları tarar: engellenen kod yayınlamayı reddeder; inceleme gerektiren bulgular ise mağaza mevcut sürümü kullanmaya devam ederken PapelShip incelemesini bekler ve onaylandığında yayına girer.
+
+## data-ps öznitelikleri
+
+Öğeleri işaretleyin, PapelShip bunları sunucuda ürün verileriyle doldursun:
+
+```html
+<div data-ps-product="current">
+  <img data-ps="image" alt="">
+  <h1 data-ps="title"></h1>
+  <p><span data-ps="price"></span> <s data-ps="compare-price" data-ps-if="on-sale"></s></p>
+  <div data-ps="variants"></div>
+  <button data-ps="add" data-ps-if="in-stock">Add to cart</button>
+  <span data-ps-if="sold-out">Sold out</span>
+</div>
+```
+
+### Değerler
+
+| `data-ps` | Doldurduğu |
+| --- | --- |
+| `title` | Ürün başlığı |
+| `price` | Güncel fiyat |
+| `compare-price` | Karşılaştırma fiyatı |
+| `stock` | Stok etiketi |
+| `rating` | Ortalama puan |
+| `badge` | İndirim veya kampanya rozeti |
+| `description` | Düz metin açıklama |
+| `image` | Bir `<img>` üzerinde: ürün görseli |
+| `url` | Bir `<a>` üzerinde: ürün sayfasına bağlantı |
+| `buy` | Hemen al butonu, ödemeye gider |
+| `add` | Sepete ekle butonu |
+| `variants` | Bir `<div>` üzerinde: varyant seçici. Yanındaki sepete ekle, satın alma ve fiyat öğeleri seçimi izler. |
+
+### Koşullar
+
+| `data-ps-if` | Öğeyi yalnızca şu durumda tutar |
+| --- | --- |
+| `on-sale` | Ürün indirimde |
+| `in-stock` | Ürün stokta |
+| `sold-out` | Ürün tükendi |
+
+### Kapsayıcılar
+
+| Öznitelik | İşlevi |
+| --- | --- |
+| `data-ps-products="8"` | İlk `<template>` alt öğesini N ürün için tekrarlar (en fazla 48) |
+| `data-ps-collection` | Listeyi bir koleksiyon handle'ıyla sınırlar |
+| `data-ps-sort` | `featured`, `newest`, `price-asc`, `price-desc`, `best-selling` |
+| `data-ps-ids` | Gösterilecek ürün id'leri, virgülle ayrılmış |
+| `data-ps-product` | Tek bir ürün: bir id, bir hash veya ürün şablonunda `current` |
+
+```html
+<div data-ps-products="8" data-ps-sort="newest">
+  <template>
+    <a data-ps="url"><img data-ps="image" alt=""><span data-ps="title"></span></a>
+    <span data-ps="price"></span>
+    <button data-ps="add" data-ps-if="in-stock">Add to cart</button>
+  </template>
+</div>
+```
+
+## Liquid sayfaları
+
+`.liquid` sayfaları, `{% app_block %}` dahil olmak üzere Liquid temalarıyla aynı nesneleri, filtreleri ve etiketleri kullanır. Bkz. [Temalar ve Liquid](/tr/themes/liquid). Başka şablon motorları için `{{ }}` kullanan statik dışa aktarımlar güvende kalır: yalnızca `.liquid` sayfaları işlenir.
+
+## SDK
+
+<Note>
+  SDK yalnızca bir `data-ps` bağlaması veya bir `data-app-block` yer tutucusu içeren tasarım sayfalarında yüklenir. Onu bir `DOMContentLoaded` dinleyicisinden çağırın. Bkz. [Ticaret ve ödeme](/tr/themes/commerce).
+</Note>
+
+Bu sayfalarda SDK `window.PapelShip` olarak kullanılabilir.
+
+| Metot | İşlevi |
+| --- | --- |
+| `products.list({ limit, ids, collection, sort })` | Ürünleri döndüren bir promise |
+| `products.get(id)` | Tek bir ürünü döndüren bir promise |
+| `cart.items`, `cart.count`, `cart.subtotal` | Sepet durumu |
+| `cart.add(id, { variantId, quantity })` | Bir satır ekler, promise döndürür |
+| `cart.remove`, `cart.update(index, quantity)`, `cart.clear` | Sepeti değiştirir |
+| `cart.open`, `cart.close` | Sepet çekmecesini açar veya kapatır |
+| `cart.on`, `cart.off` | `change` ve `add` olayları (`papelship:cart-change`, `papelship:cart-add`) |
+| `price` | Kampanyalar uygulanmış fiyat satırları |
+| `checkout({ products?, mode: 'page' \| 'embed', onPaid? })` | `page` (varsayılan) platformun ödeme sayfasına gider; `embed` ödeme açılır penceresini sayfanızın üzerinde açar |
+| `checkoutInvoice` | Mevcut bir faturayı açar |
+| `formatMoney(cents, currency)` | Bir fiyatı biçimlendirir |
+| `bind` | Markup ekledikten sonra sayfayı yeniden tarar |
+| `on`, `off` | `papelship:*` olayları |
+
+```js
+PapelShip.products.list({ limit: 8, sort: 'newest' }).then(function (items) {
+  var grid = document.getElementById('grid')
+  items.forEach(function (p) {
+    var a = document.createElement('a')
+    a.href = p.url
+    a.textContent = p.title + ' ' + PapelShip.formatMoney(p.price_cents, p.currency)
+    grid.appendChild(a)
+  })
+})
+```
+
+## Bileşenler
+
+Kod düzenleyicideki **Bileşen ekle** menüsü hazır, düzenlenebilir kod yazar: ürün ızgarası, ürün kartı, ürün sayfası, fiyat, satın alma butonu, sepete ekle, sepet sayısı, sepet çekmecesi, gömülü ödeme ve koleksiyon listesi. Ayarlarını yeniden değiştirmek için önizlemede bir bileşene tıklayın.
+
+## Mağaza sayfaları
+
+Ödeme, sepet, giriş, hesap ve sipariş takibi, panelde seçtiğiniz bir düzenle tasarımınızın içinde gösterilir. Bunları kendiniz tasarlamak için tam olarak bir kilitli blok içeren `pages/checkout.liquid`, `pages/cart.liquid`, `pages/login.liquid`, `pages/account.liquid` veya `pages/track.liquid` (ya da `.html`) ekleyin, örneğin `<div data-app-block="checkout_form"></div>`. Bloklar [Platform sayfaları](/tr/themes/liquid#platform-sayfaları) bölümünde listelenir.
+
+<Note>
+  Müşteriler her zaman PapelShip ödeme sayfasında veya onun gömülü açılır penceresinde öder. Tasarımlar ödemenin yerini alamaz ve kart verisi toplayamaz.
+</Note>

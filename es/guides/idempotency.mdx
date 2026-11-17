@@ -1,0 +1,40 @@
+---
+title: "Idempotencia"
+description: "Reintente con seguridad las solicitudes de creación y de acción de la Store API con un Idempotency-Key, para que un tiempo de espera agotado nunca cree un segundo pedido, reembolso o pago."
+---
+
+Los fallos de red ocurren. Cuando una solicitud agota el tiempo de espera, no puede saber si PapelShip creó el pedido. Un encabezado `Idempotency-Key` le permite reintentar la llamada a la Store API con seguridad.
+
+## Cómo funciona
+
+Agregue un encabezado `Idempotency-Key` (hasta 255 caracteres) a una solicitud de creación o de acción. PapelShip guarda la primera respuesta durante 24 horas. Un reintento con la misma clave y el mismo cuerpo recibe esa respuesta guardada en lugar de volver a ejecutar la solicitud.
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_email": "buyer@example.com", "items": [{ "product_id": "a1B2c3D4e5F6" }] }'
+```
+
+| Código | Estado | Significado |
+| :-- | :-- | :-- |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | La primera solicitud con esta clave todavía se está ejecutando. Reintente en breve. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | La clave ya se usó con un cuerpo distinto. Use una clave nueva para una solicitud diferente. |
+
+## Endpoints que la aceptan
+
+La clave funciona en los endpoints de creación y de acción de la Store API, entre ellos:
+
+- `POST /invoices` (crear un pedido)
+- `POST /invoices/{invoiceId}/papelpay` (iniciar el pago con tarjeta)
+- `POST /invoices/{invoiceId}/complete` y `POST /invoices/{invoiceId}/refund`
+- `POST /orders/{invoiceId}/shipments`
+- `POST /products` y `POST /coupons`
+
+## Buenas prácticas
+
+- Genere una clave por pedido, no por solicitud. Su propio ID de pedido funciona bien.
+- Guarde la clave junto con su pedido para que cada reintento la reutilice.
+- Nunca reutilice una clave para un pedido o un importe diferente.

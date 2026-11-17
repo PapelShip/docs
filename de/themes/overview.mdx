@@ -1,0 +1,44 @@
+---
+title: "Überblick über Themes"
+sidebarTitle: "Überblick"
+description: "Die drei Wege, eine PapelShip Storefront im Code zu erstellen: Liquid Themes, hochgeladene Designs und der Code-Layer für React Themes."
+---
+
+PapelShip Storefronts können visuell, im Code oder auf beide Arten erstellt werden. Sie bearbeiten alles im Shop-Panel unter **Themes**, und jede Codeänderung durchläuft denselben Code-Editor, denselben Versionsverlauf und denselben Sicherheitsscanner.
+
+<CardGroup cols={3}>
+  <Card title="Liquid Themes" icon="code" href="/de/themes/liquid">
+    Theme-Pakete im Shopify-Stil: Layouts, Templates, Sections, Snippets, Assets und Einstellungen.
+  </Card>
+
+  <Card title="Designs" icon="file-code" href="/de/themes/designs">
+    Laden Sie Ihre eigene HTML-Website hoch und verbinden Sie sie mit Produkten, Warenkorb und Checkout.
+  </Card>
+
+  <Card title="Code-Layer" icon="layer-group" href="/de/themes/code-layer">
+    Fügen Sie Code-Sections, CSS und JavaScript zu einem integrierten React Theme hinzu.
+  </Card>
+</CardGroup>
+
+## Theme-Kopien
+
+Jedes Liquid Theme, jedes Design und jedes Theme-Code-Paket ist eine **Kopie** Ihres Shops. Ein Shop kann bis zu 20 Kopien behalten.
+
+- Änderungen werden in der Kopie gespeichert, die Sie bearbeiten. Eine Kopie, die nicht live ist, verändert Ihre Storefront niemals.
+- Die Live-Kopie ändert sich nur, wenn Sie sie im Panel veröffentlichen oder aktivieren.
+- Jedes Speichern behält eine Version. Sie können jede der letzten 50 Versionen einer Datei wiederherstellen.
+
+| Limit | Wert |
+| --- | --- |
+| Dateigröße | 512 KB |
+| Dateien pro Kopie | 400 |
+| Größe einer Kopie | 10 MB |
+| Kopien pro Shop | 20 |
+
+## Vorschauen
+
+Vorschauen rendern Ihre gespeicherten Dateien und Ihre ungespeicherten Editor-Entwürfe innerhalb des Panels. Sie sind niemals öffentlich: Die Storefront zeigt eine nicht live geschaltete Kopie nur im Vorschau-Frame des Panels an, mit einem signierten Token, das nach 30 Minuten abläuft.
+
+## Mit einem KI-Agenten arbeiten
+
+Verbinden Sie Claude, Cursor, VS Code oder einen anderen MCP-Client mit Ihren Themes. Der Agent liest Ihren Theme-Code und speichert seine Änderungen als Entwürfe; Sie prüfen und veröffentlichen. Siehe [KI-Agenten (MCP)](/de/themes/mcp).

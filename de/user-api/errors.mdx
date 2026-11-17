@@ -1,0 +1,68 @@
+---
+title: "Fehler der User API"
+sidebarTitle: "Fehler"
+description: "Statuscodes und Fehlercodes, die die User API zurückgibt."
+---
+
+Fehler liefern `success: false`, einen stabilen `code`, eine lesbare `error`-Meldung und eine `request_id`.
+
+```json
+{
+  "success": false,
+  "code": "INSUFFICIENT_SCOPE",
+  "error": "This API key needs the orders:write permission",
+  "required_scope": "orders:write",
+  "request_id": "req_7YbK2mQ9xP1cRt4v"
+}
+```
+
+Wiederholen Sie nur `429`-Antworten (nach `Retry-After`) und `5xx`-Antworten, jeweils mit demselben `Idempotency-Key`.
+
+## Authentifizierung und Limits
+
+| Code | Status | Lösung |
+| :-- | :-- | :-- |
+| `MISSING_API_KEY` | `401` | Senden Sie `x-api-key`. |
+| `MISSING_STORE_HASH` | `401` | Senden Sie `x-store-hash`. |
+| `INVALID_API_KEY` | `401` | Der Schlüssel ist falsch oder widerrufen. |
+| `API_KEY_EXPIRED` | `401` | Erstellen Sie einen neuen Schlüssel oder verlängern Sie ihn. |
+| `IP_NOT_ALLOWED` | `403` | Senden Sie den Request von einer zugelassenen IP oder bearbeiten Sie den Schlüssel. |
+| `STORE_NOT_ALLOWED` | `403` | Der Schlüssel gehört zu einem anderen Konto oder ist auf andere Shops beschränkt. |
+| `STORE_NOT_FOUND` | `404` | Prüfen Sie `x-store-hash`. |
+| `INSUFFICIENT_SCOPE` | `403` | Erteilen Sie dem Schlüssel die Berechtigung aus `required_scope`. |
+| `STORE_API_NOT_IN_PLAN` | `403` | Ihr Tarif enthält die Store API nicht. |
+| `RATE_LIMITED` | `429` | Mehr als 300 Requests pro Minute. |
+| `STORE_API_MONTHLY_QUOTA_EXCEEDED` | `429` | Monatliches Kontingent aufgebraucht. Wird am 1. des Monats (UTC) zurückgesetzt. |
+
+## Requests
+
+| Code | Status | Bedeutung |
+| :-- | :-- | :-- |
+| `INVALID_JSON` | `400` | Der Body ist kein gültiges JSON. |
+| `PAYLOAD_TOO_LARGE` | `413` | Der Body ist zu groß. |
+| `VALIDATION_FAILED` | `422` | Ein Feld fehlt oder ist ungültig. `details.field` nennt es. |
+| `NOT_FOUND` | `404` | Kein solcher Datensatz in diesem Shop. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | Der `Idempotency-Key` wurde mit einem anderen Body verwendet. |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | Der erste Request mit diesem Schlüssel läuft noch. |
+| `ENDPOINT_RETIRED` | `410` | Der Endpunkt wurde entfernt. Die Meldung nennt den Ersatz. |
+| `FEATURE_NOT_ENABLED` | `403` | Der Shop ist für diese Funktion nicht freigeschaltet (physische Waren, Affiliates). |
+| `INTERNAL_ERROR` | `500` | Fehler auf unserer Seite. Wiederholen Sie den Request und kontaktieren Sie dann den Support mit der `request_id`. |
+
+## Ressourcen-Codes
+
+| Code | Status | Bedeutung |
+| :-- | :-- | :-- |
+| `PRODUCT_NOT_FOUND` | `404` | Eine Bestellposition verweist auf ein Produkt außerhalb Ihres Shops. |
+| `OUT_OF_STOCK` | `409` | Nicht genügend Lagerbestand für die Bestellung. |
+| `TOTAL_MISMATCH` | `409` | `expected_total_cents` weicht vom tatsächlichen Preis ab. |
+| `INVOICE_PAID` | `409` | Bezahlte Bestellungen können nicht storniert werden. Erstatten Sie sie stattdessen. |
+| `PAYMENT_IN_PROGRESS` | `409` | Eine Zahlung wird gerade verarbeitet. |
+| `INVOICE_CLOSED` | `409` | Stornierte oder abgelaufene Bestellungen können nicht abgeschlossen werden. |
+| `INVOICE_NOT_PAID` | `409` | Nur bezahlte Bestellungen können erstattet oder ausgeliefert werden. |
+| `ALREADY_REFUNDED` / `REFUND_TOO_LARGE` | `409` | Es ist nichts oder weniger zu erstatten übrig. |
+| `DELIVERY_FAILED` | `502` | Bezahlt, aber die Auslieferung ist fehlgeschlagen. Rufen Sie `/complete` erneut auf. |
+| `SLUG_TAKEN`, `SKU_TAKEN`, `COUPON_CODE_TAKEN` | `409` | Der Wert wird in Ihrem Shop bereits verwendet. |
+| `PLAN_LIMIT_REACHED` | `403` | Das Produktlimit Ihres Tarifs ist erreicht. |
+| `NOT_PAID`, `OVER_SHIPPED`, `CLOSED` | `409` | Für diese Bestellung oder Menge kann keine Sendung erstellt werden. |
+| `INVALID_TRANSITION` | `409` | Eine Retoure oder ein Ticket kann nicht in diesen Status wechseln. |
+| `ENDPOINT_LIMIT_REACHED` | `409` | 16 Webhook-Endpunkte pro Shop. |

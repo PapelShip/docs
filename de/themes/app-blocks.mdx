@@ -1,0 +1,137 @@
+---
+title: "Referenz der App-Blöcke"
+sidebarTitle: "App-Blöcke"
+description: "Alle Plattformblöcke: Argumente, Aliase, was sie rendern, Verhalten als Popup, Schublade oder Navigation und welche Theme-Arten sie unterstützen."
+---
+
+KI-Agenten erhalten dieselbe Referenz über das Theme-MCP: das Tool `get_reference` (Thema `app_blocks`) und die Ressource `papelship://reference/app-blocks`. Der Code-Editor, `validate` und `save_draft` warnen vor unbekannten Blöcken, unbekannten oder falsch typisierten Argumenten und Blöcken, die eine Theme-Art nicht unterstützt.
+
+Plattformblöcke (`{% app_block %}` / data-app-block): Argumente, Verhalten, Unterstützung pro Art; gesperrte Seitenblöcke.
+
+```liquid
+{% app_block 'buy_now', product_id: product.id, mode: 'embed' %}
+```
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed"}'></div>
+```
+
+| Block | Verhalten | liquid | design | code | twin |
+| --- | --- | --- | --- | --- | --- |
+| `add_to_cart` | Schublade | ja | ja | ja\* | ja\* |
+| `buy_now` | Navigation | ja | ja | ja | ja |
+| `cart_count` | Schublade | ja | ja | ja\* | ja\* |
+| `cart_drawer` | Schublade | ja | ja | ja\* | ja\* |
+| `checkout_button` | Navigation | ja | ja | ja | ja |
+| `currency_selector` | Inline | ja | ja | ja\* | ja\* |
+| `language_selector` | Navigation | ja | ja | ja | ja |
+| `newsletter_form` | Formular | ja | ja | ja | ja |
+| `powered_by` | Inline | ja | nein | nein | nein |
+| `quick_view` | Dialog | ja | ja | ja | ja |
+| `recently_viewed` | Inline | ja | ja | ja\* | ja\* |
+| `reviews_widget` | Inline | ja | ja | nein | nein |
+| `variant_picker` | Inline | ja | ja | ja | ja |
+| `wishlist_button` | Inline | ja | ja | ja | ja |
+
+`ja*`: funktioniert, mit einem Hinweis unten. In Code-Sections und herausgelösten Zwillingen verwenden Warenkorbblöcke die Warenkorb-Schublade der Plattform, nicht die eigene Schublade des React Themes; das Warenkorb-Badge des Themes bleibt synchron.
+
+## add_to_cart
+
+In-den-Warenkorb-Button für ein Produkt. Fügt zum gemeinsamen Storefront-Warenkorb hinzu und öffnet die Warenkorb-Schublade. Bei einem Produkt mit mehreren Varianten ohne Auswahl fragt der variant_picker daneben nach, andernfalls öffnet sich die Produktseite.
+
+| Argument | Typ | Erforderlich | Aliase | Standard | Beschreibung |
+| --- | --- | --- | --- | --- | --- |
+| `product_id` | product | ja | `product` |  | Produkt-ID oder Hash-ID (product.id / product.hash_id). Ein Produktobjekt wird ebenfalls akzeptiert. |
+| `variant_id` | id |  | `variant` |  | Varianten-ID; Standard: die gewählte Variante eines variant_picker daneben, andernfalls die Standardvariante. |
+| `quantity` | integer |  |  | `1` | Menge (1 oder mehr). |
+| `label` | string |  |  |  | Button-Text (Standard "Add to cart", übersetzt). Wird ignoriert, wenn der Platzhalter eigenes Markup hat. |
+| `mode` | enum (`page`, `embed`) |  |  |  | Keine Wirkung: add_to_cart fügt immer zum Warenkorb hinzu. Verwenden Sie buy_now für den Checkout. |
+
+## buy_now
+
+Sofort-kaufen-Button für ein Produkt. `mode: 'page'` (Standard) führt zum Checkout der Plattform mit nur diesem Produkt (der Warenkorb bleibt erhalten). `mode: 'embed'` öffnet das Checkout-Popup über der Seite (Plattform-iframe; Kartendaten erreichen niemals das Theme) und weicht auf die Seite aus, wenn das Widget nicht geladen werden kann.
+
+| Argument | Typ | Erforderlich | Aliase | Standard | Beschreibung |
+| --- | --- | --- | --- | --- | --- |
+| `product_id` | product | ja | `product` |  | Produkt-ID oder Hash-ID. Ein Produktobjekt wird ebenfalls akzeptiert. |
+| `variant_id` | id |  | `variant` |  | Varianten-ID; Standard: die gewählte Variante eines variant_picker daneben. |
+| `quantity` | integer |  |  | `1` | Menge (1 oder mehr). |
+| `label` | string |  |  |  | Button-Text (Standard "Buy now", übersetzt). |
+| `mode` | enum (`page`, `embed`) |  |  | `page` | `page` = Checkout-Seite; `embed` = Checkout-Popup über der aktuellen Seite. |
+
+## cart_count
+
+Warenkorb-Button mit der Artikelanzahl ("Cart `<n>`"); Ihr eigenes Markup behält sein Aussehen, und ein `[data-ps-count]`-Kindelement erhält die Zahl. Ein Klick öffnet die Warenkorb-Schublade. Keine Argumente.
+
+## cart_drawer
+
+Konfiguriert die einfahrende Warenkorb-Schublade (Positionen, Mengen, Kampagnenrabatte, Leiste für kostenlosen Versand, Upsell, Checkout). Rendert an Ort und Stelle nichts; der erste `cart_drawer` der Seite legt die Optionen fest.
+
+| Argument | Typ | Standard | Beschreibung |
+| --- | --- | --- | --- |
+| `upsell` | string |  | Handle oder ID der Collection, deren Produkte in der Schublade angeboten werden. |
+| `upsell_limit` | integer | `3` | Angezeigte Upsell-Produkte (1 bis 6). |
+| `upsell_heading` | string |  | Upsell-Überschrift (Standard "You may also like"). |
+| `free_shipping` | boolean | `true` | `false` blendet die Fortschrittsleiste für kostenlosen Versand aus. |
+
+## checkout_button
+
+Checkout-Button für den gesamten Warenkorb (deaktiviert, solange der Warenkorb leer ist). `mode: 'page'` (Standard) führt zu `<store>/checkout`; `mode: 'embed'` öffnet das Checkout-Popup; der Warenkorb wird nach der Zahlung geleert.
+
+| Argument | Typ | Standard | Beschreibung |
+| --- | --- | --- | --- |
+| `label` | string |  | Button-Text (Standard "Checkout", übersetzt). |
+| `mode` | enum (`page`, `embed`) | `page` | Checkout-Seite oder Popup. |
+
+## currency_selector
+
+Auswahl der Anzeigewährung (ausgeblendet bei weniger als zwei Währungen). Speichert die Anzeigewährung (der Checkout belastet immer in der Shop-Währung) und löst `papelship:currency-change` aus. Übergeben Sie in Code-Sections und Zwillingen `currencies`: Diese Seiten kennen nur die Shop-Währung.
+
+| Argument | Typ | Beschreibung |
+| --- | --- | --- |
+| `label` | string | Beschriftungstext. |
+| `currencies` | list | Währungscodes (`"USD,EUR,TRY"` oder ein Array); Standard: die Anzeigewährungen des Shops. |
+
+## language_selector
+
+Auswahl der Shop-Sprache (ausgeblendet, wenn der Shop nur eine Sprache hat). Setzt das Sprach-Cookie und lädt die Seite neu. Argument: `label`.
+
+## newsletter_form
+
+Newsletter-Anmeldung mit einer ausdrücklichen Einwilligungs-Checkbox. Sendet an den Leads-Endpunkt der Plattform; Vorschauen melden niemals an. Argumente: `label`, `placeholder`, `button`, `consent_text`.
+
+## powered_by
+
+Der Hinweis "Powered by PapelShip" (ausgeblendet bei Tarifen, die das Ausblenden erlauben). Nur Liquid Themes: Design-Seiten und Footer von React Themes erhalten den Hinweis automatisch von der Plattform.
+
+## quick_view
+
+Schnellansicht-Button für ein Produkt: öffnet einen Dialog mit Bildern, Preis, Varianten und In-den-Warenkorb. Argumente: `product_id` (erforderlich, Alias `product`), `label`.
+
+## recently_viewed
+
+Die zuletzt angesehenen Produkte des Besuchers (aus diesem Browser); rendert nichts, wenn die Liste leer ist. Produkte werden auf Liquid-Produktseiten erfasst (Produktseiten von React Themes erfassen keine Aufrufe). Argumente: `limit` (Standard 4, 1 bis 20), `heading`.
+
+## reviews_widget
+
+Veröffentlichte Bewertungen: auf Produktseiten die des Seitenprodukts, andernfalls die des Shops. Nicht unterstützt in Code-Sections oder Zwillingen (diese Seiten enthalten keine Bewertungsdaten; verwenden Sie die Bewertungs-Section des React Themes). Argumente: `heading`, `limit` (Standard 5, 1 bis 50), `write` (Standard `true`; `false` blendet den Link zum Schreiben einer Bewertung aus).
+
+## variant_picker
+
+Variantenauswahl (Radio-Gruppen) für ein Produkt. `add_to_cart` / `buy_now` desselben Produkts im nächsten gemeinsamen Container (oder einem `data-ps-scope`-Element) verwenden die gewählte Variante; `data-ps`-Texte für Preis, Vergleichspreis und Lagerbestand folgen ihr. Argument: `product_id` (erforderlich, Alias `product`).
+
+## wishlist_button
+
+Favoriten-Umschalter für ein Produkt (ein Herz-Button mit `aria-pressed`). Wird im Browser gespeichert und bei Anmeldung mit dem Kundenkonto synchronisiert. Argument: `product_id` (numerische ID; Hash-IDs werden nicht im Konto gespeichert).
+
+## Gesperrte Seitenblöcke
+
+| Block | Seite | Liquid-Theme-Datei | Design-Datei |
+| --- | --- | --- | --- |
+| `checkout_form` | Checkout-Seite | `templates/checkout.liquid` | `pages/checkout.liquid` oder `.html` |
+| `cart_view` | Warenkorbseite | `templates/cart.liquid` | `pages/cart.liquid` oder `.html` |
+| `customer_login` | Anmeldeseite | `templates/customers/login.liquid` | `pages/login.liquid` oder `.html` |
+| `customer_account` | Kontoseite | `templates/customers/account.liquid` | `pages/account.liquid` oder `.html` |
+| `order_track` | Sendungsverfolgungsseite | `templates/customers/track.liquid` | `pages/track.liquid` oder `.html` |
+
+Jeder Block funktioniert nur einmal, in seiner eigenen Override-Datei. Theme-Code-Pakete von React Themes haben keine Seiten-Overrides.

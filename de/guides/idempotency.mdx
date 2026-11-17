@@ -1,0 +1,40 @@
+---
+title: "Idempotenz"
+description: "Wiederholen Sie Erstellungs- und Aktions-Requests der Store API sicher mit einem Idempotency-Key, damit ein Timeout niemals eine zweite Bestellung, Rückerstattung oder Zahlung erzeugt."
+---
+
+Netzwerkfehler kommen vor. Wenn ein Request in einen Timeout läuft, können Sie nicht erkennen, ob PapelShip die Bestellung erstellt hat. Mit einem `Idempotency-Key`-Header können Sie den Store API-Aufruf sicher wiederholen.
+
+## So funktioniert es
+
+Fügen Sie einem Erstellungs- oder Aktions-Request einen `Idempotency-Key`-Header (bis zu 255 Zeichen) hinzu. PapelShip speichert die erste Antwort 24 Stunden lang. Eine Wiederholung mit demselben Schlüssel und demselben Body erhält diese gespeicherte Antwort, statt den Request erneut auszuführen.
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_email": "buyer@example.com", "items": [{ "product_id": "a1B2c3D4e5F6" }] }'
+```
+
+| Code | Status | Bedeutung |
+| :-- | :-- | :-- |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | Der erste Request mit diesem Schlüssel läuft noch. Versuchen Sie es in Kürze erneut. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | Der Schlüssel wurde bereits mit einem anderen Body verwendet. Verwenden Sie für einen anderen Request einen neuen Schlüssel. |
+
+## Unterstützte Endpunkte
+
+Der Schlüssel funktioniert bei den Erstellungs- und Aktions-Endpunkten der Store API, unter anderem:
+
+- `POST /invoices` (Bestellung erstellen)
+- `POST /invoices/{invoiceId}/papelpay` (Kartenzahlung starten)
+- `POST /invoices/{invoiceId}/complete` und `POST /invoices/{invoiceId}/refund`
+- `POST /orders/{invoiceId}/shipments`
+- `POST /products` und `POST /coupons`
+
+## Best Practices
+
+- Erzeugen Sie einen Schlüssel pro Bestellung, nicht pro Request. Ihre eigene Bestell-ID eignet sich gut.
+- Speichern Sie den Schlüssel zusammen mit Ihrer Bestellung, damit jede Wiederholung ihn wiederverwendet.
+- Verwenden Sie einen Schlüssel niemals für eine andere Bestellung oder einen anderen Betrag.

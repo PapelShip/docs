@@ -1,0 +1,66 @@
+---
+title: "Intégrez paiements, commerce et licences à votre produit"
+sidebarTitle: "Introduction"
+description: "Pilotez votre boutique depuis vos propres systèmes, acceptez les paiements par carte sur votre propre site, et gérez les licences et la protection de vos logiciels de bureau avec les API PapelShip."
+mode: "wide"
+---
+
+<div className="not-prose pb-10 mb-10 border-b border-zinc-950/10 dark:border-white/10">
+  <div className="flex flex-wrap gap-3">
+    <a href="/fr/quickstart" className="rounded-full bg-[#CB6441] px-5 py-2.5 text-sm font-medium text-white no-underline hover:opacity-90">Commencer</a>
+    <a href="/fr/guides/authentication" className="rounded-full border border-zinc-950/15 dark:border-white/15 px-5 py-2.5 text-sm font-medium text-zinc-950 dark:text-white no-underline hover:bg-zinc-950/5 dark:hover:bg-white/5">Authentification</a>
+  </div>
+</div>
+
+## Produits
+
+<CardGroup cols={3}>
+  <Card title="User API" icon="store" href="/fr/user-api/overview">
+    Gérez les produits, catégories, coupons, clients, factures et statistiques.
+  </Card>
+
+  <Card title="PapelPay" icon="credit-card" href="/fr/papelpay/overview">
+    Paiements par carte et abonnements pour vos commandes, sur votre page de paiement ou sur votre propre site.
+  </Card>
+
+  <Card title="qPapel Protection" icon="shield-halved" href="/fr/qpapel/overview">
+    Clés de licence, liaison HWID, paramètres à distance, règles anti-triche et journaux Discord.
+  </Card>
+</CardGroup>
+
+## Commencer à développer
+
+<Steps>
+  <Step title="Obtenez votre clé API">
+    Connectez-vous au [tableau de bord PapelShip](https://app.papelship.com) et créez une clé API pour votre boutique.
+  </Step>
+  <Step title="Envoyez votre première requête">
+    Suivez le [guide de démarrage rapide](/fr/quickstart) pour créer votre première commande et rediriger le client vers le paiement.
+  </Step>
+  <Step title="Passez en production">
+    Consultez les pages [authentification](/fr/guides/authentication), [erreurs](/fr/guides/errors) et [idempotence](/fr/guides/idempotency) avant la mise en ligne.
+  </Step>
+</Steps>
+
+## URL de base
+
+| API | URL de base |
+| :-- | :-- |
+| User API | `https://app.papelship.com/api/v1` |
+| qPapel Protection | `https://app.papelship.com/api/qpapel/v1` |
+
+<Info>
+  Toutes les API acceptent et renvoient du JSON via HTTPS. Les requêtes en HTTP simple ne sont pas prises en charge.
+</Info>
+
+## Besoin d'aide ?
+
+<CardGroup cols={2}>
+  <Card title="Tableau de bord" icon="gauge" href="https://app.papelship.com">
+    Créez des clés API, configurez les moyens de paiement et consultez les factures.
+  </Card>
+
+  <Card title="Assistance par e-mail" icon="envelope" href="mailto:support@papelship.com">
+    Contactez l'équipe PapelShip à [support@papelship.com](mailto:support@papelship.com).
+  </Card>
+</CardGroup>

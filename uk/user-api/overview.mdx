@@ -1,0 +1,145 @@
+---
+title: "Огляд User API"
+sidebarTitle: "Огляд"
+description: "Створюйте замовлення, синхронізуйте каталог, відправляйте фізичні товари та реагуйте на події зі своїх власних систем."
+---
+
+<Info>
+  Щоб приймати оплату цих замовлень карткою на власному сайті, див. [PapelPay](/uk/papelpay/overview).
+</Info>
+
+User API (у панелі керування він називається Store API) надає вашим серверам той самий контроль, що й панель керування магазином: замовлення, товари, залишки, клієнти, підтримка, доставка та вебхуки.
+
+**Базовий URL:** `https://app.papelship.com/api/v1`
+
+<Note>
+  Старі інтеграції, що звертаються до `https://app.papelship.com/api_user/api/v1`, продовжують працювати. Для нового коду використовуйте `/api/v1`.
+</Note>
+
+## Автентифікація
+
+Створіть ключ у розділі **Developers › API keys** і надсилайте його разом з ID магазину в кожному запиті:
+
+```bash
+curl https://app.papelship.com/api/v1/me \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+`GET /me` працює з будь-яким дійсним ключем. Він повертає магазин, дозволи ключа та ваші ліміти, тож використовуйте його для перевірки налаштувань.
+
+<Warning>
+  Ключі діють від імені власника магазину. Зберігайте їх на своєму сервері, ніколи не розміщуйте їх у браузерному чи мобільному коді.
+</Warning>
+
+## Дозволи
+
+Під час створення ключа оберіть **Full access**, **Read only** або **Custom**. У режимі Custom ви обираєте доступ на читання або запис для кожної області окремо. Запис включає читання.
+
+| Область | Дозвіл | Охоплює |
+| :-- | :-- | :-- |
+| Замовлення | `orders` | `/invoices` |
+| Товари | `products` | `/products` і все, що в ньому |
+| Категорії та групи | `catalog` | `/categories`, `/groups` |
+| Купони | `coupons` | `/coupons` |
+| Клієнти та чорний список | `customers` | `/customers`, `/blacklist` |
+| Доставка та виконання | `fulfillment` | `/orders`, `/returns`, `/shipping` |
+| Відгуки | `reviews` | `/reviews` |
+| Запитання про товари | `questions` | `/questions` |
+| Звернення до підтримки | `support` | `/tickets` |
+| Підписки | `subscriptions` | `/subscriptions` |
+| Партнери | `affiliates` | `/affiliates` |
+| Вебхуки | `webhooks` | `/webhooks`, `/events` |
+| Аналітика | `analytics` | `/analytics` (лише читання) |
+| Магазин | `store` | `/store`, `/payment-methods` (лише читання) |
+
+Запити `GET` потребують доступу на читання; `POST`, `PATCH`, `PUT` і `DELETE` потребують доступу на запис. Ключ без потрібного дозволу отримує `403 INSUFFICIENT_SCOPE`, а відсутній дозвіл указано в `required_scope`.
+
+Ви також можете обмежити ключ цим магазином, списком IP-адрес або датою закінчення терміну дії.
+
+## Відповіді
+
+Кожна відповідь є JSON із прапорцем `success`.
+
+```json Успіх
+{ "success": true, "invoice": { "id": "c35ffd-19a1b2c3d4e-8c7a20", "status": "pending" } }
+```
+
+```json Помилка
+{
+  "success": false,
+  "code": "VALIDATION_FAILED",
+  "error": "customer_email must be a valid email address",
+  "details": { "field": "customer_email" },
+  "request_id": "req_7YbK2mQ9xP1cRt4v"
+}
+```
+
+Розгалужуйте логіку за `code`, а не за текстом повідомлення. Кожна відповідь має заголовок `X-Request-Id`; указуйте його, коли звертаєтеся до підтримки. Усі коди наведено в розділі [Помилки](/uk/user-api/errors).
+
+## Домовленості
+
+- **Суми** є цілими числами в дрібних одиницях: `price_cents: 2999` означає 29.99.
+- **Дати** подано у форматі ISO 8601 в UTC.
+- **ID** є публічними ідентифікаторами: хеш-ID товарів, ID замовлень на кшталт `c35ffd-19a1b2c3d4e-8c7a20`. Записи інших магазинів повертають `404`.
+- **Створені** записи повертають `201`.
+
+## Пагінація
+
+Списки приймають `limit` (від 1 до 100, за замовчуванням 25) і `offset` та повертають об'єкт `pagination`:
+
+```bash
+curl "https://app.papelship.com/api/v1/invoices?status=completed&limit=50&offset=100" \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+```json
+{
+  "success": true,
+  "invoices": [ ... ],
+  "pagination": { "total": 342, "limit": 50, "offset": 100, "has_more": true }
+}
+```
+
+Списки партнерів натомість використовують курсор: передавайте `next_cursor` назад як `cursor`.
+
+## Безпечні повторні спроби
+
+Надсилайте заголовок `Idempotency-Key` у викликах створення (замовлення, повернення коштів, відправлення, товари, вебхуки та інші, позначені в довіднику). Якщо стався мережевий збій, повторіть запит з тим самим ключем і тілом: ви отримаєте перший результат замість дубліката.
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 6f1c8a52-4f0e-4b8e-9a7c-2d1b3e5f7a90" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_email": "buyer@example.com", "items": [{ "product_id": "a1B2c3D4e5F6" }] }'
+```
+
+- Ключі зберігаються протягом 24 годин.
+- Повторно відтворена відповідь має заголовок `Idempotent-Replayed: true`.
+- Той самий ключ з іншим тілом повертає `422 IDEMPOTENCY_KEY_REUSED`.
+
+## Ліміти
+
+| Ліміт | Значення | Заголовки |
+| :-- | :-- | :-- |
+| Запитів на ключ | 300 на хвилину | `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (час Unix) |
+| Викликів на місяць | Залежить від вашого тарифу | `X-Quota-Limit` |
+
+У разі перевищення ліміту ви отримуєте `429` із `Retry-After`. `RATE_LIMITED` знімається протягом хвилини; `STORE_API_MONTHLY_QUOTA_EXCEEDED` скидається першого дня наступного місяця (UTC).
+
+Кожен запит відображається в розділі **Developers › API requests** зі своїм статусом і тривалістю.
+
+## Наступні кроки
+
+<CardGroup cols={2}>
+  <Card title="Створення замовлень" icon="cart-shopping" href="/uk/user-api/orders">
+    Приймайте замовлення зі свого сайту чи застосунку та перенаправляйте клієнтів на оформлення.
+  </Card>
+
+  <Card title="Вебхуки" icon="bolt" href="/uk/user-api/webhooks">
+    Отримуйте сповіщення, коли замовлення оплачено, скасовано або за ним повернено кошти.
+  </Card>
+</CardGroup>

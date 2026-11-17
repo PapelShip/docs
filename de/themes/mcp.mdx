@@ -1,0 +1,137 @@
+---
+title: "KI-Agenten (MCP)"
+sidebarTitle: "Agenten einrichten"
+description: "Verbinden Sie Claude, Claude Code, Cursor, VS Code oder einen beliebigen MCP-Client über eine einzige URL mit den Themes Ihres Shops."
+---
+
+PapelShip betreibt einen [Model Context Protocol](https://modelcontextprotocol.io)-Server für Ihre Themes. Verbinden Sie einen KI-Agenten über eine einzige URL, genehmigen Sie ihn in Ihrem Browser, und der Agent kann Ihren Theme-Code lesen und Änderungen als Entwürfe speichern. Sie prüfen und veröffentlichen.
+
+**Server-URL:** `https://app.papelship.com/mcp`
+
+Die URL ist für jeden Shop gleich. Beim Verbinden melden Sie sich bei PapelShip an und wählen den Shop, an dem der Agent arbeiten darf.
+
+Agenten beginnen mit `get_reference`: Es erklärt App-Blöcke, den Checkout (Seite oder Popup), das Shop-SDK und die Grenzen jeder Theme-Art. Die Server-Anweisungen weisen verbundene Agenten an, es zuerst aufzurufen.
+
+## Was der Agent kann
+
+| Kann | Kann nicht |
+| --- | --- |
+| Die Dateien Ihrer Theme-Kopien, Designs und Theme-Code-Pakete lesen | Themes veröffentlichen, aktivieren oder löschen |
+| Dateien durchsuchen, validieren und scannen | Ihren Live-Shop ändern. Änderungen werden als Entwürfe gespeichert und gehen erst live, wenn Sie im Panel auf Veröffentlichen klicken. |
+| Änderungen als Entwürfe mit Versionsverlauf speichern | Bestellungen, Kunden, Zahlungen oder Einstellungen sehen |
+| Einen Vorschau-Link teilen | Auf einen anderen Shop zugreifen |
+
+### Wohin Entwürfe gespeichert werden
+
+| Kopie | Ergebnis von `save_draft` |
+| --- | --- |
+| Eine Kopie, die nicht live ist | In der Kopie gespeichert. Der vorherige Inhalt bleibt in ihrem Versionsverlauf. |
+| Ein Theme-Code-Paket | Im Paket gespeichert. Live-Seiten behalten die veröffentlichte Version, bis Sie veröffentlichen. |
+| Die Live-Theme-Kopie oder das Live-Design | Als Entwurf gespeichert. Ihr Shop behält die veröffentlichte Version, bis Sie auf Veröffentlichen klicken (bei Designs führt Veröffentlichen außerdem den Sicherheitsscan aus). |
+
+## Client verbinden
+
+<Tabs>
+  <Tab title="Claude">
+    Funktioniert in claude.ai, Claude Desktop und den mobilen Claude Apps.
+
+    1. Öffnen Sie **Settings › Connectors** und wählen Sie **Add custom connector**.
+    2. Nennen Sie ihn `PapelShip` und fügen Sie `https://app.papelship.com/mcp` ein.
+    3. Wählen Sie **Add** und dann **Connect**.
+    4. Melden Sie sich bei PapelShip an, wählen Sie Ihren Shop und klicken Sie auf **Zugriff erlauben**.
+  </Tab>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http papelship https://app.papelship.com/mcp
+    ```
+
+    Führen Sie in Claude Code `/mcp` aus und wählen Sie **papelship** und **Authenticate**. Ihr Browser öffnet die Genehmigungsseite von PapelShip.
+  </Tab>
+  <Tab title="Cursor">
+    [Zu Cursor hinzufügen](cursor://anysphere.cursor-deeplink/mcp/install?name=papelship&amp;config=eyJ1cmwiOiJodHRwczovL2FwcC5wYXBlbHNoaXAuY29tL21jcCJ9)
+
+    Oder fügen Sie ihn zu `~/.cursor/mcp.json` hinzu:
+
+    ```json
+    {
+      "mcpServers": {
+        "papelship": { "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+
+    Cursor zeigt neben dem Server **Needs login** an. Wählen Sie es aus, um in Ihrem Browser zu genehmigen.
+  </Tab>
+  <Tab title="VS Code">
+    [Zu VS Code hinzufügen](vscode:mcp/install?%7B%22name%22%3A%22papelship%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fapp.papelship.com%2Fmcp%22%7D)
+
+    Oder fügen Sie ihn zu `.vscode/mcp.json` hinzu:
+
+    ```json
+    {
+      "servers": {
+        "papelship": { "type": "http", "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+
+    Starten Sie den Server aus der Datei oder über den Befehl **MCP: List Servers** und melden Sie sich an, wenn Sie dazu aufgefordert werden. Verwenden Sie die Tools im Agent-Modus von Copilot.
+  </Tab>
+  <Tab title="Andere Clients">
+    Jeder Client mit Unterstützung für Streamable HTTP und OAuth funktioniert:
+
+    ```json
+    {
+      "mcpServers": {
+        "papelship": { "type": "http", "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+Das Shop-Panel enthält dieselben Schritte mit Kopier-Buttons unter **Entwickler › KI & MCP**.
+
+## Zugriff genehmigen
+
+Die Genehmigungsseite zeigt den Namen der App und wohin sie zurückleitet. Wählen Sie:
+
+- **Shop**: der eine Shop, den die App verwenden darf. Sie sehen Shops, die Ihnen gehören, und Shops, in denen Ihre Teamrolle **Theme & Design › Bearbeiten** umfasst.
+- **Änderungen als Entwürfe speichern** (`themes:write`): Deaktivieren Sie diese Option, um nur Lesezugriff zu gewähren.
+
+## Verbundene Apps und Widerruf
+
+**Entwickler › KI & MCP › Verbundene Apps** listet jede mit dem Shop verbundene App auf, wer sie verbunden hat und wann sie zuletzt verwendet wurde. **Widerrufen** stoppt die App bei ihrem nächsten Request.
+
+Der Zugriff endet außerdem, wenn die Person, die ihn genehmigt hat, sich von allen Sitzungen abmeldet, ihr Passwort ändert, das Team verlässt, die Berechtigung **Theme & Design › Bearbeiten** verliert oder ihr Konto gesperrt wird.
+
+## API-Schlüssel statt OAuth
+
+Für Clients ohne OAuth erstellen Sie unter **Entwickler › API-Schlüssel** einen Store API-Schlüssel vom Typ **Themes** und senden ihn als Bearer-Token:
+
+```bash
+claude mcp add --transport http papelship https://app.papelship.com/mcp \
+  --header "Authorization: Bearer $PAPELSHIP_THEMES_KEY"
+```
+
+Ein Themes-Schlüssel funktioniert nur für den Shop, der ihn erstellt hat, und hat dieselben Rechte wie eine OAuth-Verbindung. Bewahren Sie ihn in einer Umgebungsvariablen auf, niemals in einer Datei, die Sie teilen oder committen. `https://app.papelship.com/api/mcp/themes` bleibt als älterer Alias desselben Servers bestehen.
+
+## Limits
+
+| Limit | Wert |
+| --- | --- |
+| Requests pro Verbindung oder Schlüssel | 120 pro Minute |
+| Requests pro Shop, alle Verbindungen | 300 pro Minute |
+| Tool-Aufrufe | Zählen als Store API-Aufrufe Ihres Tarifs |
+| Access-Token | 1 Stunde, automatisch erneuert |
+| Verbindung | Bleibt angemeldet, solange sie mindestens alle 30 Tage verwendet wird |
+
+Jeder Tool-Aufruf wird mit App, Tool und Datei protokolliert.
+
+## Sicherheit
+
+- Theme-Dateien sind Shop-Daten, keine Anweisungen. Der Server kennzeichnet jedes Tool-Ergebnis als nicht vertrauenswürdige Daten, damit Text in einem Theme den Agenten nicht umleiten kann.
+- Vorschauen sind niemals öffentlich: Vorschau-Links öffnen sich im PapelShip Panel.
+- Tokens werden gehasht gespeichert. Ein wiederverwendetes Refresh-Token beendet die Verbindung.
+
+In der [Tool-Referenz](/de/themes/mcp-tools) finden Sie jedes Tool und seine Argumente.

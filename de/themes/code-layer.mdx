@@ -1,0 +1,72 @@
+---
+title: "Code-Layer für React Themes"
+sidebarTitle: "Code-Layer"
+description: "Fügen Sie Code-Sections, CSS und JavaScript zu Nightfall, Ship, Circuit, Arsenal, MarketPro und Vanguard hinzu, ohne den visuellen Editor zu verlassen."
+---
+
+Die integrierten Themes Nightfall, Ship, Circuit, Arsenal, MarketPro und Vanguard bleiben genau so, wie sie sind. Mit dem Code-Layer fügen Sie Ihren eigenen Code hinzu und bearbeiten weiterhin visuell.
+
+## Theme-Code-Paket
+
+Jeder Shop erhält pro integriertem Theme ein **Theme-Code-Paket**. Sie öffnen es im Code-Editor wie jede Theme-Kopie. Ein Paket enthält nur:
+
+| Ordner | Inhalt |
+| --- | --- |
+| `sections/` | Code-Sections (`.liquid` mit einem `{% schema %}`-Block) |
+| `snippets/` | Partials für Ihre Sections |
+| `assets/` | `theme.css`, geladen nach den Theme-Styles, und `theme.js`, verzögert auf Theme-Seiten geladen |
+| `locales/` | Übersetzungen für Ihre Sections |
+
+Theme-JavaScript wird auf Checkout-, Anmelde- oder Kontoseiten nie geladen.
+
+## Code-Sections im visuellen Editor
+
+Jede `sections/<name>.liquid` mit einem `{% schema %}`-Block erscheint in der Liste **Section hinzufügen** des visuellen Editors unter **Theme-Code**. Ihr Einstellungsformular stammt aus dem Schema, sodass eine Code-Section vollständig ohne Code bearbeitbar bleibt. Neu anordnen, ausblenden, duplizieren und löschen funktionieren wie bei integrierten Sections.
+
+Wenn Sie das Schema im Code ändern, wird das Formular sofort aktualisiert. Neue Einstellungen erhalten ihre Standardwerte; entfernte Einstellungen werden ignoriert und ihre Werte beibehalten.
+
+## Section-IDs in CSS
+
+In einer Code-Section ist `section.id` gleich `code:<name>`. Der `:` bricht CSS-Selektoren (`#{{ section.id }}-yearly:checked` wird stillschweigend verworfen) und `#id`-Abfragen. Verwenden Sie `section.css_id` (`code-<name>`) in `{% style %}` und in `id=`- / `for=`-Attributen oder `{{ value | css_id }}`. Der Code-Editor sowie MCP `validate` / `save_draft` warnen dort vor einer unveränderten `section.id`; die Schnellkorrektur des Editors lautet **section.css_id verwenden**.
+
+Labels, Radio-/Checkbox-Umschalter, `<details>` und Auswahlfelder funktionieren auf der Arbeitsfläche des visuellen Editors. Um Links und Buttons anzuklicken, aktivieren Sie **Interagieren** in der oberen Leiste (oder drücken Sie `I` oder halten Sie `Alt` gedrückt).
+
+## Code einer integrierten Section bearbeiten
+
+Wählen Sie bei einer integrierten Section **Code bearbeiten**, um sie herauszulösen. Ihr Liquid-Zwilling wird mit demselben Markup und denselben Klassennamen in Ihr Paket kopiert, sodass sie identisch aussieht und ihre Einstellungen behält. **Auf integrierte Version zurücksetzen** stellt die ursprüngliche Section wieder her.
+
+## Commerce und Checkout
+
+Code-Sections verkaufen mit App-Blöcken. Sie benötigen kein Skript:
+
+```liquid
+{% app_block 'add_to_cart', product_id: product.id %}
+{% app_block 'buy_now', product_id: product.id, mode: 'embed', label: 'Buy' %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+- `buy_now` und `checkout_button` führen standardmäßig zur Checkout-Seite. `mode: 'embed'` öffnet das Checkout-Popup über Ihrer Seite.
+- `add_to_cart` und `cart_count` öffnen die Warenkorb-Schublade der Plattform. Das Warenkorb-Badge des Themes bleibt synchron.
+- `reviews_widget` und `powered_by` funktionieren in Code-Sections nicht. `currency_selector` benötigt `currencies: 'USD,EUR'`.
+- Code-Sections verfügen über `shop`, `collections`, `all_products`, `request` und `localization`. Sie haben kein `product`, `collection` oder `routes`.
+- `window.PapelShip` wird nach dem Laden der Seite geladen, auf Seiten, deren Code-Sections einen App-Block oder ein `data-ps`-Binding enthalten. Warten Sie in `assets/theme.js` auf `papelship:sdk-ready`.
+
+Siehe [Commerce und Checkout](/de/themes/commerce) und [App-Blöcke](/de/themes/app-blocks).
+
+## Veröffentlichen
+
+Live-Seiten zeigen die **veröffentlichte** Version des Pakets. Gespeicherte Dateien erscheinen nur in den Vorschauen des visuellen Editors und des Code-Editors.
+
+1. Bearbeiten und speichern Sie Dateien im Code-Editor oder lassen Sie einen KI-Agenten Entwürfe speichern.
+2. Prüfen Sie die Vorschau.
+3. Klicken Sie im Code-Editor oder im visuellen Editor auf **Veröffentlichen**. Es ist derselbe Button, und er zeigt an, wie viele Änderungen noch nicht veröffentlicht sind.
+
+Beim Veröffentlichen werden zuerst alle Paketdateien validiert. Schlägt etwas fehl, ändert sich im Live-Shop nichts.
+
+<Note>
+  Über MCP verbundene KI-Agenten können Paketdateien speichern, aber niemals veröffentlichen. Siehe [KI-Agenten (MCP)](/de/themes/mcp).
+</Note>
+
+## Sicherheit
+
+Paketdateien werden wie Designs gescannt, sowohl im Quellcode als auch in der gerenderten Ausgabe. Rich-Text- und HTML-Einstellungen werden auf dem Server bereinigt.

@@ -1,0 +1,147 @@
+---
+title: "Вебхуки"
+sidebarTitle: "Вебхуки"
+description: "Получайте подписанные события при изменении заказов, товаров, отзывов и партнерских записей."
+---
+
+Вебхуки отправляют HTTP-запрос `POST` на ваш сервер, когда в магазине что-то происходит, поэтому вам не нужно опрашивать API.
+
+Создавайте эндпоинты в разделе **Разработчикам › Вебхуки** или с помощью [`POST /webhooks`](#управление-эндпоинтами-через-api).
+
+## События
+
+| Событие | Когда |
+| :-- | :-- |
+| `order.created` | Создан заказ (витрина, API или встраивание). |
+| `order.completed` | Заказ оплачен и доставлен. Включает доставки. |
+| `order.partially_paid` | Поступила часть криптовалютного платежа. |
+| `order.manual_review` | Ручной платеж ожидает вашей проверки. |
+| `order.expired` | Заказ не был оплачен вовремя. |
+| `order.cancelled` | Неоплаченный заказ отменен. |
+| `order.refunded` | Зарегистрирован возврат. Отправляется один раз на каждую возвращенную сумму. |
+| `product.out_of_stock` | Товар закончился на складе. |
+| `product.low_stock` | Вариант физического товара достиг порога низкого остатка. Включает `variant_id` и `threshold`. |
+| `product.restocked` | Остатки товара пополнены. |
+| `product.deleted` | Товар удален. |
+| `review.created` | Клиент оставил отзыв. |
+| `question.created` | Клиент задал вопрос на странице товара. |
+| `question.answered` | Ваша команда ответила на вопрос о товаре (в панели управления или через API). `answer.first` равно `true` для первого ответа. |
+| `customer.created` | В магазин добавлен новый клиент. |
+| `withdrawal.completed` | Вывод средств из кошелька отправлен. |
+| `affiliate.partner_applied` | Кто-то подал заявку в вашу партнерскую программу. |
+| `affiliate.conversion` | Атрибутированный заказ завершен, и комиссия записана. |
+| `affiliate.payout_requested` | Партнер запросил выплату. |
+| `affiliate.payout_sent` | Вы отметили выплату как отправленную. |
+
+`GET /events/types` возвращает тот же список.
+
+## Данные события
+
+```json
+{
+  "id": "evt_9b2c4f1a7d",
+  "object": "event",
+  "type": "order.completed",
+  "created": 1791100000,
+  "livemode": true,
+  "store": { "id": "0bHQn0bU2dei", "name": "Acme", "slug": "acme" },
+  "data": {
+    "object": {
+      "object": "order",
+      "id": "c35ffd-19a1b2c3d4e-8c7a20",
+      "status": "completed",
+      "currency": "USD",
+      "total": 34.99,
+      "customer": { "email": "buyer@example.com", "country": "GB" },
+      "items": [{ "product_id": "a1B2c3D4e5F6", "name": "Pro License", "quantity": 1, "unit_price": 34.99, "total": 34.99 }],
+      "paid_at": "2026-10-04T12:03:00.000Z"
+    }
+  }
+}
+```
+
+<Note>
+  Суммы в вебхуках указываются в основных единицах (`34.99`), в отличие от API, где используются минимальные единицы (`3499`).
+</Note>
+
+## Проверьте подпись
+
+Каждый запрос содержит следующие заголовки:
+
+| Заголовок | Значение |
+| :-- | :-- |
+| `PapelShip-Signature` | `t=<unix seconds>,v1=<hex HMAC>` |
+| `PapelShip-Event-Id` | ID события. Используйте его, чтобы игнорировать дубликаты. |
+| `PapelShip-Event-Type` | Тип события. |
+| `PapelShip-Delivery-Attempt` | 1 для первой попытки. |
+
+Подпись вычисляется как `HMAC-SHA256(secret, "<t>.<raw body>")` в шестнадцатеричном виде. Секрет (`whsec_...`) показывается при создании эндпоинта. Вычисляйте подпись по **сырому** телу запроса, до разбора JSON, и отклоняйте устаревшие метки времени.
+
+<CodeGroup>
+
+```javascript Node.js
+import crypto from "node:crypto";
+
+export function verify(rawBody, header, secret, toleranceSec = 300) {
+  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")));
+  const t = Number(parts.t);
+  if (!t || Math.abs(Date.now() / 1000 - t) > toleranceSec) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${t}.${rawBody}`).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(parts.v1 || "");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
+```python Python
+import hmac, hashlib, time
+
+def verify(raw_body: bytes, header: str, secret: str, tolerance: int = 300) -> bool:
+    parts = dict(p.split("=", 1) for p in header.split(","))
+    t = int(parts.get("t", 0))
+    if not t or abs(time.time() - t) > tolerance:
+        return False
+    expected = hmac.new(secret.encode(), f"{t}.".encode() + raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, parts.get("v1", ""))
+```
+
+```php PHP
+function verify(string $rawBody, string $header, string $secret, int $tolerance = 300): bool {
+    parse_str(str_replace(',', '&', $header), $parts);
+    $t = (int)($parts['t'] ?? 0);
+    if (!$t || abs(time() - $t) > $tolerance) return false;
+    $expected = hash_hmac('sha256', $t . '.' . $rawBody, $secret);
+    return hash_equals($expected, $parts['v1'] ?? '');
+}
+```
+
+</CodeGroup>
+
+## Ответ и повторные попытки
+
+- Ответьте любым статусом `2xx` в течение 10 секунд. Медленную работу выполняйте после ответа.
+- Неудачные доставки повторяются через 1 минуту, 5 минут, 30 минут, 2 часа, 6 часов и 12 часов (7 попыток примерно за 21 час).
+- Эндпоинт отключается после 40 неудач подряд без единого успеха за 3 дня. Включите его снова в панели управления или через `PATCH /webhooks/{id}` с `enabled: true`.
+- Одно и то же событие может прийти несколько раз. Используйте `PapelShip-Event-Id`, чтобы обработать его один раз.
+
+## Управление эндпоинтами через API
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/webhooks \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://example.com/webhooks/papelship", "events": ["order.completed", "order.refunded"] }'
+```
+
+Ответ содержит `secret` для подписи. Он показывается только один раз; сохраните его в окружении своего сервера.
+
+| Эндпоинт | Назначение |
+| :-- | :-- |
+| `GET /webhooks` | Список эндпоинтов со статистикой доставки за 7 дней. |
+| `PATCH /webhooks/{id}` | Изменить URL, события или `enabled`. |
+| `POST /webhooks/{id}/test` | Отправить тестовое событие. |
+| `GET /events/deliveries` | Журнал доставок со статусами и кодами ответов. |
+| `POST /events/deliveries/{id}/resend` | Отправить доставку повторно. |
+
+Смена секрета выполняется только в панели управления.

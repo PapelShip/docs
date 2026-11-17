@@ -1,0 +1,72 @@
+---
+title: "Lizenzschlüssel"
+description: "Stellen Sie Lizenzschlüssel für Kunden mit HWID-Bindung aus und verwalten Sie sie."
+---
+
+## Schlüsseltypen
+
+| `key_type` | Verhalten |
+| :-- | :-- |
+| `time_limited` | Gültig für `days` Tage. Standard. |
+| `hour_limited` | `days` wird als Stunden interpretiert. |
+| `single_use` | Kann einmal aktiviert werden. |
+| `multi_use` | Kann bis zu `max_uses` Mal aktiviert werden. |
+| `time_restricted` | Nur innerhalb eines festgelegten Zeitfensters gültig. |
+
+## Schlüssel erstellen
+
+```bash
+curl -X POST https://app.papelship.com/api/qpapel/v1/keys \
+  -H "Authorization: Bearer pk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 101,
+    "days": 30,
+    "key_type": "time_limited",
+    "bind_hwid": true,
+    "auto_start": false,
+    "amount": 1,
+    "note": "Order #1042"
+  }'
+```
+
+<ParamField body="bind_hwid" default="true" type="boolean">
+  Bindet den Schlüssel an den ersten Rechner, der ihn aktiviert.
+</ParamField>
+
+<ParamField body="auto_start" default="false" type="boolean">
+  Bei `true` beginnt der Countdown sofort. Bei `false` beginnt er bei der ersten Verwendung.
+</ParamField>
+
+<ParamField body="amount" default="1" type="integer">
+  Erzeugen Sie bis zu 100 Schlüssel in einem Aufruf.
+</ParamField>
+
+## Schlüssel verwalten
+
+<AccordionGroup>
+  <Accordion title="HWID zurücksetzen" icon="rotate">
+    Ermöglichen Sie einem Kunden den Wechsel auf einen neuen PC: `POST /keys/{id}/reset-hwid`.
+  </Accordion>
+
+  <Accordion title="Einfrieren und auftauen" icon="snowflake">
+    Pausieren Sie den Countdown während einer Ausfallzeit mit `POST /keys/{id}/freeze`. Setzen Sie ihn mit `DELETE /keys/{id}/freeze` fort.
+  </Accordion>
+
+  <Accordion title="Verlängern" icon="clock">
+    Fügen Sie mit `POST /keys/{id}/add-time` und `{ "days": 7 }` Tage hinzu.
+  </Accordion>
+
+  <Accordion title="Sperren und entsperren" icon="ban">
+    Widerrufen Sie mit `POST /keys/{id}/ban` und einem `reason`. Stellen Sie mit `POST /keys/{id}/unban` wieder her.
+  </Accordion>
+</AccordionGroup>
+
+## Ablaufende Schlüssel finden
+
+Listen Sie Schlüssel auf, die in den nächsten sieben Tagen ablaufen, um Erinnerungen zur Verlängerung zu senden:
+
+```bash
+curl "https://app.papelship.com/api/qpapel/v1/keys?expiresInDays=7&sortBy=end_time&sortOrder=ASC" \
+  -H "Authorization: Bearer pk_live_your_key"
+```

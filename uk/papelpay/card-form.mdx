@@ -1,0 +1,90 @@
+---
+title: "Форма картки PapelPay на вашому сайті"
+sidebarTitle: "Форма картки на вашому сайті"
+description: "Вбудуйте форму картки PapelPay у власну сторінку оформлення за допомогою JavaScript SDK: параметри, події, вигляд, дозволені домени та підтвердження оплати."
+icon: "code"
+keywords:
+  - "papelpay"
+  - "вбудовування"
+  - "форма картки"
+  - "javascript sdk"
+  - "papelship-widget"
+  - "iframe"
+---
+
+JavaScript SDK PapelShip вбудовує форму картки PapelPay у вашу власну сторінку оформлення, тож клієнт ніколи не залишає ваш сайт. Форма завантажується у фреймі з PapelShip: дані картки ніколи не потрапляють на ваш сервер чи вашу сторінку.
+
+## Перш ніж почати
+
+- Запустіть оплату карткою на своєму сервері через `POST /api/v1/invoices/{invoiceId}/papelpay` і передайте `payment.embed_url` на свою сторінку. Див. [Огляд](/uk/papelpay/overview).
+- Додайте домен своєї сторінки оформлення в панелі керування в розділі **PapelPay > Domains** і підтвердіть його. Підтверджений власний домен вашого магазину також підходить, як і його піддомени.
+- `localhost` і `127.0.0.1` працюють без налаштування під час розробки.
+
+<Warning>
+  На непідтвердженому домені фрейм показує повідомлення замість форми, а `onError` отримує `origin_not_allowed`.
+</Warning>
+
+## Вбудуйте форму
+
+```html checkout.html
+<div id="card"></div>
+
+<script src="https://app.papelship.com/scripts/papelship-widget.js"></script>
+<script>
+  const card = PapelShip.papelpay.mount("#card", {
+    embedUrl: payment.embed_url,
+    invoiceId: payment.invoice_id,
+    locale: "en",
+    appearance: { mode: "light", surface: "#ffffff", border: "#e5e7eb", text: "#111827", font: "inter", radius: 10 },
+    onReady: () => console.log("Card form loaded"),
+    onPaid: ({ invoiceId }) => {
+      window.location.href = `/order/${invoiceId}/thanks`;
+    },
+    onDeclined: ({ message }) => showError(message),
+    onError: ({ code }) => showError(code),
+  });
+</script>
+```
+
+Фрейм збільшується та зменшується разом із вмістом. `mount` повертає `{ iframe, destroy }`; викличте `card.destroy()`, щоб прибрати форму, наприклад коли клієнт обирає інший спосіб оплати.
+
+## Параметри
+
+| Параметр | Примітки |
+| :-- | :-- |
+| `embedUrl` | Обов'язковий. `payment.embed_url` із Store API. Будь-яка інша URL-адреса відхиляється з `invalid_embed_url`. |
+| `invoiceId` | Необов'язковий. Повертається в кожній події, щоб ви могли зіставити її зі своїм замовленням. |
+| `locale` | Мова форми, наприклад `en` або `tr`. |
+| `appearance.mode` | `light` або `dark`. |
+| `appearance.surface`, `appearance.border`, `appearance.text` | Кольори у форматі hex, наприклад `#ffffff`. |
+| `appearance.font` | `inter`, `system` або `fustat`. |
+| `appearance.radius` | Радіус кутів у пікселях, від `0` до `24`. |
+| `height` | Початкова висота в пікселях, доки форма не повідомить власну (за замовчуванням `420`). |
+| `title` | Доступна назва фрейму (за замовчуванням `Card payment`). |
+
+## Події
+
+| Функція зворотного виклику | Коли | Дані |
+| :-- | :-- | :-- |
+| `onReady` | Форму завантажено. | `{ invoiceId }` |
+| `onPaid` | Кошти з картки списано. Спрацьовує один раз. | `{ invoiceId }` |
+| `onDeclined` | Картку відхилено. Клієнт може спробувати іншу картку. | `{ invoiceId, message }` |
+| `onError` | Форма не може прийняти платіж. | `{ invoiceId, code }` |
+
+Ті самі події доступні глобально через `PapelShip.on("papelpay:paid", fn)`, `papelpay:declined`, `papelpay:error` і `papelpay:ready`, а також як `CustomEvent` на `window` з назвами `papelship:papelpay:paid` тощо.
+
+| Код `onError` | Значення | Що робити |
+| :-- | :-- | :-- |
+| `origin_not_allowed` | Домен вашої сторінки не підтверджено для цього магазину. | Додайте його в розділі **PapelPay > Domains**. |
+| `not_embeddable` | Карткові платежі вашого магазину не можна показувати у фреймі. | Перенаправте клієнта на `payment.payment_url`. |
+| `session_expired` | Термін дії платіжної сесії минув. | Запустіть платіж знову та вбудуйте новий `embed_url`. |
+| `session_ended` | Платіжну сесію закрито. | Прочитайте замовлення, щоб дізнатися, чи його оплачено. |
+| `invalid_embed_url` | `embedUrl` не є `embed_url` від PapelPay. | Передавайте `payment.embed_url` без змін. |
+
+## Підтвердіть оплату на своєму сервері
+
+`onPaid` повідомляє вашій сторінці, що кошти з картки списано. Перш ніж самостійно щось доставляти, підтвердіть замовлення на своєму сервері: дочекайтеся вебхука `order.completed` або прочитайте `GET /api/v1/invoices/{invoiceId}` і перевірте, що `status` має значення `completed`. Див. [Вебхуки](/uk/user-api/webhooks).
+
+<Tip>
+  Якщо ви використовуєте власний sandbox для iframe або політику дозволів, дозвольте функції карткових платежів у батьківському елементі фрейму: SDK встановлює `allow="payment *"` для свого фрейму, щоб підтримувати платежі через гаманці.
+</Tip>

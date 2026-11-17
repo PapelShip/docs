@@ -1,0 +1,174 @@
+---
+title: "Crear y gestionar pedidos"
+sidebarTitle: "Pedidos"
+description: "Cree un pedido desde su propio sitio, envíe al cliente al checkout y gestione el pago, la cancelación y los reembolsos."
+---
+
+Un pedido (factura) contiene los productos, el cliente y el precio. El cliente paga en el `checkout_url` alojado, donde elige cualquier método de pago que acepte su tienda.
+
+Los pedidos creados mediante la API siguen las mismas reglas que su tienda: los precios provienen de su catálogo, el inventario se reserva, se aplican los cupones y las reglas de producto, y se ejecutan las comprobaciones antifraude.
+
+## Crear un pedido
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 6f1c8a52-4f0e-4b8e-9a7c-2d1b3e5f7a90" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_email": "buyer@example.com",
+    "items": [
+      { "product_id": "a1B2c3D4e5F6", "quantity": 1 },
+      { "product_id": "Zx9Yw8Vu7Ts6", "variant_id": 881 }
+    ],
+    "coupon_code": "SUMMER10",
+    "customer_ip": "203.0.113.10",
+    "metadata": { "order_ref": "WEB-1042" }
+  }'
+```
+
+```javascript Node.js
+const res = await fetch("https://app.papelship.com/api/v1/invoices", {
+  method: "POST",
+  headers: {
+    "x-api-key": process.env.PAPELSHIP_API_KEY,
+    "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+    "Idempotency-Key": order.id,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    customer_email: order.email,
+    items: [{ product_id: "a1B2c3D4e5F6", quantity: 1 }],
+    customer_ip: order.ip,
+    metadata: { order_ref: order.id },
+  }),
+});
+const { invoice } = await res.json();
+// Envíe al cliente a invoice.checkout_url
+```
+
+```python Python
+import os, requests
+
+res = requests.post(
+    "https://app.papelship.com/api/v1/invoices",
+    headers={
+        "x-api-key": os.environ["PAPELSHIP_API_KEY"],
+        "x-store-hash": os.environ["PAPELSHIP_STORE_ID"],
+        "Idempotency-Key": order_id,
+    },
+    json={
+        "customer_email": "buyer@example.com",
+        "items": [{"product_id": "a1B2c3D4e5F6", "quantity": 1}],
+        "metadata": {"order_ref": order_id},
+    },
+)
+invoice = res.json()["invoice"]
+```
+
+</CodeGroup>
+
+```json Respuesta (201)
+{
+  "success": true,
+  "invoice": {
+    "id": "c35ffd-19a1b2c3d4e-8c7a20",
+    "object": "invoice",
+    "status": "pending",
+    "currency": "USD",
+    "total_cents": 3499,
+    "customer_email": "buyer@example.com",
+    "source": "api",
+    "metadata": { "order_ref": "WEB-1042" },
+    "checkout_url": "https://app.papelship.com/invoice/c35ffd-19a1b2c3d4e-8c7a20",
+    "expires_at": "2026-10-04T15:00:00.000Z",
+    "items": [ ... ]
+  }
+}
+```
+
+Redirija al cliente a `checkout_url`. Los pedidos no pagados caducan después de 3 horas.
+
+<AccordionGroup>
+  <Accordion title="Campos que puede enviar" icon="list">
+    | Campo | Notas |
+    | :-- | :-- |
+    | `customer_email` | Obligatorio. Recibe el correo de la factura y la entrega. |
+    | `items` | Obligatorio. De 1 a 50 líneas con `product_id` (hash ID), `quantity` y `variant_id` para productos con variantes. |
+    | `coupon_code` | Se aplica cuando es válido para estos productos. |
+    | `customer_ip` | La IP del comprador. Activa sus reglas de fraude, VPN y lista de bloqueo para este pedido. |
+    | `expected_total_cents` | Comprobación opcional. La llamada falla con `TOTAL_MISMATCH` si el precio cambió. |
+    | `shipping_address`, `shipping_rate_id` | Productos físicos. Consulte más abajo. |
+    | `custom_fields` | Respuestas a los campos de su checkout. |
+    | `affiliate_code` | Acredita a un socio de su programa de afiliados. |
+    | `send_email` | `false` para omitir el correo de la factura (`true` por defecto). |
+    | `metadata` | Hasta 20 cadenas propias de clave/valor. |
+  </Accordion>
+
+  <Accordion title="Errores al crear" icon="triangle-exclamation">
+    | Código | Estado | Significado |
+    | :-- | :-- | :-- |
+    | `PRODUCT_NOT_FOUND` | `404` | Un `product_id` no está en su tienda. |
+    | `OUT_OF_STOCK` | `409` | No hay inventario suficiente. `details.products` indica lo que falta. |
+    | `TOTAL_MISMATCH` | `409` | `expected_total_cents` no coincide. `details.expected_total_cents` contiene el total real. |
+    | `CURRENCY_MISMATCH` | `422` | Los productos tienen monedas distintas, o `currency` no coincide. |
+    | `INVALID_VARIANT` | `422` | `variant_id` ausente o incorrecto. |
+    | `ADDRESS_INVALID` | `422` | Dirección de envío incompleta. `details.fields` indica los campos. |
+    | `CUSTOMER_BLOCKED` | `403` | El correo electrónico o la IP está en su lista de bloqueo. |
+    | `FRAUD_BLOCKED` | `403` | Sus reglas antifraude rechazaron el pedido. |
+    | `STORE_SUSPENDED` | `403` | La tienda no puede recibir pedidos en este momento. |
+  </Accordion>
+</AccordionGroup>
+
+## Productos físicos
+
+Para los productos que se envían, agregue la dirección. Obtenga primero las opciones con `POST /shipping/quote`, u omita `shipping_rate_id` para usar la tarifa más económica.
+
+```json
+{
+  "customer_email": "buyer@example.com",
+  "items": [{ "product_id": "Tsh1rtM3d1um", "variant_id": 2041, "quantity": 2 }],
+  "shipping_address": {
+    "full_name": "Alex Morgan",
+    "phone": "+44 20 7946 0958",
+    "country_code": "GB",
+    "city": "London",
+    "line1": "221B Baker Street",
+    "postal_code": "NW1 6XE"
+  },
+  "shipping_rate_id": 12
+}
+```
+
+El envío se suma a `total_cents` y se muestra como `shipping_cents`. Sin dirección, el cliente la introduce en la página de checkout antes de pagar. Después del pago, envíe el pedido con [`POST /orders/{invoiceId}/shipments`](/es/user-api/fulfillment).
+
+## Estados del pedido
+
+| Estado | Significado |
+| :-- | :-- |
+| `pending` | Esperando a que el cliente pague. |
+| `payment_pending`, `payment_processing` | El cliente eligió un método; el pago está en curso. |
+| `partial_payment` | Llegó una parte del importe (cripto). |
+| `manual_review_pending` | Un pago manual espera su revisión. |
+| `completed` | Pagado y entregado. |
+| `cancelled` | Cancelado antes del pago. |
+| `expired` | No se pagó a tiempo. |
+
+Escuche el webhook `order.completed` en lugar de consultar periódicamente. Consulte [Webhooks](/es/user-api/webhooks).
+
+## Después de crear el pedido
+
+| Acción | Endpoint | Cuándo |
+| :-- | :-- | :-- |
+| Marcar como pagado | `POST /invoices/{id}/complete` | Recibió el dinero fuera de PapelShip (transferencia bancaria, efectivo). Entrega los productos. |
+| Cancelar | `POST /invoices/{id}/cancel` | El pedido no está pagado. Libera el inventario reservado. |
+| Registrar un reembolso | `POST /invoices/{id}/refund` | Devolvió el dinero al cliente. Envíe `amount_cents` para un reembolso parcial. |
+| Ver lo entregado | `GET /invoices/{id}/deliveries` | Claves de licencia, archivos y notas enviados al cliente. |
+| Actualizar | `PATCH /invoices/{id}` | Cambie `metadata` o `delivery_email`. |
+
+<Tip>
+  Use su propio ID de pedido como `Idempotency-Key` en las llamadas de creación, completado y reembolso. Así, los reintentos nunca crean un segundo pedido ni un segundo reembolso.
+</Tip>

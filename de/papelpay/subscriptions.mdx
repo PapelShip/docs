@@ -1,0 +1,87 @@
+---
+title: "Abonnements mit PapelPay-Kartenzahlungen verkaufen"
+sidebarTitle: "Abonnements"
+description: "Erstellen Sie Store API-Bestellungen, die sich mit PapelPay in jedem Zeitraum verlängern: Setzen Sie auto_renew, lesen Sie das Subscription-Objekt und verfolgen oder beenden Sie Verlängerungen nach der Zahlung."
+icon: "rotate"
+keywords:
+  - "papelpay"
+  - "Abonnement"
+  - "auto_renew"
+  - "wiederkehrend"
+  - "Verlängerung"
+---
+
+Ein Produkt mit aktivierten Abonnements und einem Abrechnungszeitraum kann als Abonnement gekauft werden. Wenn der Kunde mit PapelPay bezahlt, wird die Karte in jedem Zeitraum erneut belastet, bis er kündigt. Bei jeder anderen Zahlungsmethode erhält der Kunde vor Ende jedes Zeitraums eine Verlängerungsrechnung per E-Mail. Diese Seite zeigt, wie Sie diese Auswahl über die Store API steuern.
+
+## Abonnement oder Einmalkauf wählen
+
+Senden Sie `auto_renew`, wenn Sie die Bestellung erstellen:
+
+| Wert | Ergebnis |
+| :-- | :-- |
+| `true` | Die Bestellung wird als Abonnement gekauft. Der Kunde kann dies im Checkout nicht deaktivieren. |
+| `false` | Die Bestellung ist ein Einmalkauf. Der Checkout zeigt keine Abonnementoption an. |
+| Weggelassen | Der Kunde wählt im Checkout. Abonnement ist vorausgewählt. |
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: WEB-2087" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_email": "buyer@example.com",
+    "items": [{ "product_id": "Pr0Mnth1yX9a" }],
+    "auto_renew": true,
+    "payment_method": "PAPELPAY"
+  }'
+```
+
+`auto_renew: true` erfordert eine Bestellung mit genau einer Produktposition, und für dieses Produkt müssen Abonnements mit einem Abrechnungszeitraum aktiviert sein. Andernfalls schlägt der Aufruf mit `SUBSCRIPTION_NOT_AVAILABLE` (`422`) fehl und es wird keine Bestellung erstellt.
+
+## Das Subscription-Objekt
+
+Die Erstellungs- und Detailantworten einer Bestellung enthalten `subscription`. Der Wert ist `null`, wenn die Bestellung kein Abonnement sein kann.
+
+```json
+"subscription": {
+  "enabled": true,
+  "locked": true,
+  "interval_days": 30,
+  "interval": "month",
+  "discount_percent": 20,
+  "discount_applies_to": "automatic_payments",
+  "discount_cents": 0,
+  "subscription_id": null,
+  "auto_renewal_id": null
+}
+```
+
+| Feld | Bedeutung |
+| :-- | :-- |
+| `enabled` | `true`: als Abonnement gekauft. `false`: Einmalkauf. |
+| `locked` | Wird beim Erstellen durch `auto_renew` gesetzt. Der Kunde kann es im Checkout nicht umstellen. |
+| `interval_days`, `interval` | Abrechnungszeitraum. `interval` ist bei Standardzeiträumen `day`, `week`, `month` oder `year`, andernfalls `null`. |
+| `discount_percent` | Am Produkt festgelegter Abonnentenrabatt. |
+| `discount_applies_to` | `automatic_payments`: nur wenn die Karte automatisch verlängert wird. `all_payment_methods`: bei jeder Methode. |
+| `discount_cents` | Derzeit in `total_cents` enthaltener Rabatt. Er bleibt `0`, bis der Kunde eine Zahlungsmethode wählt, für die er gilt. |
+| `subscription_id` | Nach der Zahlung der Abonnement-Datensatz. |
+| `auto_renewal_id` | Nach einer PapelPay-Kartenzahlung die automatische Verlängerung der Karte. |
+
+## Nach der Zahlung
+
+Die erste Zahlung schließt die Bestellung ab und startet das Abonnement. Jede Verlängerung erstellt eine neue bezahlte Bestellung und verlängert das Abonnement. Mit diesen Endpunkten lesen und beenden Sie Abonnements:
+
+| Aktion | Endpunkt |
+| :-- | :-- |
+| Abonnements auflisten | `GET /subscriptions` |
+| Ein Abonnement mit seinen Zahlungen abrufen | `GET /subscriptions/{subscriptionId}` |
+| Kündigen | `POST /subscriptions/{subscriptionId}/cancel` |
+| Automatische Kartenverlängerungen auflisten | `GET /subscriptions/auto-renewals` |
+| Künftige Kartenbelastungen beenden | `POST /subscriptions/auto-renewals/{renewalId}/cancel` |
+
+Das Beenden einer automatischen Verlängerung stoppt künftige Belastungen zum Ende des bezahlten Zeitraums. Eine Kündigung erstattet dem Kunden niemals Geld.
+
+<Note>
+  Kartenzahlungen für Abonnements werden in USD belastet.
+</Note>

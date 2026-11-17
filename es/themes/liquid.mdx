@@ -1,0 +1,132 @@
+---
+title: "Temas y Liquid"
+sidebarTitle: "Temas Liquid"
+description: "Estructura de un tema Liquid de PapelShip, los objetos, filtros y etiquetas que puede usar, y cómo se aplican temas a las páginas de la plataforma."
+---
+
+Un tema Liquid es un paquete de archivos de texto que se renderiza en el servidor con [Liquid](https://shopify.github.io/liquid/). Si conoce los temas de Shopify, la estructura le resultará familiar.
+
+## Carpetas
+
+| Carpeta | Contiene |
+| --- | --- |
+| `layout/` | `theme.liquid`, la estructura base de la página. Genera `{{ content_for_layout }}`. |
+| `templates/` | Una plantilla por tipo de página, en JSON (`index.json`) o Liquid. |
+| `sections/` | Secciones de página reutilizables con un bloque `{% schema %}`. |
+| `blocks/` | Bloques del tema que las secciones pueden contener. |
+| `snippets/` | Fragmentos parciales que se incluyen con `{% render %}`. |
+| `assets/` | CSS, JavaScript, SVG y fuentes. |
+| `config/` | `settings_schema.json` (configuración del tema) y `settings_data.json` (sus valores). |
+| `locales/` | Archivos de traducción, por ejemplo `en.default.json`. |
+
+Todo tema necesita `layout/theme.liquid`, `templates/index.json` y `config/settings_schema.json`.
+
+## Secciones y schema
+
+Una sección declara su configuración y sus bloques en un bloque `{% schema %}`. El editor visual construye su formulario de configuración a partir de él.
+
+```liquid sections/hero.liquid
+<section class="hero">
+  <h1>{{ section.settings.heading | escape }}</h1>
+  {% for block in section.blocks %}
+    <p>{{ block.settings.text | escape }}</p>
+  {% endfor %}
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Welcome" }
+  ],
+  "blocks": [
+    { "type": "line", "name": "Line", "settings": [{ "type": "text", "id": "text", "label": "Text" }] }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}
+```
+
+Los valores de configuración de texto enriquecido y HTML se sanean en el servidor al guardarse.
+
+## Objetos
+
+| Objeto | Campos |
+| --- | --- |
+| `shop` | `name`, `slug`, `logo`, `currency`, `locale`, `languages`, `url`, `settings` |
+| `product` | En las plantillas de producto: `id`, `hash_id`, `title`, `handle`, `url`, `price`, `compare_at_price`, `on_sale`, `available`, `featured_image`, `images`, `description`, `short_description`, `rating`, `rating_count`, `options`, `variants`, `variant_count`, `default_variant_id`, `requires_shipping`, `campaign`, `meta` |
+| `collection` | En las plantillas de colección: `title`, `handle`, `url`, `products_count`, `products` |
+| `collections` | Todas las colecciones, cada una con los campos de colección |
+| `all_products` | Todos los productos de la tienda, cada uno con los campos de producto |
+| `settings` | Valores de configuración del tema |
+| `section` | Dentro de una sección: `id`, `css_id`, `type`, `settings`, `blocks` |
+| `request` | `locale`, `page_type`, `path`, `design_mode` |
+| `localization` | `language`, `available_languages`, `currency` |
+
+## Filtros
+
+| Filtro | Función |
+| --- | --- |
+| `money` | Da formato de precio a los centavos |
+| `money_with_currency` | Precio con el código de moneda |
+| `money_without_currency` | Solo el número |
+| `t` | Traduce una clave de sus archivos de idioma |
+| `image_url` | URL de imagen, opcionalmente redimensionada |
+| `image_tag` | Una etiqueta `<img>` completa |
+| `asset_url` | URL de un archivo en `assets/` |
+| `stylesheet_tag` | Una etiqueta `<link rel="stylesheet">` |
+| `script_tag` | Una etiqueta `<script>` |
+| `handleize` | Genera un handle seguro para URL |
+| `json` | JSON seguro para scripts |
+| `product_url` | Enlace a la página de un producto |
+| `collection_url` | Enlace a la página de una colección |
+| `store_url` | Enlace a una ruta de la tienda |
+| `escape` | Escapa texto para HTML |
+| `css_id` | Hace que un valor sea seguro para selectores CSS y atributos id |
+
+<Warning>
+  Escape todo texto de productos y clientes con `| escape`. Los títulos y las descripciones los escriben personas.
+</Warning>
+
+## Etiquetas
+
+| Etiqueta | Función |
+| --- | --- |
+| `{% section %}` | Renderiza una sección estática |
+| `{% sections %}` | Renderiza un grupo de secciones |
+| `{% render %}` | Renderiza un snippet. Los snippets no ven las variables de la página, así que pase lo que necesiten: `{% render 'card', product: product %}` |
+| `{% app_block %}` | Renderiza un bloque de la plataforma, por ejemplo `{% app_block 'add_to_cart', product_id: product.id %}` (`product` es un alias). Consulte [Bloques de aplicación](/es/themes/app-blocks) y [Comercio y checkout](/es/themes/commerce). |
+| `{% schema %}` | Metadatos de la sección, nunca se renderiza |
+
+Bloques de aplicación: `add_to_cart`, `buy_now`, `cart_count`, `cart_drawer`, `checkout_button`, `powered_by`, `variant_picker`.
+
+## Páginas de la plataforma
+
+El checkout, el carrito, el inicio de sesión, la cuenta y el seguimiento de pedidos siempre se ejecutan en PapelShip. Puede diseñar la página a su alrededor con una plantilla que contenga exactamente un bloque bloqueado:
+
+| Página | Plantilla | Bloque bloqueado |
+| --- | --- | --- |
+| Checkout | `templates/checkout.liquid` | `checkout_form` |
+| Carrito | `templates/cart.liquid` | `cart_view` |
+| Inicio de sesión | `templates/customers/login.liquid` | `customer_login` |
+| Cuenta | `templates/customers/account.liquid` | `customer_account` |
+| Seguimiento de pedidos | `templates/customers/track.liquid` | `order_track` |
+
+```liquid templates/checkout.liquid
+<div class="checkout-shell">
+  <h1>{{ 'checkout.title' | t }}</h1>
+  {% app_block "checkout_form" %}
+</div>
+```
+
+El bloque debe estar directamente en la plantilla, no en un snippet. El JavaScript del tema nunca se carga en estas páginas, y los campos de tarjeta siempre son los de la plataforma.
+
+## Publicación
+
+Los guardados son borradores: la tienda en vivo mantiene la versión publicada hasta que usted publique.
+
+1. Edite una copia en el editor de código o en el editor visual. Al guardar (Ctrl+S) se valida el archivo y se conserva una versión; el otro editor muestra el cambio de inmediato.
+2. Previsualice la copia en el editor.
+3. Pulse **Publicar** en cualquiera de los dos editores. Muestra los archivos no publicados y valida primero todos los archivos del tema.
+
+Los agentes de IA pueden guardar borradores, pero no pueden publicar. Consulte [Agentes de IA (MCP)](/es/themes/mcp).

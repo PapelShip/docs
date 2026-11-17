@@ -1,0 +1,63 @@
+---
+title: "Enviar pedidos físicos"
+sidebarTitle: "Envíos"
+description: "Liste los pedidos por enviar, cree envíos con seguimiento, actualice el estado de entrega y gestione las devoluciones."
+---
+
+Si su tienda vende productos físicos, use estos endpoints para conectar su almacén o su software de envíos. Su tienda debe estar aprobada para productos físicos en **Configuración › Productos físicos**.
+
+## 1. Encontrar pedidos por enviar
+
+```bash
+curl "https://app.papelship.com/api/v1/orders?status=to_ship" \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+`to_ship` lista los pedidos pagados con artículos aún no enviados, empezando por los más antiguos. Otros filtros: `in_transit`, `delivered`, `issues` (entregas fallidas, devoluciones) y `all`.
+
+`GET /orders/{invoiceId}` devuelve la dirección, cada artículo con `shipped_quantity`, los envíos, las devoluciones y las notas.
+
+## 2. Crear un envío
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "carrier_code": "dhl_express", "tracking_number": "1234567890" }'
+```
+
+- Omita `items` para enviar todo lo que queda pendiente. Para un envío parcial, envíe `items: [{ "invoice_item_id": 55, "qty": 1 }]`.
+- El cliente recibe un correo con el enlace de seguimiento. Envíe `notify_customer: false` para omitirlo.
+- El enlace de seguimiento se genera a partir del transportista. `GET /shipping` lista los códigos de transportista.
+
+## 3. Actualizar el estado
+
+```bash
+curl -X PATCH https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments/88 \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "delivered", "location": "London" }'
+```
+
+Estados: `label_created`, `shipped`, `in_transit`, `out_for_delivery`, `delivered`, `failed_attempt`, `returned_to_sender`. Cada uno se agrega a la línea de tiempo de seguimiento que ve el cliente. El `fulfillment_status` del pedido sigue a los envíos automáticamente.
+
+## Devoluciones
+
+Los clientes solicitan devoluciones desde la página de su pedido dentro del plazo de devolución del producto. Gestiónelas con `PATCH /orders/{invoiceId}/returns/{returnId}`:
+
+| `action` | Efecto |
+| :-- | :-- |
+| `approve` | Acepta la solicitud. `location_id` define a dónde enviar el paquete. |
+| `reject` | La rechaza. `note` es obligatorio y se envía al cliente. |
+| `receive` | Recibió el paquete. `restock: true` devuelve los artículos al inventario. |
+| `refund` | Registra `refund_cents`. Devuelva el dinero usted mismo y luego llame a `POST /invoices/{id}/refund`. |
+| `close` | Cierra la devolución. |
+
+`GET /returns?status=requested` lista las solicitudes abiertas de todos los pedidos.
+
+## Configuración de envíos
+
+Consulte y modifique zonas, tarifas y ubicaciones de almacén con `/shipping/zones` y `/shipping/locations`. Cotice una cesta con `POST /shipping/quote`.

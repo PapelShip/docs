@@ -1,0 +1,137 @@
+---
+title: "Yapay zeka ajanları (MCP)"
+sidebarTitle: "Ajan kurulumu"
+description: "Claude, Claude Code, Cursor, VS Code veya herhangi bir MCP istemcisini tek bir URL ile mağazanızın temalarına bağlayın."
+---
+
+PapelShip, temalarınız için bir [Model Context Protocol](https://modelcontextprotocol.io) sunucusu çalıştırır. Bir yapay zeka ajanını tek bir URL ile bağlayın, tarayıcınızda onaylayın; ajan tema kodunuzu okuyabilir ve düzenlemeleri taslak olarak kaydedebilir. İnceleme ve yayınlama sizdedir.
+
+**Sunucu URL'si:** `https://app.papelship.com/mcp`
+
+URL her mağaza için aynıdır. Bağlanırken PapelShip'e giriş yapar ve ajanın üzerinde çalışabileceği mağazayı seçersiniz.
+
+Ajanlar işe `get_reference` ile başlar: bu araç uygulama bloklarını, ödemeyi (sayfa veya açılır pencere), mağaza SDK'sını ve her tema türünün sınırlarını açıklar. Sunucu talimatları, bağlı ajanlara önce bu aracı çağırmalarını söyler.
+
+## Ajan neler yapabilir
+
+| Yapabilir | Yapamaz |
+| --- | --- |
+| Tema kopyalarınızın, tasarımlarınızın ve tema kod paketlerinizin dosyalarını okumak | Temaları yayınlamak, etkinleştirmek veya silmek |
+| Dosyalarda arama yapmak, dosyaları doğrulamak ve taramak | Canlı mağazanızı değiştirmek. Düzenlemeler taslak olarak kaydedilir ve yalnızca panelde Yayınla'ya bastığınızda yayına girer. |
+| Düzenlemeleri sürüm geçmişiyle taslak olarak kaydetmek | Siparişleri, müşterileri, ödemeleri veya ayarları görmek |
+| Önizleme bağlantısı paylaşmak | Başka bir mağazaya erişmek |
+
+### Taslaklar nereye gider
+
+| Kopya | `save_draft` sonucu |
+| --- | --- |
+| Yayında olmayan bir kopya | Kopyaya kaydedilir. Önceki içerik sürüm geçmişinde kalır. |
+| Bir tema kod paketi | Pakete kaydedilir. Siz yayınlayana kadar canlı sayfalar yayınlanmış sürümü kullanır. |
+| Yayındaki tema kopyası veya yayındaki tasarım | Taslak olarak kaydedilir. Siz Yayınla'ya basana kadar mağazanız yayınlanmış sürümü kullanır (tasarımlarda Yayınla ayrıca güvenlik taramasını da çalıştırır). |
+
+## Bir istemci bağlayın
+
+<Tabs>
+  <Tab title="Claude">
+    claude.ai, Claude Desktop ve Claude mobil uygulamalarında çalışır.
+
+    1. **Settings › Connectors** bölümünü açın ve **Add custom connector**'ı seçin.
+    2. Ad olarak `PapelShip` yazın ve `https://app.papelship.com/mcp` adresini yapıştırın.
+    3. **Add**'i, ardından **Connect**'i seçin.
+    4. PapelShip'e giriş yapın, mağazanızı seçin ve **Allow access**'i seçin.
+  </Tab>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http papelship https://app.papelship.com/mcp
+    ```
+
+    Claude Code'da `/mcp` komutunu çalıştırın, **papelship**'i ve **Authenticate**'i seçin. Tarayıcınız PapelShip onay sayfasını açar.
+  </Tab>
+  <Tab title="Cursor">
+    [Cursor'a ekle](cursor://anysphere.cursor-deeplink/mcp/install?name=papelship&amp;config=eyJ1cmwiOiJodHRwczovL2FwcC5wYXBlbHNoaXAuY29tL21jcCJ9)
+
+    Ya da `~/.cursor/mcp.json` dosyasına ekleyin:
+
+    ```json
+    {
+      "mcpServers": {
+        "papelship": { "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+
+    Cursor, sunucunun yanında **Needs login** gösterir. Tarayıcınızda onaylamak için bunu seçin.
+  </Tab>
+  <Tab title="VS Code">
+    [VS Code'a ekle](vscode:mcp/install?%7B%22name%22%3A%22papelship%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fapp.papelship.com%2Fmcp%22%7D)
+
+    Ya da `.vscode/mcp.json` dosyasına ekleyin:
+
+    ```json
+    {
+      "servers": {
+        "papelship": { "type": "http", "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+
+    Sunucuyu dosyadan veya **MCP: List Servers** komutundan başlatın, istendiğinde giriş yapın. Araçları Copilot ajan modunda kullanın.
+  </Tab>
+  <Tab title="Diğer istemciler">
+    Streamable HTTP ve OAuth destekleyen her istemci çalışır:
+
+    ```json
+    {
+      "mcpServers": {
+        "papelship": { "type": "http", "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+Mağaza panelinde aynı adımlar, kopyalama butonlarıyla birlikte **Developers › AI & MCP** altında bulunur.
+
+## Erişimi onaylayın
+
+Onay sayfası uygulamanın adını ve geri döneceği adresi gösterir. Şunları seçin:
+
+- **Mağaza**: uygulamanın kullanabileceği tek mağaza. Sahibi olduğunuz mağazaları ve ekip rolünüzün **Theme & Design › Edit** iznini içerdiği mağazaları görürsünüz.
+- **Save edits as drafts** (`themes:write`): salt okuma erişimi vermek için bu seçeneğin işaretini kaldırın.
+
+## Bağlı uygulamalar ve erişimi iptal etme
+
+**Developers › AI & MCP › Connected apps**, mağazaya bağlı her uygulamayı, onu kimin bağladığını ve en son ne zaman kullanıldığını listeler. **Revoke**, uygulamayı bir sonraki isteğinde durdurur.
+
+Erişim ayrıca onayı veren kişi tüm oturumlardan çıkış yaptığında, şifresini değiştirdiğinde, ekipten ayrıldığında, **Theme & Design › Edit** iznini kaybettiğinde veya hesabı askıya alındığında sona erer.
+
+## OAuth yerine API anahtarı
+
+OAuth desteklemeyen istemciler için **Developers › API keys** bölümünde **Themes** türünde bir mağaza API anahtarı oluşturun ve bunu Bearer token olarak gönderin:
+
+```bash
+claude mcp add --transport http papelship https://app.papelship.com/mcp \
+  --header "Authorization: Bearer $PAPELSHIP_THEMES_KEY"
+```
+
+Bir Themes anahtarı yalnızca onu oluşturan mağaza için çalışır ve bir OAuth bağlantısıyla aynı haklara sahiptir. Anahtarı bir ortam değişkeninde tutun; paylaştığınız veya commit ettiğiniz bir dosyaya asla koymayın. `https://app.papelship.com/api/mcp/themes`, aynı sunucunun eski bir takma adı olarak kullanılmaya devam eder.
+
+## Limitler
+
+| Limit | Değer |
+| --- | --- |
+| Bağlantı veya anahtar başına istek | Dakikada 120 |
+| Mağaza başına istek, tüm bağlantılar | Dakikada 300 |
+| Araç çağrıları | Planınızın Store API çağrıları olarak sayılır |
+| Erişim token'ı | 1 saat, otomatik olarak yenilenir |
+| Bağlantı | En az 30 günde bir kullanıldığı sürece oturum açık kalır |
+
+Her araç çağrısı uygulama, araç ve dosya bilgisiyle kaydedilir.
+
+## Güvenlik
+
+- Tema dosyaları talimat değil, mağaza verisidir. Sunucu her araç sonucunu güvenilmeyen veri olarak işaretler; böylece bir temadaki metin ajanı yönlendiremez.
+- Önizlemeler asla herkese açık değildir: önizleme bağlantıları PapelShip panelinde açılır.
+- Token'lar hash'lenmiş olarak saklanır. Yeniden kullanılan bir yenileme token'ı bağlantıyı sonlandırır.
+
+Her araç ve argümanları için [araç referansına](/tr/themes/mcp-tools) bakın.

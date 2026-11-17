@@ -1,0 +1,90 @@
+---
+title: "Afficher le formulaire de carte PapelPay sur votre site"
+sidebarTitle: "Formulaire de carte sur votre site"
+description: "Intégrez le formulaire de carte PapelPay à votre propre page de paiement avec le SDK JavaScript : options, événements, apparence, domaines autorisés et confirmation du paiement."
+icon: "code"
+keywords:
+  - "papelpay"
+  - "intégration"
+  - "formulaire de carte"
+  - "sdk javascript"
+  - "papelship-widget"
+  - "iframe"
+---
+
+Le SDK JavaScript PapelShip intègre le formulaire de carte PapelPay dans votre propre page de paiement, de sorte que le client ne quitte jamais votre site. Le formulaire se charge dans un cadre (frame) servi par PapelShip : les données de carte ne transitent jamais par votre serveur ni par votre page.
+
+## Avant de commencer
+
+- Lancez le paiement par carte sur votre serveur avec `POST /api/v1/invoices/{invoiceId}/papelpay` et transmettez `payment.embed_url` à votre page. Consultez [Présentation](/fr/papelpay/overview).
+- Ajoutez le domaine de votre page de paiement dans le tableau de bord, sous **PapelPay > Domains**, puis vérifiez-le. Un domaine personnalisé vérifié de votre boutique fonctionne également, ainsi que ses sous-domaines.
+- `localhost` et `127.0.0.1` fonctionnent sans configuration pendant le développement.
+
+<Warning>
+  Sur un domaine non vérifié, le cadre affiche un avertissement à la place du formulaire et `onError` reçoit `origin_not_allowed`.
+</Warning>
+
+## Intégrer le formulaire
+
+```html checkout.html
+<div id="card"></div>
+
+<script src="https://app.papelship.com/scripts/papelship-widget.js"></script>
+<script>
+  const card = PapelShip.papelpay.mount("#card", {
+    embedUrl: payment.embed_url,
+    invoiceId: payment.invoice_id,
+    locale: "en",
+    appearance: { mode: "light", surface: "#ffffff", border: "#e5e7eb", text: "#111827", font: "inter", radius: 10 },
+    onReady: () => console.log("Card form loaded"),
+    onPaid: ({ invoiceId }) => {
+      window.location.href = `/order/${invoiceId}/thanks`;
+    },
+    onDeclined: ({ message }) => showError(message),
+    onError: ({ code }) => showError(code),
+  });
+</script>
+```
+
+Le cadre s'agrandit et se réduit en fonction de son contenu. `mount` renvoie `{ iframe, destroy }` ; appelez `card.destroy()` pour retirer le formulaire, par exemple lorsque le client choisit un autre moyen de paiement.
+
+## Options
+
+| Option | Remarques |
+| :-- | :-- |
+| `embedUrl` | Obligatoire. `payment.embed_url` fourni par la Store API. Toute autre URL est refusée avec `invalid_embed_url`. |
+| `invoiceId` | Facultatif. Renvoyé dans chaque événement pour que vous puissiez l'associer à votre commande. |
+| `locale` | Langue du formulaire, par exemple `en` ou `tr`. |
+| `appearance.mode` | `light` ou `dark`. |
+| `appearance.surface`, `appearance.border`, `appearance.text` | Couleurs hexadécimales comme `#ffffff`. |
+| `appearance.font` | `inter`, `system` ou `fustat`. |
+| `appearance.radius` | Rayon des coins en pixels, de `0` à `24`. |
+| `height` | Hauteur initiale en pixels, avant que le formulaire ne communique la sienne (`420` par défaut). |
+| `title` | Titre accessible du cadre (`Card payment` par défaut). |
+
+## Événements
+
+| Callback | Déclenchement | Données |
+| :-- | :-- | :-- |
+| `onReady` | Le formulaire est chargé. | `{ invoiceId }` |
+| `onPaid` | La carte a été débitée. Se déclenche une seule fois. | `{ invoiceId }` |
+| `onDeclined` | La carte a été refusée. Le client peut essayer une autre carte. | `{ invoiceId, message }` |
+| `onError` | Le formulaire ne peut pas accepter de paiement. | `{ invoiceId, code }` |
+
+Les mêmes événements sont disponibles globalement avec `PapelShip.on("papelpay:paid", fn)`, `papelpay:declined`, `papelpay:error` et `papelpay:ready`, ainsi que sous forme de `CustomEvent` `papelship:papelpay:paid` (et ainsi de suite) sur `window`.
+
+| Code `onError` | Signification | Que faire |
+| :-- | :-- | :-- |
+| `origin_not_allowed` | Le domaine de votre page n'est pas vérifié pour cette boutique. | Ajoutez-le sous **PapelPay > Domains**. |
+| `not_embeddable` | Les paiements par carte de votre boutique ne peuvent pas être affichés dans un cadre. | Redirigez le client vers `payment.payment_url`. |
+| `session_expired` | La session de paiement a expiré. | Relancez le paiement et intégrez le nouvel `embed_url`. |
+| `session_ended` | La session de paiement a été fermée. | Lisez la commande pour savoir si elle a été payée. |
+| `invalid_embed_url` | `embedUrl` n'est pas un `embed_url` PapelPay. | Transmettez `payment.embed_url` sans le modifier. |
+
+## Confirmer le paiement sur votre serveur
+
+`onPaid` indique à votre page que la carte a été débitée. Avant de livrer quoi que ce soit vous-même, confirmez la commande sur votre serveur : attendez le webhook `order.completed` ou lisez `GET /api/v1/invoices/{invoiceId}` et vérifiez que `status` vaut `completed`. Consultez [Webhooks](/fr/user-api/webhooks).
+
+<Tip>
+  Autorisez les fonctionnalités de paiement par carte dans le parent du cadre si vous utilisez votre propre sandbox d'iframe ou votre propre politique d'autorisations : le SDK définit `allow="payment *"` sur son cadre pour les paiements par portefeuille.
+</Tip>

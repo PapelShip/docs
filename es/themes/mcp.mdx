@@ -1,0 +1,137 @@
+---
+title: "Agentes de IA (MCP)"
+sidebarTitle: "Configurar un agente"
+description: "Conecte Claude, Claude Code, Cursor, VS Code o cualquier cliente MCP a los temas de su tienda con una sola URL."
+---
+
+PapelShip ejecuta un servidor [Model Context Protocol](https://modelcontextprotocol.io) para sus temas. Conecte un agente de IA con una sola URL, apruébelo en su navegador, y el agente podrá leer el código de su tema y guardar cambios como borradores. Usted los revisa y los publica.
+
+**URL del servidor:** `https://app.papelship.com/mcp`
+
+La URL es la misma para todas las tiendas. Al conectarse, inicia sesión en PapelShip y elige la tienda en la que puede trabajar el agente.
+
+Los agentes empiezan con `get_reference`: explica los bloques de aplicación, el checkout (página o ventana emergente), el SDK de la tienda y los límites de cada tipo de tema. Las instrucciones del servidor indican a los agentes conectados que lo llamen primero.
+
+## Qué puede hacer el agente
+
+| Puede | No puede |
+| --- | --- |
+| Leer los archivos de sus copias de tema, diseños y paquetes de código de tema | Publicar, activar ni eliminar temas |
+| Buscar, validar y escanear archivos | Modificar su tienda en vivo. Los cambios se guardan como borradores y solo se publican cuando usted pulsa Publicar en el panel. |
+| Guardar cambios como borradores, con historial de versiones | Ver pedidos, clientes, pagos ni configuración |
+| Compartir un enlace de vista previa | Acceder a cualquier otra tienda |
+
+### Dónde se guardan los borradores
+
+| Copia | Resultado de `save_draft` |
+| --- | --- |
+| Una copia que no está publicada | Se guarda en la copia. El contenido anterior permanece en su historial de versiones. |
+| Un paquete de código de tema | Se guarda en el paquete. Las páginas en vivo mantienen la versión publicada hasta que usted publique. |
+| La copia de tema publicada o el diseño publicado | Se guarda como borrador. Su tienda mantiene la versión publicada hasta que pulse Publicar (en los diseños, Publicar también ejecuta el escaneo de seguridad). |
+
+## Conectar un cliente
+
+<Tabs>
+  <Tab title="Claude">
+    Funciona en claude.ai, Claude Desktop y las aplicaciones móviles de Claude.
+
+    1. Abra **Settings › Connectors** y elija **Add custom connector**.
+    2. Asígnele el nombre `PapelShip` y pegue `https://app.papelship.com/mcp`.
+    3. Seleccione **Add** y luego **Connect**.
+    4. Inicie sesión en PapelShip, elija su tienda y seleccione **Permitir acceso**.
+  </Tab>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --transport http papelship https://app.papelship.com/mcp
+    ```
+
+    Ejecute `/mcp` en Claude Code, elija **papelship** y **Authenticate**. Su navegador abre la página de aprobación de PapelShip.
+  </Tab>
+  <Tab title="Cursor">
+    [Agregar a Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=papelship&amp;config=eyJ1cmwiOiJodHRwczovL2FwcC5wYXBlbHNoaXAuY29tL21jcCJ9)
+
+    O agréguelo a `~/.cursor/mcp.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "papelship": { "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+
+    Cursor muestra **Needs login** junto al servidor. Selecciónelo para aprobar en su navegador.
+  </Tab>
+  <Tab title="VS Code">
+    [Agregar a VS Code](vscode:mcp/install?%7B%22name%22%3A%22papelship%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fapp.papelship.com%2Fmcp%22%7D)
+
+    O agréguelo a `.vscode/mcp.json`:
+
+    ```json
+    {
+      "servers": {
+        "papelship": { "type": "http", "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+
+    Inicie el servidor desde el archivo o con el comando **MCP: List Servers** y luego inicie sesión cuando se le solicite. Use las herramientas en el modo agente de Copilot.
+  </Tab>
+  <Tab title="Otros clientes">
+    Funciona cualquier cliente compatible con Streamable HTTP y OAuth:
+
+    ```json
+    {
+      "mcpServers": {
+        "papelship": { "type": "http", "url": "https://app.papelship.com/mcp" }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+El panel de la tienda incluye los mismos pasos con botones para copiar en **Desarrolladores › IA y MCP**.
+
+## Aprobar el acceso
+
+La página de aprobación muestra el nombre de la aplicación y la dirección a la que regresa. Elija:
+
+- **Tienda**: la única tienda que puede usar la aplicación. Verá las tiendas de las que es propietario y las tiendas en las que su rol en el equipo incluye **Tema y diseño › Editar**.
+- **Guardar cambios como borradores** (`themes:write`): desmárquelo para dar acceso de solo lectura.
+
+## Aplicaciones conectadas y revocación
+
+**Desarrolladores › IA y MCP › Aplicaciones conectadas** lista todas las aplicaciones conectadas a la tienda, quién las conectó y cuándo se usaron por última vez. **Revocar** detiene la aplicación en su siguiente solicitud.
+
+El acceso también se detiene cuando la persona que lo aprobó cierra todas sus sesiones, cambia su contraseña, deja el equipo, pierde **Tema y diseño › Editar** o su cuenta es suspendida.
+
+## Clave de API en lugar de OAuth
+
+Para clientes sin OAuth, cree una clave de API de la tienda del tipo **Temas** en **Desarrolladores › Claves de API** y envíela como token Bearer:
+
+```bash
+claude mcp add --transport http papelship https://app.papelship.com/mcp \
+  --header "Authorization: Bearer $PAPELSHIP_THEMES_KEY"
+```
+
+Una clave de Temas solo funciona para la tienda que la creó y tiene los mismos derechos que una conexión OAuth. Guárdela en una variable de entorno, nunca en un archivo que comparta o suba al control de versiones. `https://app.papelship.com/api/mcp/themes` se mantiene como alias antiguo del mismo servidor.
+
+## Límites
+
+| Límite | Valor |
+| --- | --- |
+| Solicitudes por conexión o clave | 120 por minuto |
+| Solicitudes por tienda, todas las conexiones | 300 por minuto |
+| Llamadas a herramientas | Cuentan como llamadas a la Store API de su plan |
+| Token de acceso | 1 hora, se renueva automáticamente |
+| Conexión | Permanece con la sesión iniciada mientras se use al menos cada 30 días |
+
+Cada llamada a una herramienta se registra con la aplicación, la herramienta y el archivo.
+
+## Seguridad
+
+- Los archivos del tema son datos de la tienda, no instrucciones. El servidor marca cada resultado de herramienta como datos no confiables para que el texto dentro de un tema no pueda desviar al agente.
+- Las vistas previas nunca son públicas: los enlaces de vista previa se abren en el panel de PapelShip.
+- Los tokens se almacenan con hash. Un token de actualización reutilizado finaliza la conexión.
+
+Consulte la [referencia de herramientas](/es/themes/mcp-tools) para ver todas las herramientas y sus argumentos.

@@ -1,0 +1,132 @@
+---
+title: "Темы и Liquid"
+sidebarTitle: "Темы Liquid"
+description: "Структура темы Liquid в PapelShip, доступные объекты, фильтры и теги, а также оформление страниц платформы."
+---
+
+Тема Liquid представляет собой пакет текстовых файлов, которые отрисовываются на сервере с помощью [Liquid](https://shopify.github.io/liquid/). Если вы знакомы с темами Shopify, структура покажется вам знакомой.
+
+## Папки
+
+| Папка | Содержимое |
+| --- | --- |
+| `layout/` | `theme.liquid`, оболочка страницы. Выводит `{{ content_for_layout }}`. |
+| `templates/` | По одному шаблону на тип страницы, в формате JSON (`index.json`) или Liquid. |
+| `sections/` | Переиспользуемые секции страницы с блоком `{% schema %}`. |
+| `blocks/` | Блоки темы, которые могут содержаться в секциях. |
+| `snippets/` | Частичные шаблоны, подключаемые через `{% render %}`. |
+| `assets/` | CSS, JavaScript, SVG и шрифты. |
+| `config/` | `settings_schema.json` (настройки темы) и `settings_data.json` (их значения). |
+| `locales/` | Файлы переводов, например `en.default.json`. |
+
+Каждой теме нужны `layout/theme.liquid`, `templates/index.json` и `config/settings_schema.json`.
+
+## Секции и схема
+
+Секция объявляет свои настройки и блоки в блоке `{% schema %}`. Визуальный редактор строит на его основе форму настроек.
+
+```liquid sections/hero.liquid
+<section class="hero">
+  <h1>{{ section.settings.heading | escape }}</h1>
+  {% for block in section.blocks %}
+    <p>{{ block.settings.text | escape }}</p>
+  {% endfor %}
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Welcome" }
+  ],
+  "blocks": [
+    { "type": "line", "name": "Line", "settings": [{ "type": "text", "id": "text", "label": "Text" }] }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}
+```
+
+Значения настроек с форматированным текстом и HTML очищаются на сервере при сохранении.
+
+## Объекты
+
+| Объект | Поля |
+| --- | --- |
+| `shop` | `name`, `slug`, `logo`, `currency`, `locale`, `languages`, `url`, `settings` |
+| `product` | В шаблонах товаров: `id`, `hash_id`, `title`, `handle`, `url`, `price`, `compare_at_price`, `on_sale`, `available`, `featured_image`, `images`, `description`, `short_description`, `rating`, `rating_count`, `options`, `variants`, `variant_count`, `default_variant_id`, `requires_shipping`, `campaign`, `meta` |
+| `collection` | В шаблонах коллекций: `title`, `handle`, `url`, `products_count`, `products` |
+| `collections` | Все коллекции, каждая с полями коллекции |
+| `all_products` | Все товары магазина, каждый с полями товара |
+| `settings` | Значения настроек темы |
+| `section` | В секции: `id`, `css_id`, `type`, `settings`, `blocks` |
+| `request` | `locale`, `page_type`, `path`, `design_mode` |
+| `localization` | `language`, `available_languages`, `currency` |
+
+## Фильтры
+
+| Фильтр | Назначение |
+| --- | --- |
+| `money` | Форматирует сумму в центах как цену |
+| `money_with_currency` | Цена с кодом валюты |
+| `money_without_currency` | Только число |
+| `t` | Переводит ключ из ваших файлов переводов |
+| `image_url` | URL изображения, при необходимости с измененным размером |
+| `image_tag` | Готовый тег `<img>` |
+| `asset_url` | URL файла из `assets/` |
+| `stylesheet_tag` | Тег `<link rel="stylesheet">` |
+| `script_tag` | Тег `<script>` |
+| `handleize` | Создает безопасный для URL идентификатор (handle) |
+| `json` | Безопасный JSON для скриптов |
+| `product_url` | Ссылка на страницу товара |
+| `collection_url` | Ссылка на страницу коллекции |
+| `store_url` | Ссылка на путь в магазине |
+| `escape` | Экранирует текст для HTML |
+| `css_id` | Делает значение безопасным для CSS-селекторов и атрибутов id |
+
+<Warning>
+  Экранируйте любой текст товаров и клиентов с помощью `| escape`. Названия и описания пишут люди.
+</Warning>
+
+## Теги
+
+| Тег | Назначение |
+| --- | --- |
+| `{% section %}` | Отрисовывает статическую секцию |
+| `{% sections %}` | Отрисовывает группу секций |
+| `{% render %}` | Отрисовывает сниппет. Сниппеты не видят переменные страницы, поэтому передавайте то, что им нужно: `{% render 'card', product: product %}` |
+| `{% app_block %}` | Отрисовывает блок платформы, например `{% app_block 'add_to_cart', product_id: product.id %}` (`product` является псевдонимом). См. [Блоки приложений](/ru/themes/app-blocks) и [Коммерция и оформление заказа](/ru/themes/commerce). |
+| `{% schema %}` | Метаданные секции, никогда не отрисовываются |
+
+Блоки приложений: `add_to_cart`, `buy_now`, `cart_count`, `cart_drawer`, `checkout_button`, `powered_by`, `variant_picker`.
+
+## Страницы платформы
+
+Оформление заказа, корзина, вход, аккаунт и отслеживание заказа всегда работают на PapelShip. Вы можете оформить страницу вокруг них с помощью шаблона, содержащего ровно один заблокированный блок:
+
+| Страница | Шаблон | Заблокированный блок |
+| --- | --- | --- |
+| Оформление заказа | `templates/checkout.liquid` | `checkout_form` |
+| Корзина | `templates/cart.liquid` | `cart_view` |
+| Вход | `templates/customers/login.liquid` | `customer_login` |
+| Аккаунт | `templates/customers/account.liquid` | `customer_account` |
+| Отслеживание заказа | `templates/customers/track.liquid` | `order_track` |
+
+```liquid templates/checkout.liquid
+<div class="checkout-shell">
+  <h1>{{ 'checkout.title' | t }}</h1>
+  {% app_block "checkout_form" %}
+</div>
+```
+
+Блок должен находиться непосредственно в шаблоне, а не в сниппете. JavaScript темы никогда не загружается на этих страницах, а поля карты всегда принадлежат платформе.
+
+## Публикация
+
+Сохранения являются черновиками: рабочий магазин показывает опубликованную версию, пока вы не опубликуете новую.
+
+1. Отредактируйте копию в редакторе кода или визуальном редакторе. Сохранение (Ctrl+S) проверяет файл и создает версию; другой редактор сразу показывает изменение.
+2. Просмотрите копию в редакторе.
+3. Нажмите **Опубликовать** в любом из редакторов. Сначала отображается список неопубликованных файлов, и проверяется каждый файл темы.
+
+ИИ-агенты могут сохранять черновики, но не могут публиковать. См. [ИИ-агенты (MCP)](/ru/themes/mcp).

@@ -1,0 +1,132 @@
+---
+title: "Temalar ve Liquid"
+sidebarTitle: "Liquid temaları"
+description: "Bir PapelShip Liquid temasının yapısı, kullanabileceğiniz nesneler, filtreler ve etiketler ile platform sayfalarının nasıl temalandırıldığı."
+---
+
+Liquid teması, sunucuda [Liquid](https://shopify.github.io/liquid/) ile işlenen metin dosyalarından oluşan bir pakettir. Shopify temalarını biliyorsanız bu yapı size tanıdık gelecektir.
+
+## Klasörler
+
+| Klasör | İçerik |
+| --- | --- |
+| `layout/` | Sayfa iskeleti olan `theme.liquid`. `{{ content_for_layout }}` çıktısını verir. |
+| `templates/` | Her sayfa türü için bir şablon, JSON (`index.json`) veya Liquid olarak. |
+| `sections/` | `{% schema %}` bloğu olan, yeniden kullanılabilir sayfa bölümleri. |
+| `blocks/` | Bölümlerin içerebileceği tema blokları. |
+| `snippets/` | `{% render %}` ile eklediğiniz parçalar. |
+| `assets/` | CSS, JavaScript, SVG ve yazı tipleri. |
+| `config/` | `settings_schema.json` (tema ayarları) ve `settings_data.json` (bu ayarların değerleri). |
+| `locales/` | Çeviri dosyaları, örneğin `en.default.json`. |
+
+Her temada `layout/theme.liquid`, `templates/index.json` ve `config/settings_schema.json` bulunmalıdır.
+
+## Bölümler ve schema
+
+Bir bölüm, ayarlarını ve bloklarını bir `{% schema %}` bloğunda tanımlar. Görsel düzenleyici ayar formunu buradan oluşturur.
+
+```liquid sections/hero.liquid
+<section class="hero">
+  <h1>{{ section.settings.heading | escape }}</h1>
+  {% for block in section.blocks %}
+    <p>{{ block.settings.text | escape }}</p>
+  {% endfor %}
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Welcome" }
+  ],
+  "blocks": [
+    { "type": "line", "name": "Line", "settings": [{ "type": "text", "id": "text", "label": "Text" }] }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}
+```
+
+Zengin metin ve HTML ayar değerleri kaydedilirken sunucuda temizlenir.
+
+## Nesneler
+
+| Nesne | Alanlar |
+| --- | --- |
+| `shop` | `name`, `slug`, `logo`, `currency`, `locale`, `languages`, `url`, `settings` |
+| `product` | Ürün şablonlarında: `id`, `hash_id`, `title`, `handle`, `url`, `price`, `compare_at_price`, `on_sale`, `available`, `featured_image`, `images`, `description`, `short_description`, `rating`, `rating_count`, `options`, `variants`, `variant_count`, `default_variant_id`, `requires_shipping`, `campaign`, `meta` |
+| `collection` | Koleksiyon şablonlarında: `title`, `handle`, `url`, `products_count`, `products` |
+| `collections` | Tüm koleksiyonlar, her biri koleksiyon alanlarıyla |
+| `all_products` | Mağazanın tüm ürünleri, her biri ürün alanlarıyla |
+| `settings` | Tema ayarı değerleri |
+| `section` | Bir bölümde: `id`, `css_id`, `type`, `settings`, `blocks` |
+| `request` | `locale`, `page_type`, `path`, `design_mode` |
+| `localization` | `language`, `available_languages`, `currency` |
+
+## Filtreler
+
+| Filtre | İşlevi |
+| --- | --- |
+| `money` | Kuruş cinsinden tutarı fiyat olarak biçimlendirir |
+| `money_with_currency` | Para birimi koduyla birlikte fiyat |
+| `money_without_currency` | Yalnızca sayı |
+| `t` | Yerel dil dosyalarınızdaki bir anahtarı çevirir |
+| `image_url` | Görsel URL'si, isteğe bağlı olarak yeniden boyutlandırılmış |
+| `image_tag` | Eksiksiz bir `<img>` etiketi |
+| `asset_url` | `assets/` içindeki bir dosyanın URL'si |
+| `stylesheet_tag` | Bir `<link rel="stylesheet">` etiketi |
+| `script_tag` | Bir `<script>` etiketi |
+| `handleize` | URL'de güvenle kullanılabilecek bir handle üretir |
+| `json` | Script'ler için güvenli JSON |
+| `product_url` | Bir ürün sayfasına bağlantı |
+| `collection_url` | Bir koleksiyon sayfasına bağlantı |
+| `store_url` | Bir mağaza yoluna bağlantı |
+| `escape` | Metni HTML için kaçış karakterleriyle güvenli hale getirir |
+| `css_id` | Bir değeri CSS seçicileri ve id öznitelikleri için güvenli hale getirir |
+
+<Warning>
+  Her ürün ve müşteri metnini `| escape` ile kaçışlayın. Başlıkları ve açıklamaları insanlar yazar.
+</Warning>
+
+## Etiketler
+
+| Etiket | İşlevi |
+| --- | --- |
+| `{% section %}` | Statik bir bölümü işler |
+| `{% sections %}` | Bir bölüm grubunu işler |
+| `{% render %}` | Bir snippet'i işler. Snippet'ler sayfa değişkenlerini göremez, bu yüzden ihtiyaç duyduklarını aktarın: `{% render 'card', product: product %}` |
+| `{% app_block %}` | Bir platform bloğunu işler, örneğin `{% app_block 'add_to_cart', product_id: product.id %}` (`product` bir takma addır). Bkz. [Uygulama blokları](/tr/themes/app-blocks) ve [Ticaret ve ödeme](/tr/themes/commerce). |
+| `{% schema %}` | Bölüm meta verisi, asla işlenmez |
+
+Uygulama blokları: `add_to_cart`, `buy_now`, `cart_count`, `cart_drawer`, `checkout_button`, `powered_by`, `variant_picker`.
+
+## Platform sayfaları
+
+Ödeme, sepet, giriş, hesap ve sipariş takibi her zaman PapelShip üzerinde çalışır. Bu sayfaların çevresini, tam olarak bir kilitli blok içeren bir şablonla tasarlayabilirsiniz:
+
+| Sayfa | Şablon | Kilitli blok |
+| --- | --- | --- |
+| Ödeme | `templates/checkout.liquid` | `checkout_form` |
+| Sepet | `templates/cart.liquid` | `cart_view` |
+| Giriş | `templates/customers/login.liquid` | `customer_login` |
+| Hesap | `templates/customers/account.liquid` | `customer_account` |
+| Sipariş takibi | `templates/customers/track.liquid` | `order_track` |
+
+```liquid templates/checkout.liquid
+<div class="checkout-shell">
+  <h1>{{ 'checkout.title' | t }}</h1>
+  {% app_block "checkout_form" %}
+</div>
+```
+
+Blok bir snippet içinde değil, doğrudan şablonun içinde olmalıdır. Tema JavaScript'i bu sayfalarda asla yüklenmez ve kart alanları her zaman platformundur.
+
+## Yayınlama
+
+Kayıtlar taslağdır: siz yayınlayana kadar canlı mağaza yayınlanmış sürümü kullanmaya devam eder.
+
+1. Bir kopyayı kod düzenleyicide veya görsel düzenleyicide düzenleyin. Kaydetmek (Ctrl+S) dosyayı doğrular ve bir sürüm saklar; diğer düzenleyici değişikliği hemen gösterir.
+2. Kopyayı düzenleyicide önizleyin.
+3. Düzenleyicilerden birinde **Yayınla**'ya basın. Bu işlem yayınlanmamış dosyaları listeler ve önce temanın her dosyasını doğrular.
+
+Yapay zeka ajanları taslak kaydedebilir ancak yayınlayamaz. Bkz. [Yapay zeka ajanları (MCP)](/tr/themes/mcp).

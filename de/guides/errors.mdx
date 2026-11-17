@@ -1,0 +1,44 @@
+---
+title: "Fehler"
+description: "HTTP-Statuscodes und Fehlerantworten von PapelShip verstehen."
+---
+
+PapelShip verwendet Standard-HTTP-Statuscodes. Jede JSON-Antwort enthält einen booleschen Wert `success`.
+
+```json Fehlerantwort
+{
+  "success": false,
+  "error": "Invalid parameters provided"
+}
+```
+
+## Statuscodes
+
+| Code | Bedeutung | Vorgehen |
+| :-- | :-- | :-- |
+| `200` | Request erfolgreich. | Lesen Sie den Response-Body. |
+| `400` | Fehlerhafter Request oder Validierungsfehler. | Prüfen Sie Pflichtfelder und Werttypen. |
+| `401` | Fehlender oder ungültiger API-Schlüssel. | Prüfen Sie Ihre Authentifizierungs-Header. |
+| `403` | Dem Schlüssel fehlt die Berechtigung für diese Aktion. | Verwenden Sie einen Schlüssel mit dem passenden Scope. |
+| `404` | Ressource nicht gefunden. | Prüfen Sie die ID in der URL oder Query. |
+| `500` | Serverfehler. | Wiederholen Sie den Request mit exponentiellem Backoff. |
+
+## Store API-Fehler
+
+Store API-Fehler enthalten zusätzlich einen maschinenlesbaren `code`, optionale `details` und eine `request_id`, die Sie dem Support nennen können:
+
+```json Store API-Fehler
+{
+  "success": false,
+  "code": "PRODUCT_NOT_FOUND",
+  "error": "Product a1B2c3D4e5F6 not found in this store",
+  "details": { "field": "items[0].product_id" },
+  "request_id": "req_8fK2mQ1xZ7pL0vN3"
+}
+```
+
+Verzweigen Sie anhand von `code`, nicht anhand der Meldung. Alle Codes finden Sie unter [Store API-Fehler](/de/user-api/errors).
+
+<Tip>
+  Wiederholen Sie Requests nur bei Netzwerkfehlern und `5xx`-Antworten. Senden Sie bei jeder Wiederholung denselben `Idempotency-Key`. Siehe [Idempotenz](/de/guides/idempotency).
+</Tip>

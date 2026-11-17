@@ -1,0 +1,72 @@
+---
+title: "Capa de código para temas React"
+sidebarTitle: "Capa de código"
+description: "Agregue secciones de código, CSS y JavaScript sobre Nightfall, Ship, Circuit, Arsenal, MarketPro y Vanguard sin salir del editor visual."
+---
+
+Los temas integrados Nightfall, Ship, Circuit, Arsenal, MarketPro y Vanguard se mantienen exactamente como son. La capa de código le permite agregar su propio código sobre ellos y seguir editando de forma visual.
+
+## Paquete de código del tema
+
+Cada tienda recibe un **paquete de código del tema** por cada tema integrado. Se abre en el editor de código como cualquier copia de tema. Un paquete contiene solo:
+
+| Carpeta | Contiene |
+| --- | --- |
+| `sections/` | Secciones de código (`.liquid` con un bloque `{% schema %}`) |
+| `snippets/` | Fragmentos parciales para sus secciones |
+| `assets/` | `theme.css`, que se carga después de los estilos del tema, y `theme.js`, que se carga de forma diferida en las páginas del tema |
+| `locales/` | Traducciones para sus secciones |
+
+El JavaScript del tema nunca se carga en las páginas de checkout, inicio de sesión o cuenta.
+
+## Secciones de código en el editor visual
+
+Cada `sections/<name>.liquid` con un bloque `{% schema %}` aparece en la lista **Agregar sección** del editor visual, en **Código del tema**. Su formulario de configuración proviene del schema, por lo que una sección de código sigue siendo totalmente editable sin código. Reordenar, ocultar, duplicar y eliminar funcionan igual que en las secciones integradas.
+
+Cuando cambia el schema en el código, el formulario se actualiza de inmediato. Las nuevas opciones reciben sus valores por defecto; las opciones eliminadas se ignoran y sus valores se conservan.
+
+## ID de sección en CSS
+
+En una sección de código, `section.id` es `code:<name>`. Los `:` rompen los selectores CSS (`#{{ section.id }}-yearly:checked` se descarta sin aviso) y las búsquedas por `#id`. Use `section.css_id` (`code-<name>`) en `{% style %}` y en los atributos `id=` / `for=`, o `{{ value | css_id }}`. El editor de código y `validate` / `save_draft` de MCP advierten sobre un `section.id` sin procesar en esos lugares; la corrección rápida del editor es **Usar section.css_id**.
+
+Las etiquetas, los interruptores de radio/casilla, `<details>` y los selectores funcionan en el lienzo del editor visual. Para hacer clic en enlaces y botones, active **Interactuar** en la barra superior (o pulse `I`, o mantenga pulsado `Alt`).
+
+## Editar el código de una sección integrada
+
+Elija **Editar código** en una sección integrada para extraerla. Su equivalente en Liquid se copia en su paquete con el mismo marcado y los mismos nombres de clase, de modo que se ve idéntica y conserva su configuración. **Volver a la integrada** restaura la sección original.
+
+## Comercio y checkout
+
+Las secciones de código venden con bloques de aplicación. No necesitan ningún script:
+
+```liquid
+{% app_block 'add_to_cart', product_id: product.id %}
+{% app_block 'buy_now', product_id: product.id, mode: 'embed', label: 'Buy' %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+- `buy_now` y `checkout_button` llevan a la página de checkout por defecto. `mode: 'embed'` abre la ventana emergente de checkout sobre su página.
+- `add_to_cart` y `cart_count` abren el panel del carrito de la plataforma. La insignia del carrito del tema se mantiene sincronizada.
+- `reviews_widget` y `powered_by` no funcionan en las secciones de código. `currency_selector` necesita `currencies: 'USD,EUR'`.
+- Las secciones de código tienen `shop`, `collections`, `all_products`, `request` y `localization`. No tienen `product`, `collection` ni `routes`.
+- `window.PapelShip` se carga después de que la página termina de cargarse, en las páginas cuyas secciones de código contienen un bloque de aplicación o un enlace `data-ps`. En `assets/theme.js`, espere a `papelship:sdk-ready`.
+
+Consulte [Comercio y checkout](/es/themes/commerce) y [Bloques de aplicación](/es/themes/app-blocks).
+
+## Publicar
+
+Las páginas en vivo muestran la versión **publicada** del paquete. Los archivos guardados solo se muestran en las vistas previas del editor visual y del editor de código.
+
+1. Edite y guarde archivos en el editor de código, o deje que un agente de IA guarde borradores.
+2. Revise la vista previa.
+3. Pulse **Publicar** en el editor de código o en el editor visual. Es el mismo botón y muestra cuántos cambios están sin publicar.
+
+La publicación valida primero todos los archivos del paquete. Si algo falla, no cambia nada en la tienda en vivo.
+
+<Note>
+  Los agentes de IA conectados mediante MCP pueden guardar archivos del paquete, pero nunca publicarlos. Consulte [Agentes de IA (MCP)](/es/themes/mcp).
+</Note>
+
+## Seguridad
+
+Los archivos del paquete se escanean igual que los diseños, tanto en el código fuente como en el resultado renderizado. La configuración de texto enriquecido y HTML se sanea en el servidor.

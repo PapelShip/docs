@@ -1,0 +1,121 @@
+---
+title: "Швидкий старт"
+description: "Створіть перше замовлення через PapelShip Store API, перенаправте клієнта на оформлення та підтвердьте оплату через вебхук або читанням замовлення."
+---
+
+Цей посібник проведе вас через повний цикл замовлення з PapelShip Store API: створіть замовлення на один зі своїх товарів, перенаправте клієнта на хостингову сторінку оформлення та підтвердьте оплату, перш ніж на неї покладатися.
+
+## Передумови
+
+- Магазин PapelShip щонайменше з одним товаром
+- Ключ Store API (`pk_live_...`) з дозволом `orders:write`, а також ID вашого магазину для заголовка `x-store-hash`
+
+<Tip>
+  Обидва значення ви знайдете в [панелі керування PapelShip](https://app.papelship.com) у налаштуваннях API вашого магазину. Див. [Автентифікація](/uk/guides/authentication).
+</Tip>
+
+<Steps>
+  <Step title="Створіть замовлення">
+    Надішліть email клієнта та товари. Додайте заголовок `Idempotency-Key`, щоб повторні спроби ніколи не створювали друге замовлення.
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST https://app.papelship.com/api/v1/invoices \
+      -H "x-api-key: pk_live_your_key" \
+      -H "x-store-hash: your_store_id" \
+      -H "Idempotency-Key: WEB-1042" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "customer_email": "buyer@example.com",
+        "items": [{ "product_id": "a1B2c3D4e5F6", "quantity": 1 }],
+        "metadata": { "order_ref": "WEB-1042" }
+      }'
+    ```
+
+    ```javascript Node.js
+    const res = await fetch("https://app.papelship.com/api/v1/invoices", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.PAPELSHIP_API_KEY,
+        "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+        "Idempotency-Key": order.id,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customer_email: order.email,
+        items: [{ product_id: "a1B2c3D4e5F6", quantity: 1 }],
+        metadata: { order_ref: order.id },
+      }),
+    });
+    const { invoice } = await res.json();
+    ```
+
+    ```python Python
+    import os, requests
+    
+    res = requests.post(
+        "https://app.papelship.com/api/v1/invoices",
+        headers={
+            "x-api-key": os.environ["PAPELSHIP_API_KEY"],
+            "x-store-hash": os.environ["PAPELSHIP_STORE_ID"],
+            "Idempotency-Key": order_id,
+        },
+        json={
+            "customer_email": "buyer@example.com",
+            "items": [{"product_id": "a1B2c3D4e5F6", "quantity": 1}],
+            "metadata": {"order_ref": order_id},
+        },
+    )
+    invoice = res.json()["invoice"]
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Перенаправте клієнта на оформлення">
+    Відповідь містить замовлення з його `checkout_url`. Перенаправте туди клієнта, щоб він оплатив будь-яким способом, який приймає ваш магазин.
+
+    ```json Відповідь (201)
+    {
+      "success": true,
+      "invoice": {
+        "id": "c35ffd-19a1b2c3d4e-8c7a20",
+        "status": "pending",
+        "currency": "USD",
+        "total_cents": 3499,
+        "checkout_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+        "expires_at": "2026-10-04T15:00:00.000Z"
+      }
+    }
+    ```
+
+    Збережіть `invoice.id` разом зі своїм замовленням. Неоплачені замовлення спливають через 3 години. Щоб одразу списати кошти з картки або показати форму картки на власному сайті, див. [PapelPay](/uk/papelpay/overview).
+  </Step>
+  <Step title="Підтвердьте оплату">
+    Ніколи не покладайтеся лише на повернення клієнта на ваш сайт. Слухайте вебхук `order.completed` або прочитайте замовлення на своєму сервері:
+
+    ```bash
+    curl https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20 \
+      -H "x-api-key: pk_live_your_key" \
+      -H "x-store-hash: your_store_id"
+    ```
+
+    Замовлення оплачене й доставлене, коли `status` має значення `completed`.
+  </Step>
+</Steps>
+
+<Warning>
+  Зберігайте API-ключ на своєму сервері. Ніколи не включайте його в браузерний код, мобільні застосунки чи десктопні клієнти.
+</Warning>
+
+## Наступні кроки
+
+<Columns cols={2}>
+  <Card title="Замовлення" icon="receipt" href="/uk/user-api/orders">
+    Фізичні товари, статуси, скасування та повернення коштів.
+  </Card>
+
+  <Card title="PapelPay" icon="credit-card" href="/uk/papelpay/overview">
+    Оплата карткою, підписки та форма картки на вашому сайті.
+  </Card>
+</Columns>

@@ -1,0 +1,132 @@
+---
+title: "Themes und Liquid"
+sidebarTitle: "Liquid Themes"
+description: "Aufbau eines PapelShip Liquid Themes, die verfügbaren Objekte, Filter und Tags sowie die Gestaltung von Plattformseiten."
+---
+
+Ein Liquid Theme ist ein Paket aus Textdateien, das auf dem Server mit [Liquid](https://shopify.github.io/liquid/) gerendert wird. Wenn Sie Shopify Themes kennen, ist Ihnen der Aufbau vertraut.
+
+## Ordner
+
+| Ordner | Inhalt |
+| --- | --- |
+| `layout/` | `theme.liquid`, das Seitengerüst. Es gibt `{{ content_for_layout }}` aus. |
+| `templates/` | Ein Template pro Seitentyp, als JSON (`index.json`) oder Liquid. |
+| `sections/` | Wiederverwendbare Seitenabschnitte mit einem `{% schema %}`-Block. |
+| `blocks/` | Theme-Blöcke, die Sections enthalten können. |
+| `snippets/` | Partials, die Sie mit `{% render %}` einbinden. |
+| `assets/` | CSS, JavaScript, SVG und Schriftarten. |
+| `config/` | `settings_schema.json` (Theme-Einstellungen) und `settings_data.json` (deren Werte). |
+| `locales/` | Übersetzungsdateien, zum Beispiel `en.default.json`. |
+
+Jedes Theme benötigt `layout/theme.liquid`, `templates/index.json` und `config/settings_schema.json`.
+
+## Sections und Schema
+
+Eine Section deklariert ihre Einstellungen und Blöcke in einem `{% schema %}`-Block. Der visuelle Editor erstellt daraus sein Einstellungsformular.
+
+```liquid sections/hero.liquid
+<section class="hero">
+  <h1>{{ section.settings.heading | escape }}</h1>
+  {% for block in section.blocks %}
+    <p>{{ block.settings.text | escape }}</p>
+  {% endfor %}
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Welcome" }
+  ],
+  "blocks": [
+    { "type": "line", "name": "Line", "settings": [{ "type": "text", "id": "text", "label": "Text" }] }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}
+```
+
+Rich-Text- und HTML-Einstellungswerte werden beim Speichern auf dem Server bereinigt.
+
+## Objekte
+
+| Objekt | Felder |
+| --- | --- |
+| `shop` | `name`, `slug`, `logo`, `currency`, `locale`, `languages`, `url`, `settings` |
+| `product` | In Produkt-Templates: `id`, `hash_id`, `title`, `handle`, `url`, `price`, `compare_at_price`, `on_sale`, `available`, `featured_image`, `images`, `description`, `short_description`, `rating`, `rating_count`, `options`, `variants`, `variant_count`, `default_variant_id`, `requires_shipping`, `campaign`, `meta` |
+| `collection` | In Collection-Templates: `title`, `handle`, `url`, `products_count`, `products` |
+| `collections` | Alle Collections, jeweils mit den Collection-Feldern |
+| `all_products` | Jedes Produkt des Shops, jeweils mit den Produktfeldern |
+| `settings` | Werte der Theme-Einstellungen |
+| `section` | In einer Section: `id`, `css_id`, `type`, `settings`, `blocks` |
+| `request` | `locale`, `page_type`, `path`, `design_mode` |
+| `localization` | `language`, `available_languages`, `currency` |
+
+## Filter
+
+| Filter | Funktion |
+| --- | --- |
+| `money` | Formatiert Cent-Beträge als Preis |
+| `money_with_currency` | Preis mit Währungscode |
+| `money_without_currency` | Nur die Zahl |
+| `t` | Übersetzt einen Schlüssel aus Ihren Locale-Dateien |
+| `image_url` | Bild-URL, optional skaliert |
+| `image_tag` | Ein vollständiger `<img>`-Tag |
+| `asset_url` | URL einer Datei in `assets/` |
+| `stylesheet_tag` | Ein `<link rel="stylesheet">`-Tag |
+| `script_tag` | Ein `<script>`-Tag |
+| `handleize` | Erzeugt einen URL-sicheren Handle |
+| `json` | Sicheres JSON für Skripte |
+| `product_url` | Link zu einer Produktseite |
+| `collection_url` | Link zu einer Collection-Seite |
+| `store_url` | Link zu einem Shop-Pfad |
+| `escape` | Maskiert Text für HTML |
+| `css_id` | Macht einen Wert sicher für CSS-Selektoren und id-Attribute |
+
+<Warning>
+  Maskieren Sie jeden Produkt- und Kundentext mit `| escape`. Titel und Beschreibungen werden von Menschen geschrieben.
+</Warning>
+
+## Tags
+
+| Tag | Funktion |
+| --- | --- |
+| `{% section %}` | Rendert eine statische Section |
+| `{% sections %}` | Rendert eine Section-Gruppe |
+| `{% render %}` | Rendert ein Snippet. Snippets sehen keine Seitenvariablen, übergeben Sie daher, was sie benötigen: `{% render 'card', product: product %}` |
+| `{% app_block %}` | Rendert einen Plattformblock, zum Beispiel `{% app_block 'add_to_cart', product_id: product.id %}` (`product` ist ein Alias). Siehe [App-Blöcke](/de/themes/app-blocks) und [Commerce und Checkout](/de/themes/commerce). |
+| `{% schema %}` | Section-Metadaten, werden nie gerendert |
+
+App-Blöcke: `add_to_cart`, `buy_now`, `cart_count`, `cart_drawer`, `checkout_button`, `powered_by`, `variant_picker`.
+
+## Plattformseiten
+
+Checkout, Warenkorb, Anmeldung, Konto und Sendungsverfolgung laufen immer auf PapelShip. Sie können die Seite um sie herum mit einem Template gestalten, das genau einen gesperrten Block enthält:
+
+| Seite | Template | Gesperrter Block |
+| --- | --- | --- |
+| Checkout | `templates/checkout.liquid` | `checkout_form` |
+| Warenkorb | `templates/cart.liquid` | `cart_view` |
+| Anmeldung | `templates/customers/login.liquid` | `customer_login` |
+| Konto | `templates/customers/account.liquid` | `customer_account` |
+| Sendungsverfolgung | `templates/customers/track.liquid` | `order_track` |
+
+```liquid templates/checkout.liquid
+<div class="checkout-shell">
+  <h1>{{ 'checkout.title' | t }}</h1>
+  {% app_block "checkout_form" %}
+</div>
+```
+
+Der Block muss direkt im Template stehen, nicht in einem Snippet. Theme-JavaScript wird auf diesen Seiten nie geladen, und Kartenfelder stammen immer von der Plattform.
+
+## Veröffentlichen
+
+Gespeicherte Änderungen sind Entwürfe: Der Live-Shop behält die veröffentlichte Version, bis Sie veröffentlichen.
+
+1. Bearbeiten Sie eine Kopie im Code-Editor oder im visuellen Editor. Beim Speichern (Strg+S) wird die Datei validiert und eine Version behalten; der jeweils andere Editor zeigt die Änderung sofort an.
+2. Sehen Sie sich die Kopie im Editor in der Vorschau an.
+3. Klicken Sie in einem der beiden Editoren auf **Veröffentlichen**. Es werden die unveröffentlichten Dateien aufgelistet und zuerst alle Dateien des Themes validiert.
+
+KI-Agenten können Entwürfe speichern, aber nicht veröffentlichen. Siehe [KI-Agenten (MCP)](/de/themes/mcp).

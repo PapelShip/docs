@@ -1,0 +1,145 @@
+---
+title: "Présentation de la User API"
+sidebarTitle: "Présentation"
+description: "Créez des commandes, synchronisez votre catalogue, expédiez des produits physiques et réagissez aux événements depuis vos propres systèmes."
+---
+
+<Info>
+  Pour encaisser ces commandes par carte sur votre propre site, consultez [PapelPay](/fr/papelpay/overview).
+</Info>
+
+La User API (appelée Store API dans votre tableau de bord) donne à vos serveurs le même contrôle que celui dont vous disposez dans le tableau de bord de la boutique : commandes, produits, stock, clients, support, expédition et webhooks.
+
+**URL de base :** `https://app.papelship.com/api/v1`
+
+<Note>
+  Les anciennes intégrations qui appellent `https://app.papelship.com/api_user/api/v1` continuent de fonctionner. Utilisez `/api/v1` pour tout nouveau code.
+</Note>
+
+## S'authentifier
+
+Créez une clé dans **Developers › API keys** et envoyez-la avec l'identifiant de votre boutique dans chaque requête :
+
+```bash
+curl https://app.papelship.com/api/v1/me \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+`GET /me` fonctionne avec n'importe quelle clé valide. Il renvoie la boutique, les autorisations de la clé et vos limites : utilisez-le pour tester votre configuration.
+
+<Warning>
+  Les clés agissent en tant que propriétaire de la boutique. Conservez-les sur votre serveur, jamais dans du code exécuté dans le navigateur ou dans une application mobile.
+</Warning>
+
+## Autorisations
+
+Lorsque vous créez une clé, choisissez **Full access**, **Read only** ou **Custom**. Avec Custom, vous choisissez un accès en lecture ou en écriture pour chaque domaine. L'écriture inclut la lecture.
+
+| Domaine | Autorisation | Couvre |
+| :-- | :-- | :-- |
+| Commandes | `orders` | `/invoices` |
+| Produits | `products` | `/products` et tout ce qui en dépend |
+| Catégories et groupes | `catalog` | `/categories`, `/groups` |
+| Coupons | `coupons` | `/coupons` |
+| Clients et liste de blocage | `customers` | `/customers`, `/blacklist` |
+| Expédition et traitement des commandes | `fulfillment` | `/orders`, `/returns`, `/shipping` |
+| Avis | `reviews` | `/reviews` |
+| Questions sur les produits | `questions` | `/questions` |
+| Tickets de support | `support` | `/tickets` |
+| Abonnements | `subscriptions` | `/subscriptions` |
+| Affiliés | `affiliates` | `/affiliates` |
+| Webhooks | `webhooks` | `/webhooks`, `/events` |
+| Statistiques | `analytics` | `/analytics` (lecture seule) |
+| Boutique | `store` | `/store`, `/payment-methods` (lecture seule) |
+
+Les requêtes `GET` nécessitent un accès en lecture ; `POST`, `PATCH`, `PUT` et `DELETE` nécessitent un accès en écriture. Une clé sans l'autorisation requise reçoit `403 INSUFFICIENT_SCOPE`, avec l'autorisation manquante dans `required_scope`.
+
+Vous pouvez également limiter une clé à cette boutique, à une liste d'adresses IP ou à une date d'expiration.
+
+## Réponses
+
+Chaque réponse est au format JSON et contient un indicateur `success`.
+
+```json Succès
+{ "success": true, "invoice": { "id": "c35ffd-19a1b2c3d4e-8c7a20", "status": "pending" } }
+```
+
+```json Erreur
+{
+  "success": false,
+  "code": "VALIDATION_FAILED",
+  "error": "customer_email must be a valid email address",
+  "details": { "field": "customer_email" },
+  "request_id": "req_7YbK2mQ9xP1cRt4v"
+}
+```
+
+Basez votre logique sur `code`, pas sur le message. Chaque réponse comporte un en-tête `X-Request-Id` ; indiquez-le lorsque vous contactez le support. Consultez [Erreurs](/fr/user-api/errors) pour la liste de tous les codes.
+
+## Conventions
+
+- **Les montants** sont des entiers exprimés en unités mineures : `price_cents: 2999` correspond à 29,99.
+- **Les dates** sont au format ISO 8601 en UTC.
+- **Les identifiants** sont des identifiants publics : hash ID des produits, identifiants de commande comme `c35ffd-19a1b2c3d4e-8c7a20`. Les enregistrements d'autres boutiques renvoient `404`.
+- **Les enregistrements créés** renvoient `201`.
+
+## Pagination
+
+Les listes acceptent `limit` (de 1 à 100, 25 par défaut) et `offset`, et renvoient un objet `pagination` :
+
+```bash
+curl "https://app.papelship.com/api/v1/invoices?status=completed&limit=50&offset=100" \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+```json
+{
+  "success": true,
+  "invoices": [ ... ],
+  "pagination": { "total": 342, "limit": 50, "offset": 100, "has_more": true }
+}
+```
+
+Les listes d'affiliés utilisent plutôt un curseur : renvoyez `next_cursor` dans `cursor`.
+
+## Nouvelles tentatives sans risque
+
+Envoyez un en-tête `Idempotency-Key` lors des appels de création (commandes, remboursements, expéditions, produits, webhooks et autres appels signalés dans la référence). En cas d'échec réseau, réessayez avec la même clé et le même corps : vous récupérez le premier résultat au lieu d'un doublon.
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 6f1c8a52-4f0e-4b8e-9a7c-2d1b3e5f7a90" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_email": "buyer@example.com", "items": [{ "product_id": "a1B2c3D4e5F6" }] }'
+```
+
+- Les clés sont conservées pendant 24 heures.
+- Une réponse rejouée comporte l'en-tête `Idempotent-Replayed: true`.
+- La même clé avec un corps différent renvoie `422 IDEMPOTENCY_KEY_REUSED`.
+
+## Limites
+
+| Limite | Valeur | En-têtes |
+| :-- | :-- | :-- |
+| Requêtes par clé | 300 par minute | `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` (temps Unix) |
+| Appels mensuels | Selon votre offre | `X-Quota-Limit` |
+
+Au-delà d'une limite, vous recevez `429` avec `Retry-After`. `RATE_LIMITED` est levé en moins d'une minute ; `STORE_API_MONTHLY_QUOTA_EXCEEDED` est réinitialisé le premier jour du mois suivant (UTC).
+
+Chaque requête apparaît dans **Developers › API requests** avec son statut et sa durée.
+
+## Étapes suivantes
+
+<CardGroup cols={2}>
+  <Card title="Créer des commandes" icon="cart-shopping" href="/fr/user-api/orders">
+    Recevez des commandes depuis votre propre site ou application et redirigez les clients vers le paiement.
+  </Card>
+
+  <Card title="Webhooks" icon="bolt" href="/fr/user-api/webhooks">
+    Soyez averti lorsque des commandes sont payées, annulées ou remboursées.
+  </Card>
+</CardGroup>

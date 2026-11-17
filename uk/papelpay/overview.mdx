@@ -1,0 +1,131 @@
+---
+title: "Приймання оплати карткою з PapelPay"
+sidebarTitle: "Огляд"
+description: "Списуйте кошти з карток за замовлення Store API через PapelPay: запустіть платіж, перенаправте клієнта на оформлення або покажіть форму картки на своєму сайті та підтвердіть через вебхук."
+icon: "credit-card"
+keywords:
+  - "papelpay"
+  - "оплата карткою"
+  - "оформлення замовлення"
+  - "store api"
+  - "підписки"
+---
+
+PapelPay є способом оплати карткою у вашому магазині PapelShip. За допомогою Store API ви створюєте замовлення, запускаєте його оплату через PapelPay і даєте клієнту змогу оплатити карткою на хостинговій сторінці оформлення або в формі картки на вашому власному сайті. За замовлення товарів, що продаються за підпискою, кошти списуються повторно в кожному розрахунковому періоді.
+
+<Info>
+  PapelPay має бути активований у вашому магазині. Подайте заявку в панелі керування в розділі **PapelPay**; ендпоінти на цій сторінці повертають `PAPELPAY_NOT_ENABLED`, доки ваш магазин не схвалено.
+</Info>
+
+## Як працює оплата карткою
+
+<Steps>
+  <Step title="Створіть замовлення">
+    Викличте `POST /api/v1/invoices`, передавши клієнта та товари, як описано в розділі [Створення та керування замовленнями](/uk/user-api/orders). Додайте `auto_renew`, щоб продати товар з підпискою як підписку або як одноразову покупку. Див. [Підписки](/uk/papelpay/subscriptions).
+  </Step>
+  <Step title="Запустіть оплату карткою">
+    Викличте `POST /api/v1/invoices/{invoiceId}/papelpay` або надішліть `"payment_method": "PAPELPAY"` під час створення замовлення, щоб виконати обидва кроки одним викликом. Відповідь містить об'єкт `payment`.
+  </Step>
+  <Step title="Дозвольте клієнту оплатити">
+    Перенаправте клієнта на `payment.payment_url`, вашу хостингову сторінку оформлення, відкриту на формі картки. Щоб клієнт залишався на вашому сайті, вбудуйте `payment.embed_url` за допомогою JavaScript SDK. Див. [Форма картки на вашому сайті](/uk/papelpay/card-form).
+  </Step>
+  <Step title="Підтвердіть замовлення">
+    Коли кошти з картки списано, замовлення переходить у статус `completed`, і PapelShip доставляє товари. Слухайте вебхук `order.completed` або прочитайте замовлення через `GET /api/v1/invoices/{invoiceId}`. Див. [Вебхуки](/uk/user-api/webhooks).
+  </Step>
+</Steps>
+
+## Запустіть оплату карткою
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20/papelpay \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 4d2b7f1e-8a3c-4e9b-b1d0-5c6a7e8f9a01" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_ip": "203.0.113.10", "locale": "en" }'
+```
+
+```javascript Node.js
+const res = await fetch(
+  `https://app.papelship.com/api/v1/invoices/${invoiceId}/papelpay`,
+  {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.PAPELSHIP_API_KEY,
+      "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+      "Idempotency-Key": `${invoiceId}:papelpay`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ customer_ip: req.ip, locale: "en" }),
+  }
+);
+const { payment } = await res.json();
+```
+
+</CodeGroup>
+
+```json Відповідь (200)
+{
+  "success": true,
+  "payment": {
+    "object": "papelpay_payment",
+    "invoice_id": "c35ffd-19a1b2c3d4e-8c7a20",
+    "session_id": "ch_7Hq2Lm9xP4",
+    "status": "pending",
+    "mode": "subscription",
+    "interval_days": 30,
+    "amount_cents": 2399,
+    "currency": "USD",
+    "payment_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+    "embed_url": "https://invoice.papelship.com/api/payment/papelpay/embed/ch_7Hq2Lm9xP4",
+    "embeddable": true,
+    "expires_at": "2026-11-17T15:00:00.000Z"
+  },
+  "invoice": { "id": "c35ffd-19a1b2c3d4e-8c7a20", "status": "payment_pending" }
+}
+```
+
+| Поле тіла запиту | Примітки |
+| :-- | :-- |
+| `customer_ip` | IP-адреса покупця. Вмикає для цього платежу перевірки картки (VPN, повторні відмови). |
+| `locale` | Мова повідомлень про помилки, наприклад `en` або `tr`. |
+
+Повторний виклик ендпоінта, поки платіж відкритий, повертає той самий `session_id`. Використовуйте ID замовлення у своєму `Idempotency-Key`.
+
+## Об'єкт платежу
+
+| Поле | Значення |
+| :-- | :-- |
+| `mode` | `subscription`: кошти з картки списуються повторно кожні `interval_days`, доки клієнт не скасує підписку. `one_time`: одноразове списання. |
+| `interval_days` | Розрахунковий період у днях для підписок, інакше `null`. |
+| `amount_cents`, `currency` | Сума, яка списується зараз. Карткові платежі можуть списуватися в USD. |
+| `payment_url` | Ваша хостингова сторінка оформлення, відкрита на формі картки. Та сама сторінка, що й `checkout_url` замовлення. |
+| `embed_url` | Лише форма картки, для вашої власної сторінки. `null`, якщо карткові платежі вашого магазину не можна вбудувати; у такому разі використовуйте `payment_url`. |
+| `embeddable` | `true`, коли `embed_url` задано. |
+| `expires_at` | У цей час неоплачене замовлення спливає. |
+
+## Помилки
+
+| Код | Статус | Значення |
+| :-- | :-- | :-- |
+| `PAPELPAY_NOT_ENABLED` | `422` | PapelPay не активований у вашому магазині. |
+| `PAYMENT_METHOD_DISABLED` | `422` | Замовлення містить `PAPELPAY` у `disabled_payment_methods`. |
+| `INVOICE_NOT_PAYABLE` | `409` | Замовлення оплачене, скасоване, за ним повернено кошти або термін його дії минув. |
+| `CARD_CHECKOUT_BLOCKED` | `403` | Перевірки картки зупинили цього покупця. `details.reason` пояснює причину; `details.existing_invoice_id` вказує відкрите замовлення на ту саму покупку. |
+| `PAPELPAY_UNAVAILABLE` | `503` | Карткові платежі тимчасово призупинено. Повторіть спробу пізніше. |
+
+Якщо ви надсилаєте `"payment_method": "PAPELPAY"` під час створення, а оплата карткою не може розпочатися, замовлення все одно існує. Його вказано в `details.invoice_id` помилки, тож ви можете повторити спробу через `POST /invoices/{invoiceId}/papelpay`.
+
+## Наступні кроки
+
+<Columns cols={2}>
+  <Card title="Підписки" icon="rotate" href="/uk/papelpay/subscriptions">
+    Продавайте товар за підпискою та відстежуйте її поновлення.
+  </Card>
+
+  <Card title="Форма картки на вашому сайті" icon="code" href="/uk/papelpay/card-form">
+    Показуйте форму картки на власній сторінці оформлення.
+  </Card>
+</Columns>

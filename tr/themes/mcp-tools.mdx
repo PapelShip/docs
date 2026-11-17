@@ -1,0 +1,157 @@
+---
+title: "MCP araç referansı"
+sidebarTitle: "Araç referansı"
+description: "PapelShip tema MCP sunucusunun tüm araçları, argümanları ve döndürdükleri."
+---
+
+Tüm araçlar, onayladığınız tek mağaza üzerinde çalışır. Başka bir mağazaya ait tema id'si `not_found` döner. Yazma araçları (`save_draft`, `propose_edit`) yalnızca bağlantıda `themes:write` kapsamı olduğunda listelenir.
+
+Sonuçlar, güvenilmeyen veri bloğuna sarılmış JSON'dur. Hatalar, `code` alanı olan araç hatalarıdır: `invalid_input`, `not_found`, `forbidden`, `conflict`, `limit`, `busy`, `unsupported` veya `internal`.
+
+## Tipik iş akışı
+
+1. Platformun neleri desteklediğini öğrenmek için `get_reference` (konu `overview`, ardından tema türüyle birlikte örneğin `commerce` veya `app_blocks`).
+2. Kopyayı bulmak için `list_themes`, ardından `list_files`, `read_file` veya `search`.
+3. Okumanızdan gelen `baseHash` ile `save_draft`.
+4. Dosyayı `validate` ile doğrulayın; yüklenen bir tasarım için `scan` çalıştırın.
+5. `preview_link` alın ve bağlantıyı kullanıcıya verin. Kullanıcı panelde yayınlar.
+
+## Okuma araçları
+
+### get_reference
+
+Düzenleyicinin ve `validate`'in kullandığı aynı kayıt defterinden üretilen platform referansı. Mağaza verisi içermez.
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `topic` | string | `overview` (varsayılan), `kinds`, `app_blocks`, `commerce`, `sdk`, `liquid`, `platform_pages`, `limits` veya `pitfalls` |
+| `kind` | string | `liquid`, `design`, `code` veya `twin`: yalnızca o tema türüne uygulananlar. `list_themes` türü döndürür. `twin`, ayrılmış bir hazır bölümdür |
+| `name` | string | `app_blocks` ile tek bir blok (örneğin `buy_now`). `sdk` ile tek bir üye (örneğin `checkout` veya `cart`) |
+
+Kompakt JSON döndürür. Örneğin `{ "topic": "app_blocks", "name": "buy_now" }`; bloğun türleri, zorunluluk bayrakları ve takma adlarıyla argümanlarını, davranışını ve tema türüne göre desteğini döndürür.
+
+### Kaynaklar
+
+Aynı referans MCP kaynakları olarak da kullanılabilir (`resources/list`, `resources/read`, `resources/templates/list`):
+
+| URI | İçerik |
+| --- | --- |
+| `papelship://reference/<topic>` | Tek bir konu: `overview`, `kinds`, `app-blocks`, `commerce`, `sdk`, `liquid`, `platform-pages`, `limits`, `pitfalls` |
+| `papelship://reference/<topic>/<kind>` | Tek bir tema türü için konu |
+
+### list_themes
+
+Mağazanın tema kopyaları: Liquid temaları, yüklenen tasarımlar ve tema kod paketleri; `id`, `name`, `kind`, `live` ve `updatedAt` ile birlikte. Argümanı yoktur.
+
+### list_files
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu |
+| `prefix` | string | Yalnızca bununla başlayan yollar, örneğin `sections/` |
+
+En fazla 400 adet `files` (`path`, `size`, `kind`, `contentHash`) ve `truncated` döndürür.
+
+### read_file
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu |
+| `path` | string | Zorunlu, örneğin `sections/hero.liquid` |
+| `startLine`, `endLine` | integer | İsteğe bağlı, 1 tabanlı satır aralığı |
+
+`content`, `contentHash`, `startLine`, `endLine` ve `totalLines` döndürür. İkili medya dosyaları içerik olmadan `binary: true` döndürür.
+
+### read_files
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu |
+| `paths` | string[] | Zorunlu, 1-20 yol |
+
+Her biri `content` ve `contentHash` içeren `files` döndürür, toplamda en fazla 1 MB. Eksik dosyalarda `missing: true` bulunur; boyut bütçesini aşan dosyalarda `skipped` bulunur.
+
+### search
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu |
+| `query` | string | Zorunlu, birebir metin, 1-200 karakter |
+| `caseSensitive` | boolean | Varsayılan `false` |
+| `pathPrefix` | string | Bir klasörle sınırlar |
+| `maxResults` | integer | 1-100 |
+
+`path`, `line`, `column` ve satır önizlemesi içeren eşleşmeler döndürür.
+
+### get_schema
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu |
+| `path` | string | Bir bölüm dosyası |
+
+`path` olmadan: `config/settings_schema.json` içindeki tema ayarları ve adı, ayar id'leri ve blok türleriyle birlikte her bölüm. `path` ile: bölümün tam `{% schema %}` JSON'u. Her iki yanıt da `sectionObject` içerir: bölüm alanları ve `section.css_id` notu.
+
+### validate
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu |
+| `path` | string | Kayıtlı tek bir dosya |
+| `proposalId` | string | `propose_edit` veya `save_draft`'tan gelen bir öneri |
+
+`path` ve `proposalId` olmadan, tüm kopyayı yayınlamada olduğu gibi doğrular. `valid` ve `problems` (`path`, `line`, `column`, `message`, `severity`) döndürür. Tema kod paketlerinde CSS'te veya `id=`/`for=` içinde ham bir `section.id` bir `warning`'dir (`valid` değerini asla false yapmaz). Ayrıca bilinmeyen uygulama bloklarını, bilinmeyen veya yanlış türde argümanları (bir "bunu mu demek istediniz" önerisiyle), tema türünün desteklemediği blokları, bilinmeyen `PapelShip` çağrılarını ve orada hiç çalışmayan SDK çağrılarını (örneğin Liquid tema sayfalarındaki satır içi script'leri) işaretler.
+
+### scan
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu, yüklenmiş bir tasarım |
+| `proposalId` | string | Bir öneri uygulanmış olarak tarar |
+
+Tasarım güvenlik tarayıcısının deneme çalıştırması. Hiçbir şey kaydedilmez. Liquid temaları `unsupported` döner.
+
+### preview_link
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu |
+| `page` | string | Sayfa yolu, örneğin `/` veya `/shop` |
+
+PapelShip panelindeki önizlemeye giden bir bağlantı olan `url` döndürür. Kullanıcının giriş yapmış olması gerekir. Kopyanın kaydedilmiş (taslak) dosyalarını gösterir. Tıklamaları, geçişleri ve bağlantıları bu sayfada test edin; görsel düzenleyici tuvali tıklamada seçim yapar.
+
+## Yazma araçları
+
+### save_draft
+
+`themes:write` gerektirir.
+
+| Argüman | Tür |  |
+| --- | --- | --- |
+| `themeId` | integer | Zorunlu |
+| `path` | string | Zorunlu |
+| `content` | string | Tam yeni içerik, en fazla 512 KB. Dosya yoksa oluşturur. |
+| `edits` | `{ find, replace }[]` | 1-50 arama ve değiştirme çifti. Her `find` tam olarak bir kez eşleşmelidir. |
+| `baseHash` | string | Okumanızdan gelen `contentHash`. O zamandan beri değişmiş bir dosya `conflict` döner. |
+| `note` | string | Dosya geçmişinde saklanır |
+
+`content` veya `edits` argümanlarından tam olarak birini gönderin. Kayıtlar düzenleyici kayıtları gibi doğrulanır; geçersiz bir dosya ilk sorunla birlikte `invalid_input` döner.
+
+| `mode` | Ne zaman | Etkisi |
+| --- | --- | --- |
+| `copy` | Kopya yayında değilse | Yeni bir sürümle kaydedilir. `saved: true` |
+| `code_package_draft` | Bir tema kod paketi | Kaydedilir. Canlı sayfalar yayınlanmış sürümü kullanmaya devam eder. `saved: true` |
+| `live_copy_draft` | Yayındaki tema kopyası veya yayındaki tasarım | Taslak olarak kaydedilir. Mağaza, Yayınla'ya basılana kadar yayınlanmış sürümü kullanır. `saved: true` |
+
+Her sonuç, düzenleyici tanılamalarından gelen `problems` alanını içerir, örneğin kod paketlerindeki `section.css_id` uyarısı.
+
+### propose_edit
+
+`themes:write` gerektirir. `save_draft` ile aynı argümanların yanı sıra zorunlu, tek satırlık bir `summary` alır; `note` kullanılmaz. Asla kaydetmez: öneri, sahibinin kod düzenleyicide kabul etmesini bekler ve 24 saat sonra süresi dolar. Her değişikliğin sahibi tarafından incelenmesini istediğinizde kullanın.
+
+## Protokol
+
+- Taşıma: Streamable HTTP, JSON yanıtlar, oturum yok. `GET` isteği `405` döner.
+- Protokol sürümleri: `2025-11-25`, `2025-06-18`, `2025-03-26`, `2024-11-05`.
+- Toplu istekler: en fazla 10 mesaj. Her mesaj hız limitine dahil edilir.
+- Yetkilendirme: `https://app.papelship.com/.well-known/oauth-protected-resource/mcp` adresinden keşfedilen PKCE'li OAuth 2.1 ya da Bearer token olarak gönderilen bir Themes API anahtarı.

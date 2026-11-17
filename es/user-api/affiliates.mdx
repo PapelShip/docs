@@ -1,0 +1,161 @@
+---
+title: "Programa de afiliados"
+sidebarTitle: "Afiliados"
+description: "Consulte socios, conversiones y pagos, invite a socios y reaccione a los webhooks de afiliados."
+---
+
+Use los endpoints de afiliados para sincronizar su programa de socios con sus propios sistemas: liste socios, haga seguimiento de los pedidos atribuidos y controle los pagos.
+
+<Info>
+  Su tienda debe estar aprobada para el programa de afiliados. Solicítelo en el panel, en **Afiliados**. Hasta entonces, todos los endpoints de afiliados devuelven `403` con el código `FEATURE_NOT_ENABLED`.
+</Info>
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+| :-- | :-- | :-- |
+| `GET` | `/affiliates/partners` | Lista los socios. Filtre por `status` o busque con `q`. |
+| `POST` | `/affiliates/partners` | Invita a un socio por correo electrónico. El socio queda activo de inmediato. |
+| `GET` | `/affiliates/conversions` | Lista los pedidos atribuidos con el estado de comisión de cada uno. |
+| `GET` | `/affiliates/payouts` | Lista las solicitudes de pago. Las solicitudes abiertas aparecen primero. |
+
+La aprobación de socios, la revisión de conversiones marcadas y el envío de pagos se siguen haciendo en el panel.
+
+## Importes e ID
+
+- Los importes en las respuestas de la API son enteros en unidades menores. `commission: 499` en `USD` equivale a \$4.99.
+- Las cargas de los webhooks usan unidades mayores. `commission: 4.99` equivale a \$4.99.
+- Los socios y los pagos usan ID públicos de 16 caracteres. Las conversiones usan el `invoice_id` público del pedido.
+
+## Paginación
+
+Los endpoints de lista devuelven 25 elementos por página con un `next_cursor`. Envíelo de vuelta como `cursor` para obtener la página siguiente. `next_cursor` es `null` en la última página.
+
+```bash
+curl "https://app.papelship.com/api/v1/affiliates/conversions?status=valid&cursor=1832" \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```
+
+Cada lista también devuelve `counts`, el número de registros por estado:
+
+```json
+{
+  "success": true,
+  "conversions": [ ... ],
+  "next_cursor": 1807,
+  "counts": { "valid": 40, "flagged": 2, "rejected": 1 }
+}
+```
+
+## Invitar a un socio
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/affiliates/partners \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "creator@example.com", "name": "Alex Creator" }'
+```
+
+```json Respuesta (201)
+{ "success": true, "id": "7fKq2LmN9xPa3RtB" }
+```
+
+Las claves de solo lectura no pueden invitar a socios.
+
+## Cómo se atribuyen los pedidos
+
+Un pedido se acredita a un socio de una de estas formas, por orden de prioridad:
+
+1. **Cupón del socio.** El comprador usó un cupón vinculado al socio.
+2. **Enlace de seguimiento.** El comprador abrió un enlace del socio: `https://your-store.com/any-page?ref=CODE` o `https://your-store.com/r/CODE`. La tienda recuerda el clic durante la ventana de cookie del programa.
+3. **API.** Usted envió `affiliateCode` al crear la factura. La conversión tiene `source: "api"`.
+
+La conversión se rechaza cuando el comprador es el propio socio, o cuando se usa otro cupón y el programa no permite combinar cupones. Se marca para revisión cuando el pedido tiene una puntuación de fraude alta o el socio recibe un número inusual de pedidos en poco tiempo.
+
+## Estados de la comisión
+
+| `commission_state` | Significado |
+| :-- | :-- |
+| `unpaid` | El pedido aún no se ha completado. |
+| `held` | Marcada. Pendiente de su revisión en el panel. |
+| `pending` | Dentro del periodo de retención. Consulte `available_at`. |
+| `available` | El socio puede solicitar un pago. |
+| `none` | La conversión fue rechazada. |
+
+Los reembolsos revierten la comisión automáticamente. `commission` siempre es el importe neto.
+
+## Webhooks
+
+Suscríbase a estos eventos en **Desarrolladores › Webhooks**. Usan el mismo sobre y el mismo encabezado `PapelShip-Signature` que los eventos de pedidos.
+
+| Evento | Cuándo |
+| :-- | :-- |
+| `affiliate.partner_applied` | Alguien solicita unirse a su programa desde la tienda. |
+| `affiliate.conversion` | Un pedido atribuido se completa y se registra la comisión. Se envía una vez por pedido. |
+| `affiliate.payout_requested` | Un socio solicita un pago. |
+| `affiliate.payout_sent` | Usted marca un pago como enviado. |
+
+```json affiliate.conversion
+{
+  "id": "evt_9b2c...",
+  "object": "event",
+  "type": "affiliate.conversion",
+  "created": 1791100000,
+  "livemode": true,
+  "store": { "id": "0bHQn0bU2dei", "name": "Acme", "slug": "acme" },
+  "data": {
+    "object": {
+      "object": "affiliate_conversion",
+      "order_id": "c35ffd-19a1b2c3d4e-8c7a20",
+      "partner": { "id": "7fKq2LmN9xPa3RtB", "email": "creator@example.com" },
+      "source": "link",
+      "link_code": "alex",
+      "status": "valid",
+      "commission": 4.99,
+      "currency": "USD",
+      "available_at": "2026-10-18T12:00:00.000Z",
+      "created_at": "2026-10-04T12:00:00.000Z"
+    }
+  }
+}
+```
+
+```json affiliate.payout_sent
+{
+  "type": "affiliate.payout_sent",
+  "data": {
+    "object": {
+      "object": "affiliate_payout",
+      "id": "Qm3vX8kL2pN7rT4w",
+      "partner": { "id": "7fKq2LmN9xPa3RtB", "email": "creator@example.com" },
+      "amount": 125,
+      "currency": "USD",
+      "method": "crypto",
+      "coin": "USDT",
+      "network": "TRC20",
+      "amount_coin": 125.04,
+      "status": "sent",
+      "tx_hash": "a1b2c3...",
+      "created_at": "2026-10-02T09:30:00.000Z"
+    }
+  }
+}
+```
+
+## Errores
+
+Los errores de afiliados incluyen un `code` legible por máquina:
+
+```json
+{ "success": false, "code": "ALREADY_MEMBER", "error": "This email is already a partner of your store." }
+```
+
+| Código | Estado | Significado |
+| :-- | :-- | :-- |
+| `FEATURE_NOT_ENABLED` | `403` | La tienda no está aprobada para el programa de afiliados. |
+| `INVALID_EMAIL` | `400` | La dirección de correo electrónico no es válida. |
+| `ALREADY_MEMBER` | `409` | El correo electrónico ya es socio de esta tienda. |
+| `BANNED` | `409` | El socio está vetado en esta tienda. |
+| `NOT_FOUND` | `404` | El socio o el registro no existe. |

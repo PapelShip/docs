@@ -1,0 +1,80 @@
+---
+title: "Ticaret ve ödeme"
+sidebarTitle: "Ticaret ve ödeme"
+description: "Her temadan sepete ekleme, hemen alma ve ödeme: uygulama blokları, data-ps öznitelikleri veya window.PapelShip ile ödeme sayfası ya da gömülü ödeme açılır penceresi."
+---
+
+Her tema türü aynı şekilde satış yapar: butonları sayfaya platform blokları yerleştirir ve ödeme her zaman PapelShip ödeme sayfasında veya onun açılır penceresinde gerçekleşir. Bir tema asla kart verisi toplamaz.
+
+## Ödeme sayfası veya açılır pencere
+
+`buy_now`, `checkout_button`, `data-ps="buy"` ve `PapelShip.checkout()` bir `mode` alır:
+
+| mode | Ne olur |
+| --- | --- |
+| `page` (varsayılan) | Tarayıcı platformun ödeme sayfasına gider: `<store>/checkout` veya tek bir ürün için hemen al URL'si. |
+| `embed` | Ödeme, geçerli sayfanın üzerinde bir PapelShip çerçevesi içinde açılır pencere olarak açılır. Açılır pencere yüklenemezse onun yerine ödeme sayfası açılır. Sepet ödendiğinde boşaltılır. |
+
+`add_to_cart` her zaman sepete ekler ve sepet çekmecesini açar.
+
+## Liquid temaları ve kod bölümleri
+
+Uygulama blokları script gerektirmez. Ürünün `id` (veya `hash_id`) değerini `product_id` olarak aktarın:
+
+```liquid
+{% for p in all_products limit: 3 %}
+  <h3>{{ p.title | escape }}</h3>
+  <p>{{ p.price | money }}</p>
+  {% app_block 'add_to_cart', product_id: p.id %}
+  {% app_block 'buy_now', product_id: p.id, mode: 'embed', label: 'Buy' %}
+{% endfor %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+<Note>
+  `product`, `product_id` için takma ad olarak çalışır ve bir ürün nesnesi de kabul edilir. İkisi birlikte verilirse `product_id` geçerli olur.
+</Note>
+
+## Yüklenen tasarımlar (ve her tür markup)
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed","label":"Buy"}'></div>
+
+<!-- veya kendi butonunuz -->
+<button type="button" data-ps="buy" data-ps-product-id="PRODUCT_ID" data-ps-mode="embed">Buy</button>
+```
+
+## JavaScript'ten
+
+`window.PapelShip` sizin script'inizden sonra yüklenebilir. Bu yardımcı fonksiyon her tema türünde çalışır:
+
+```js
+function withPapelShip(fn) {
+  var done = false;
+  function go() { if (!done && window.PapelShip && window.PapelShip.version) { done = true; fn(window.PapelShip); } }
+  go();
+  if (!done) { window.addEventListener('papelship:sdk-ready', go); document.addEventListener('DOMContentLoaded', go); }
+}
+
+withPapelShip(function (ps) {
+  document.getElementById('buy').onclick = function () {
+    ps.checkout({ products: [{ id: 'PRODUCT_ID' }], mode: 'embed', onPaid: function (d) { console.log(d.invoiceId); } });
+  };
+});
+```
+
+## window.PapelShip nerede kullanılabilir
+
+| Tema türü | Yüklendiği yer | Zamanlama |
+| --- | --- | --- |
+| Liquid teması | Her tema sayfasında | `<head>` başında ertelenmiş olarak. Ertelenmiş tema script'leri (`script_tag`) onu kullanabilir. |
+| Yüklenen tasarım | Yalnızca bir `data-ps` bağlaması veya bir `data-app-block` yer tutucusu olan sayfalarda | `<head>` başında ertelenmiş olarak. Onu `DOMContentLoaded` içinden çağırın. Yalnızca script kullanan bir sayfa bir yer tutucuya ihtiyaç duyar, örneğin `<div data-app-block="cart_count" hidden></div>`. |
+| Kod bölümü / ayrılmış ikiz | Kod bölümleri bir uygulama bloğu veya bir `data-ps` bağlaması içeren sayfalarda ve builder'da her zaman | Sayfa hydrate edildikten sonra, `assets/theme.js` çalıştıktan sonra yüklenir. `papelship:sdk-ready` olayını bekleyin. Kod bölümlerinde satır içi `<script>` reddedilir. |
+
+Satır içi `<script>` etiketleri Liquid tema sayfalarında çalışmaz. Script'leri `assets/*.js` içine koyun ve `{{ 'x.js' | asset_url | script_tag }}` ile yükleyin.
+
+## Test etme
+
+Builder tuvali, tıkladığınız öğeleri seçer; bu yüzden butonlar orada hiçbir şey yapmaz. Builder üst çubuğunda **Etkileşim**'i açın (`I` tuşuna basın veya `Alt` tuşunu basılı tutun) ya da önizlemeyi açın.
+
+Her blok, argümanları ve çalıştığı yerler için bkz. [Uygulama blokları](/tr/themes/app-blocks).

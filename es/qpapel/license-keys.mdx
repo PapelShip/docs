@@ -1,0 +1,72 @@
+---
+title: "Claves de licencia"
+description: "Emita y gestione claves de licencia de clientes con vinculación por HWID."
+---
+
+## Tipos de clave
+
+| `key_type` | Comportamiento |
+| :-- | :-- |
+| `time_limited` | Válida durante `days` días. Valor por defecto. |
+| `hour_limited` | `days` se interpreta como horas. |
+| `single_use` | Se puede activar una sola vez. |
+| `multi_use` | Se puede activar hasta `max_uses` veces. |
+| `time_restricted` | Válida solo dentro de una franja horaria definida. |
+
+## Crear claves
+
+```bash
+curl -X POST https://app.papelship.com/api/qpapel/v1/keys \
+  -H "Authorization: Bearer pk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 101,
+    "days": 30,
+    "key_type": "time_limited",
+    "bind_hwid": true,
+    "auto_start": false,
+    "amount": 1,
+    "note": "Order #1042"
+  }'
+```
+
+<ParamField body="bind_hwid" default="true" type="boolean">
+  Vincula la clave al primer equipo que la activa.
+</ParamField>
+
+<ParamField body="auto_start" default="false" type="boolean">
+  Si es `true`, la cuenta regresiva empieza ahora. Si es `false`, empieza con el primer uso.
+</ParamField>
+
+<ParamField body="amount" default="1" type="integer">
+  Genere hasta 100 claves en una sola llamada.
+</ParamField>
+
+## Gestionar una clave
+
+<AccordionGroup>
+  <Accordion title="Restablecer el HWID" icon="rotate">
+    Permita que un cliente pase a un PC nuevo: `POST /keys/{id}/reset-hwid`.
+  </Accordion>
+
+  <Accordion title="Congelar y descongelar" icon="snowflake">
+    Pause la cuenta regresiva durante una interrupción del servicio con `POST /keys/{id}/freeze`. Reanude con `DELETE /keys/{id}/freeze`.
+  </Accordion>
+
+  <Accordion title="Extender" icon="clock">
+    Agregue días con `POST /keys/{id}/add-time` y `{ "days": 7 }`.
+  </Accordion>
+
+  <Accordion title="Vetar y levantar el veto" icon="ban">
+    Revoque con `POST /keys/{id}/ban` y un `reason`. Restaure con `POST /keys/{id}/unban`.
+  </Accordion>
+</AccordionGroup>
+
+## Encontrar claves a punto de caducar
+
+Liste las claves que caducan en los próximos siete días para enviar recordatorios de renovación:
+
+```bash
+curl "https://app.papelship.com/api/qpapel/v1/keys?expiresInDays=7&sortBy=end_time&sortOrder=ASC" \
+  -H "Authorization: Bearer pk_live_your_key"
+```

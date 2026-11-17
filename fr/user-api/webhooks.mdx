@@ -1,0 +1,147 @@
+---
+title: "Webhooks"
+sidebarTitle: "Webhooks"
+description: "Recevez des événements signés lorsque des commandes, des produits, des avis ou des enregistrements d'affiliation changent."
+---
+
+Les webhooks envoient une requête HTTP `POST` à votre serveur lorsqu'un événement se produit dans votre boutique, vous n'avez donc pas besoin d'interroger l'API en boucle.
+
+Créez des points de terminaison dans **Developers › Webhooks** ou avec [`POST /webhooks`](#gérer-les-points-de-terminaison-avec-lapi).
+
+## Événements
+
+| Événement | Déclenchement |
+| :-- | :-- |
+| `order.created` | Une commande est créée (vitrine, API ou intégration). |
+| `order.completed` | Une commande est payée et livrée. Inclut les livraisons. |
+| `order.partially_paid` | Une partie d'un paiement en crypto est arrivée. |
+| `order.manual_review` | Un paiement manuel attend votre vérification. |
+| `order.expired` | Une commande n'a pas été payée dans les délais. |
+| `order.cancelled` | Une commande impayée a été annulée. |
+| `order.refunded` | Un remboursement a été enregistré. Envoyé une fois par montant remboursé. |
+| `product.out_of_stock` | Un produit est en rupture de stock. |
+| `product.low_stock` | Une variante d'un produit physique a atteint son seuil de stock bas. Inclut `variant_id` et `threshold`. |
+| `product.restocked` | Du stock a été ajouté à un produit. |
+| `product.deleted` | Un produit a été supprimé. |
+| `review.created` | Un client a laissé un avis. |
+| `question.created` | Un client a posé une question sur une page produit. |
+| `question.answered` | Votre équipe a répondu à une question sur un produit (tableau de bord ou API). `answer.first` vaut `true` pour la première réponse. |
+| `customer.created` | Un nouveau client a été ajouté à votre boutique. |
+| `withdrawal.completed` | Un retrait du portefeuille a été envoyé. |
+| `affiliate.partner_applied` | Une personne a postulé à votre programme d'affiliation. |
+| `affiliate.conversion` | Une commande attribuée a été finalisée et la commission a été enregistrée. |
+| `affiliate.payout_requested` | Un partenaire a demandé un paiement. |
+| `affiliate.payout_sent` | Vous avez marqué un paiement comme envoyé. |
+
+`GET /events/types` renvoie la même liste.
+
+## Charge utile
+
+```json
+{
+  "id": "evt_9b2c4f1a7d",
+  "object": "event",
+  "type": "order.completed",
+  "created": 1791100000,
+  "livemode": true,
+  "store": { "id": "0bHQn0bU2dei", "name": "Acme", "slug": "acme" },
+  "data": {
+    "object": {
+      "object": "order",
+      "id": "c35ffd-19a1b2c3d4e-8c7a20",
+      "status": "completed",
+      "currency": "USD",
+      "total": 34.99,
+      "customer": { "email": "buyer@example.com", "country": "GB" },
+      "items": [{ "product_id": "a1B2c3D4e5F6", "name": "Pro License", "quantity": 1, "unit_price": 34.99, "total": 34.99 }],
+      "paid_at": "2026-10-04T12:03:00.000Z"
+    }
+  }
+}
+```
+
+<Note>
+  Les montants des webhooks sont exprimés en unités majeures (`34.99`), contrairement à l'API, qui utilise les unités mineures (`3499`).
+</Note>
+
+## Vérifier la signature
+
+Chaque requête comporte les en-têtes suivants :
+
+| En-tête | Valeur |
+| :-- | :-- |
+| `PapelShip-Signature` | `t=<unix seconds>,v1=<hex HMAC>` |
+| `PapelShip-Event-Id` | L'identifiant de l'événement. Utilisez-le pour ignorer les doublons. |
+| `PapelShip-Event-Type` | Le type d'événement. |
+| `PapelShip-Delivery-Attempt` | 1 pour la première tentative. |
+
+La signature est `HMAC-SHA256(secret, "<t>.<raw body>")` en hexadécimal. Le secret (`whsec_...`) s'affiche lorsque vous créez le point de terminaison. Calculez-la sur le corps **brut**, avant d'analyser le JSON, et rejetez les horodatages trop anciens.
+
+<CodeGroup>
+
+```javascript Node.js
+import crypto from "node:crypto";
+
+export function verify(rawBody, header, secret, toleranceSec = 300) {
+  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")));
+  const t = Number(parts.t);
+  if (!t || Math.abs(Date.now() / 1000 - t) > toleranceSec) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${t}.${rawBody}`).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(parts.v1 || "");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
+```python Python
+import hmac, hashlib, time
+
+def verify(raw_body: bytes, header: str, secret: str, tolerance: int = 300) -> bool:
+    parts = dict(p.split("=", 1) for p in header.split(","))
+    t = int(parts.get("t", 0))
+    if not t or abs(time.time() - t) > tolerance:
+        return False
+    expected = hmac.new(secret.encode(), f"{t}.".encode() + raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, parts.get("v1", ""))
+```
+
+```php PHP
+function verify(string $rawBody, string $header, string $secret, int $tolerance = 300): bool {
+    parse_str(str_replace(',', '&', $header), $parts);
+    $t = (int)($parts['t'] ?? 0);
+    if (!$t || abs(time() - $t) > $tolerance) return false;
+    $expected = hash_hmac('sha256', $t . '.' . $rawBody, $secret);
+    return hash_equals($expected, $parts['v1'] ?? '');
+}
+```
+
+</CodeGroup>
+
+## Réponse et nouvelles tentatives
+
+- Répondez avec n'importe quel statut `2xx` dans un délai de 10 secondes. Effectuez les traitements lents après avoir répondu.
+- Les livraisons échouées sont réessayées après 1 minute, 5 minutes, 30 minutes, 2 heures, 6 heures et 12 heures (7 tentatives sur environ 21 heures).
+- Un point de terminaison est désactivé après 40 échecs consécutifs sans aucun succès pendant 3 jours. Réactivez-le dans le tableau de bord ou avec `PATCH /webhooks/{id}` et `enabled: true`.
+- Un même événement peut arriver plusieurs fois. Utilisez `PapelShip-Event-Id` pour ne le traiter qu'une seule fois.
+
+## Gérer les points de terminaison avec l'API
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/webhooks \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://example.com/webhooks/papelship", "events": ["order.completed", "order.refunded"] }'
+```
+
+La réponse contient le `secret` de signature. Il n'est affiché qu'une seule fois ; stockez-le dans l'environnement de votre serveur.
+
+| Point de terminaison | Usage |
+| :-- | :-- |
+| `GET /webhooks` | Liste les points de terminaison avec les statistiques de livraison sur 7 jours. |
+| `PATCH /webhooks/{id}` | Modifie l'URL, les événements ou `enabled`. |
+| `POST /webhooks/{id}/test` | Envoie un événement d'exemple. |
+| `GET /events/deliveries` | Journal des livraisons avec statut et codes de réponse. |
+| `POST /events/deliveries/{id}/resend` | Renvoie une livraison. |
+
+Le renouvellement du secret reste dans le tableau de bord.

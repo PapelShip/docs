@@ -1,0 +1,39 @@
+---
+title: "Présentation de qPapel Protection"
+sidebarTitle: "Présentation"
+description: "Gérez les licences, la configuration et la protection de vos applications de bureau et de vos loaders."
+---
+
+qPapel Protection est un backend de gestion des licences et de protection contre la falsification pour les logiciels de bureau. La Web API vous permet de tout automatiser depuis votre propre panneau ou votre propre bot.
+
+**URL de base :** `https://app.papelship.com/api/qpapel/v1`
+
+<CardGroup cols={2}>
+  <Card title="Clés de licence" icon="key" href="/fr/qpapel/license-keys">
+    Créez, bannissez, gelez et prolongez les clés des clients, et réinitialisez leur HWID.
+  </Card>
+
+  <Card title="Clés revendeur" icon="handshake">
+    Attribuez des clés aux comptes revendeurs et contrôlez leur durée.
+  </Card>
+
+  <Card title="Paramètres à distance" icon="sliders">
+    Envoyez une configuration d'exécution aux clients et vérifiez les hachages SHA-256 des builds.
+  </Card>
+
+  <Card title="URL du personnel" icon="user-shield">
+    Donnez aux modérateurs un accès au portail limité en portée et dans le temps.
+  </Card>
+
+  <Card title="Intégrations Discord" icon="discord">
+    Diffusez les journaux de sécurité dans un salon et associez les autorisations aux rôles.
+  </Card>
+
+  <Card title="Sécurité du client" icon="shield-halved">
+    Bloquez des processus et des fenêtres, bannissez des appareils, et servez des chaînes et des fichiers protégés.
+  </Card>
+</CardGroup>
+
+## Identifiants de produit
+
+Certains points de terminaison acceptent un `product_id` numérique. D'autres acceptent le `cheat_value` du produit, une chaîne comme `cs2_cheat`. La référence de chaque point de terminaison indique lequel il attend.

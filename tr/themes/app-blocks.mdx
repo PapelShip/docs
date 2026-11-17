@@ -1,0 +1,137 @@
+---
+title: "Uygulama bloğu referansı"
+sidebarTitle: "Uygulama blokları"
+description: "Tüm platform blokları: argümanlar, takma adlar, ne işledikleri, açılır pencere / çekmece / yönlendirme davranışı ve hangi tema türlerinin bunları desteklediği."
+---
+
+Yapay zeka ajanları aynı referansı tema MCP'sinden alır: `get_reference` aracı (konu `app_blocks`) ve `papelship://reference/app-blocks` kaynağı. Kod düzenleyici, `validate` ve `save_draft`; bilinmeyen bloklar, bilinmeyen veya yanlış türde argümanlar ve bir tema türünün desteklemediği bloklar için uyarı verir.
+
+Platform blokları (`{% app_block %}` / data-app-block): argümanlar, davranış, türe göre destek; kilitli sayfa blokları.
+
+```liquid
+{% app_block 'buy_now', product_id: product.id, mode: 'embed' %}
+```
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed"}'></div>
+```
+
+| Blok | Davranış | liquid | design | code | twin |
+| --- | --- | --- | --- | --- | --- |
+| `add_to_cart` | çekmece | evet | evet | evet\* | evet\* |
+| `buy_now` | yönlendirme | evet | evet | evet | evet |
+| `cart_count` | çekmece | evet | evet | evet\* | evet\* |
+| `cart_drawer` | çekmece | evet | evet | evet\* | evet\* |
+| `checkout_button` | yönlendirme | evet | evet | evet | evet |
+| `currency_selector` | satır içi | evet | evet | evet\* | evet\* |
+| `language_selector` | yönlendirme | evet | evet | evet | evet |
+| `newsletter_form` | form | evet | evet | evet | evet |
+| `powered_by` | satır içi | evet | hayır | hayır | hayır |
+| `quick_view` | iletişim kutusu | evet | evet | evet | evet |
+| `recently_viewed` | satır içi | evet | evet | evet\* | evet\* |
+| `reviews_widget` | satır içi | evet | evet | hayır | hayır |
+| `variant_picker` | satır içi | evet | evet | evet | evet |
+| `wishlist_button` | satır içi | evet | evet | evet | evet |
+
+`evet*`: çalışır, aşağıdaki notla birlikte. Kod bölümlerinde ve ayrılmış ikizlerde sepet blokları, React temanın kendi çekmecesini değil platformun sepet çekmecesini kullanır; temanın sepet rozeti senkron kalır.
+
+## add_to_cart
+
+Tek bir ürün için sepete ekle butonu. Ortak vitrin sepetine ekler ve sepet çekmecesini açar. Birden fazla varyantı olan ve seçim yapılmamış bir üründe: yanındaki variant_picker seçimi sorar, yoksa ürün sayfası açılır.
+
+| Argüman | Tür | Zorunlu | Takma adlar | Varsayılan | Açıklama |
+| --- | --- | --- | --- | --- | --- |
+| `product_id` | product | evet | `product` |  | Ürün id'si veya hash id'si (product.id / product.hash_id). Bir ürün nesnesi de kabul edilir. |
+| `variant_id` | id |  | `variant` |  | Varyant id'si; varsayılan: yanındaki variant_picker'da seçilen varyant, yoksa varsayılan varyant. |
+| `quantity` | integer |  |  | `1` | Adet (1 veya daha fazla). |
+| `label` | string |  |  |  | Buton metni (varsayılan "Add to cart", çevrilmiş). Yer tutucunun kendi markup'ı varsa yok sayılır. |
+| `mode` | enum (`page`, `embed`) |  |  |  | Etkisi yoktur: add_to_cart her zaman sepete ekler. Ödeme için buy_now kullanın. |
+
+## buy_now
+
+Tek bir ürün için hemen al butonu. `mode: 'page'` (varsayılan) yalnızca bu ürünle platform ödemesine gider (sepet korunur). `mode: 'embed'` ödeme açılır penceresini sayfanın üzerinde açar (platform iframe'i; kart verisi temaya asla dokunmaz) ve widget yüklenemezse sayfaya geri döner.
+
+| Argüman | Tür | Zorunlu | Takma adlar | Varsayılan | Açıklama |
+| --- | --- | --- | --- | --- | --- |
+| `product_id` | product | evet | `product` |  | Ürün id'si veya hash id'si. Bir ürün nesnesi de kabul edilir. |
+| `variant_id` | id |  | `variant` |  | Varyant id'si; varsayılan: yanındaki variant_picker'da seçilen varyant. |
+| `quantity` | integer |  |  | `1` | Adet (1 veya daha fazla). |
+| `label` | string |  |  |  | Buton metni (varsayılan "Buy now", çevrilmiş). |
+| `mode` | enum (`page`, `embed`) |  |  | `page` | `page` = ödeme sayfası; `embed` = geçerli sayfanın üzerinde ödeme açılır penceresi. |
+
+## cart_count
+
+Ürün sayısını gösteren sepet butonu ("Cart `<n>`"); kendi markup'ınız görünümünü korur ve bir `[data-ps-count]` alt öğesi sayıyı alır. Tıklama sepet çekmecesini açar. Argümanı yoktur.
+
+## cart_drawer
+
+Kayan sepet çekmecesini yapılandırır (satırlar, adetler, kampanya indirimleri, ücretsiz kargo çubuğu, upsell, ödeme). Bulunduğu yerde hiçbir şey işlemez; sayfadaki ilk `cart_drawer` seçenekleri belirler.
+
+| Argüman | Tür | Varsayılan | Açıklama |
+| --- | --- | --- | --- |
+| `upsell` | string |  | Ürünleri çekmecede önerilecek koleksiyonun handle'ı veya id'si. |
+| `upsell_limit` | integer | `3` | Gösterilen upsell ürünleri (1-6). |
+| `upsell_heading` | string |  | Upsell başlığı (varsayılan "You may also like"). |
+| `free_shipping` | boolean | `true` | `false` ücretsiz kargo ilerleme çubuğunu gizler. |
+
+## checkout_button
+
+Tüm sepet için ödeme butonu (sepet boşken devre dışıdır). `mode: 'page'` (varsayılan) `<store>/checkout` adresine gider; `mode: 'embed'` ödeme açılır penceresini açar; ödemeden sonra sepet boşaltılır.
+
+| Argüman | Tür | Varsayılan | Açıklama |
+| --- | --- | --- | --- |
+| `label` | string |  | Buton metni (varsayılan "Checkout", çevrilmiş). |
+| `mode` | enum (`page`, `embed`) | `page` | Ödeme sayfası veya açılır pencere. |
+
+## currency_selector
+
+Görüntüleme para birimi seçici (ikiden az para birimi varsa gizlenir). Görüntüleme para birimini saklar (ödeme her zaman mağaza para biriminde tahsil edilir) ve `papelship:currency-change` olayını yayar. Kod bölümlerinde ve ikizlerde `currencies` aktarın: bu sayfalar yalnızca mağaza para birimini bilir.
+
+| Argüman | Tür | Açıklama |
+| --- | --- | --- |
+| `label` | string | Etiket metni. |
+| `currencies` | list | Para birimi kodları (`"USD,EUR,TRY"` veya bir dizi); varsayılan: mağazanın görüntüleme para birimleri. |
+
+## language_selector
+
+Mağaza dili seçici (mağazanın tek dili varsa gizlenir). Dil çerezini ayarlar ve sayfayı yeniden yükler. Argüman: `label`.
+
+## newsletter_form
+
+Açık rıza onay kutusu olan bülten kayıt formu. Platformun potansiyel müşteri uç noktasına gönderir; önizlemeler asla abone yapmaz. Argümanlar: `label`, `placeholder`, `button`, `consent_text`.
+
+## powered_by
+
+"Powered by PapelShip" ibaresi (gizlemeye izin veren planlarda gizlenir). Yalnızca Liquid temaları içindir: tasarım sayfaları ve React tema altbilgileri bu ibareyi platformdan otomatik olarak alır.
+
+## quick_view
+
+Tek bir ürün için hızlı görünüm butonu: görseller, fiyat, varyantlar ve sepete ekle içeren bir iletişim kutusu açar. Argümanlar: `product_id` (zorunlu, takma ad `product`), `label`.
+
+## recently_viewed
+
+Ziyaretçinin son görüntülediği ürünler (bu tarayıcıdan); liste boşsa hiçbir şey işlemez. Ürünler Liquid ürün sayfalarında kaydedilir (React tema ürün sayfaları görüntülemeleri kaydetmez). Argümanlar: `limit` (varsayılan 4, 1-20), `heading`.
+
+## reviews_widget
+
+Yayınlanmış yorumlar: ürün sayfalarında sayfanın ürünü, diğer sayfalarda mağaza. Kod bölümlerinde veya ikizlerde desteklenmez (bu sayfalar yorum verisi taşımaz; React temanın yorumlar bölümünü kullanın). Argümanlar: `heading`, `limit` (varsayılan 5, 1-50), `write` (varsayılan `true`; `false` yorum yazma bağlantısını gizler).
+
+## variant_picker
+
+Tek bir ürün için varyant seçici (radio grupları). En yakın ortak kapsayıcıdaki (veya bir `data-ps-scope` öğesindeki) aynı ürüne ait `add_to_cart` / `buy_now` seçilen varyantı kullanır; `data-ps` price / compare-price / stock metinleri de onu izler. Argüman: `product_id` (zorunlu, takma ad `product`).
+
+## wishlist_button
+
+Tek bir ürün için favori geçişi (`aria-pressed` özelliğine sahip bir kalp butonu). Tarayıcıda saklanır ve oturum açıkken müşteri hesabıyla senkronize edilir. Argüman: `product_id` (sayısal id; hash id'ler hesaba kaydedilmez).
+
+## Kilitli sayfa blokları
+
+| Blok | Sayfa | Liquid tema dosyası | Tasarım dosyası |
+| --- | --- | --- | --- |
+| `checkout_form` | Ödeme sayfası | `templates/checkout.liquid` | `pages/checkout.liquid` veya `.html` |
+| `cart_view` | Sepet sayfası | `templates/cart.liquid` | `pages/cart.liquid` veya `.html` |
+| `customer_login` | Giriş sayfası | `templates/customers/login.liquid` | `pages/login.liquid` veya `.html` |
+| `customer_account` | Hesap sayfası | `templates/customers/account.liquid` | `pages/account.liquid` veya `.html` |
+| `order_track` | Sipariş takip sayfası | `templates/customers/track.liquid` | `pages/track.liquid` veya `.html` |
+
+Her biri yalnızca bir kez ve yalnızca kendi geçersiz kılma dosyasında çalışır. React tema kod paketlerinde sayfa geçersiz kılmaları yoktur.

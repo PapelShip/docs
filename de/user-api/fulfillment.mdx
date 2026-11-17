@@ -1,0 +1,63 @@
+---
+title: "Physische Bestellungen versenden"
+sidebarTitle: "Versand"
+description: "Zu versendende Bestellungen auflisten, Sendungen mit Tracking erstellen, den Lieferstatus aktualisieren und Retouren bearbeiten."
+---
+
+Wenn Ihr Shop physische Produkte verkauft, verbinden Sie mit diesen Endpunkten Ihr Lager oder Ihre Versandsoftware. Ihr Shop muss unter **Einstellungen › Physische Waren** für physische Waren freigeschaltet sein.
+
+## 1. Zu versendende Bestellungen finden
+
+```bash
+curl "https://app.papelship.com/api/v1/orders?status=to_ship" \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+`to_ship` listet bezahlte Bestellungen mit noch nicht versendeten Artikeln auf, die ältesten zuerst. Weitere Filter: `in_transit`, `delivered`, `issues` (fehlgeschlagene Zustellungen, Retouren) und `all`.
+
+`GET /orders/{invoiceId}` liefert die Adresse, jeden Artikel mit `shipped_quantity`, Sendungen, Retouren und Notizen.
+
+## 2. Sendung erstellen
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "carrier_code": "dhl_express", "tracking_number": "1234567890" }'
+```
+
+- Lassen Sie `items` weg, um alles Verbleibende zu versenden. Für eine Teilsendung senden Sie `items: [{ "invoice_item_id": 55, "qty": 1 }]`.
+- Der Kunde erhält eine E-Mail mit dem Tracking-Link. Senden Sie `notify_customer: false`, um sie zu überspringen.
+- Der Tracking-Link wird anhand des Versanddienstleisters erzeugt. `GET /shipping` listet die Carrier-Codes auf.
+
+## 3. Status aktualisieren
+
+```bash
+curl -X PATCH https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments/88 \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "delivered", "location": "London" }'
+```
+
+Statuswerte: `label_created`, `shipped`, `in_transit`, `out_for_delivery`, `delivered`, `failed_attempt`, `returned_to_sender`. Jeder Status wird der Tracking-Zeitleiste hinzugefügt, die der Kunde sieht. Der `fulfillment_status` der Bestellung folgt den Sendungen automatisch.
+
+## Retouren
+
+Kunden beantragen Retouren innerhalb des Rückgabezeitraums des Produkts über ihre Bestellseite. Bearbeiten Sie sie mit `PATCH /orders/{invoiceId}/returns/{returnId}`:
+
+| `action` | Wirkung |
+| :-- | :-- |
+| `approve` | Nimmt die Anfrage an. `location_id` legt fest, wohin das Paket gesendet wird. |
+| `reject` | Lehnt sie ab. `note` ist erforderlich und wird an den Kunden gesendet. |
+| `receive` | Sie haben das Paket erhalten. `restock: true` führt die Artikel wieder dem Lagerbestand zu. |
+| `refund` | Erfasst `refund_cents`. Zahlen Sie das Geld selbst zurück und rufen Sie dann `POST /invoices/{id}/refund` auf. |
+| `close` | Schließt die Retoure. |
+
+`GET /returns?status=requested` listet offene Anfragen über alle Bestellungen hinweg auf.
+
+## Versandeinstellungen
+
+Lesen und ändern Sie Zonen, Tarife und Lagerstandorte mit `/shipping/zones` und `/shipping/locations`. Berechnen Sie die Versandkosten für einen Warenkorb mit `POST /shipping/quote`.

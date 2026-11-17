@@ -202,6 +202,30 @@
             "icon": "credit-card"
           },
           {
+            "tab": "Temalar",
+            "icon": "palette",
+            "groups": [
+              {
+                "group": "Temalar",
+                "pages": [
+                  "tr/themes/overview",
+                  "tr/themes/liquid",
+                  "tr/themes/designs",
+                  "tr/themes/code-layer",
+                  "tr/themes/commerce",
+                  "tr/themes/app-blocks"
+                ]
+              },
+              {
+                "group": "Yapay zeka ajanları (MCP)",
+                "pages": [
+                  "tr/themes/mcp",
+                  "tr/themes/mcp-tools"
+                ]
+              }
+            ]
+          },
+          {
             "tab": "qPapel Protection",
             "icon": "shield-halved",
             "groups": [
@@ -218,6 +242,476 @@
                   "source": "api-reference/openapi/qpapel.json",
                   "directory": "tr/reference/qpapel"
                 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "ru",
+        "tabs": [
+          {
+            "tab": "Руководства",
+            "icon": "book-open",
+            "groups": [
+              {
+                "group": "Начало работы",
+                "pages": [
+                  "ru/index",
+                  "ru/quickstart"
+                ]
+              },
+              {
+                "group": "Основные понятия",
+                "pages": [
+                  "ru/guides/authentication",
+                  "ru/guides/errors",
+                  "ru/guides/idempotency"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Цифровой магазин",
+            "icon": "store",
+            "groups": [
+              {
+                "group": "Руководства",
+                "pages": [
+                  "ru/user-api/overview",
+                  "ru/user-api/affiliates",
+                  "ru/user-api/orders",
+                  "ru/user-api/webhooks",
+                  "ru/user-api/fulfillment",
+                  "ru/user-api/errors"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "PapelPay",
+            "icon": "credit-card",
+            "groups": [
+              {
+                "group": "Руководства",
+                "pages": [
+                  "ru/papelpay/overview",
+                  "ru/papelpay/subscriptions",
+                  "ru/papelpay/card-form"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Темы",
+            "icon": "palette",
+            "groups": [
+              {
+                "group": "Темы",
+                "pages": [
+                  "ru/themes/overview",
+                  "ru/themes/liquid",
+                  "ru/themes/designs",
+                  "ru/themes/code-layer",
+                  "ru/themes/commerce",
+                  "ru/themes/app-blocks"
+                ]
+              },
+              {
+                "group": "ИИ-агенты (MCP)",
+                "pages": [
+                  "ru/themes/mcp",
+                  "ru/themes/mcp-tools"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "qPapel Protection",
+            "icon": "shield-halved",
+            "groups": [
+              {
+                "group": "Руководства",
+                "pages": [
+                  "ru/qpapel/overview",
+                  "ru/qpapel/license-keys"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "fr",
+        "tabs": [
+          {
+            "tab": "Guides",
+            "icon": "book-open",
+            "groups": [
+              {
+                "group": "Premiers pas",
+                "pages": [
+                  "fr/index",
+                  "fr/quickstart"
+                ]
+              },
+              {
+                "group": "Concepts clés",
+                "pages": [
+                  "fr/guides/authentication",
+                  "fr/guides/errors",
+                  "fr/guides/idempotency"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Boutique numérique",
+            "icon": "store",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr/user-api/overview",
+                  "fr/user-api/affiliates",
+                  "fr/user-api/orders",
+                  "fr/user-api/webhooks",
+                  "fr/user-api/fulfillment",
+                  "fr/user-api/errors"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "PapelPay",
+            "icon": "credit-card",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr/papelpay/overview",
+                  "fr/papelpay/subscriptions",
+                  "fr/papelpay/card-form"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Thèmes",
+            "icon": "palette",
+            "groups": [
+              {
+                "group": "Thèmes",
+                "pages": [
+                  "fr/themes/overview",
+                  "fr/themes/liquid",
+                  "fr/themes/designs",
+                  "fr/themes/code-layer",
+                  "fr/themes/commerce",
+                  "fr/themes/app-blocks"
+                ]
+              },
+              {
+                "group": "Agents IA (MCP)",
+                "pages": [
+                  "fr/themes/mcp",
+                  "fr/themes/mcp-tools"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "qPapel Protection",
+            "icon": "shield-halved",
+            "groups": [
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr/qpapel/overview",
+                  "fr/qpapel/license-keys"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "uk",
+        "tabs": [
+          {
+            "tab": "Посібники",
+            "icon": "book-open",
+            "groups": [
+              {
+                "group": "Початок роботи",
+                "pages": [
+                  "uk/index",
+                  "uk/quickstart"
+                ]
+              },
+              {
+                "group": "Основні поняття",
+                "pages": [
+                  "uk/guides/authentication",
+                  "uk/guides/errors",
+                  "uk/guides/idempotency"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Цифровий магазин",
+            "icon": "store",
+            "groups": [
+              {
+                "group": "Посібники",
+                "pages": [
+                  "uk/user-api/overview",
+                  "uk/user-api/affiliates",
+                  "uk/user-api/orders",
+                  "uk/user-api/webhooks",
+                  "uk/user-api/fulfillment",
+                  "uk/user-api/errors"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "PapelPay",
+            "icon": "credit-card",
+            "groups": [
+              {
+                "group": "Посібники",
+                "pages": [
+                  "uk/papelpay/overview",
+                  "uk/papelpay/subscriptions",
+                  "uk/papelpay/card-form"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Теми",
+            "icon": "palette",
+            "groups": [
+              {
+                "group": "Теми",
+                "pages": [
+                  "uk/themes/overview",
+                  "uk/themes/liquid",
+                  "uk/themes/designs",
+                  "uk/themes/code-layer",
+                  "uk/themes/commerce",
+                  "uk/themes/app-blocks"
+                ]
+              },
+              {
+                "group": "AI-агенти (MCP)",
+                "pages": [
+                  "uk/themes/mcp",
+                  "uk/themes/mcp-tools"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "qPapel Protection",
+            "icon": "shield-halved",
+            "groups": [
+              {
+                "group": "Посібники",
+                "pages": [
+                  "uk/qpapel/overview",
+                  "uk/qpapel/license-keys"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "de",
+        "tabs": [
+          {
+            "tab": "Anleitungen",
+            "icon": "book-open",
+            "groups": [
+              {
+                "group": "Erste Schritte",
+                "pages": [
+                  "de/index",
+                  "de/quickstart"
+                ]
+              },
+              {
+                "group": "Grundkonzepte",
+                "pages": [
+                  "de/guides/authentication",
+                  "de/guides/errors",
+                  "de/guides/idempotency"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Digitaler Shop",
+            "icon": "store",
+            "groups": [
+              {
+                "group": "Anleitungen",
+                "pages": [
+                  "de/user-api/overview",
+                  "de/user-api/affiliates",
+                  "de/user-api/orders",
+                  "de/user-api/webhooks",
+                  "de/user-api/fulfillment",
+                  "de/user-api/errors"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "PapelPay",
+            "icon": "credit-card",
+            "groups": [
+              {
+                "group": "Anleitungen",
+                "pages": [
+                  "de/papelpay/overview",
+                  "de/papelpay/subscriptions",
+                  "de/papelpay/card-form"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Themes",
+            "icon": "palette",
+            "groups": [
+              {
+                "group": "Themes",
+                "pages": [
+                  "de/themes/overview",
+                  "de/themes/liquid",
+                  "de/themes/designs",
+                  "de/themes/code-layer",
+                  "de/themes/commerce",
+                  "de/themes/app-blocks"
+                ]
+              },
+              {
+                "group": "KI-Agenten (MCP)",
+                "pages": [
+                  "de/themes/mcp",
+                  "de/themes/mcp-tools"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "qPapel Protection",
+            "icon": "shield-halved",
+            "groups": [
+              {
+                "group": "Anleitungen",
+                "pages": [
+                  "de/qpapel/overview",
+                  "de/qpapel/license-keys"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "es",
+        "tabs": [
+          {
+            "tab": "Guías",
+            "icon": "book-open",
+            "groups": [
+              {
+                "group": "Primeros pasos",
+                "pages": [
+                  "es/index",
+                  "es/quickstart"
+                ]
+              },
+              {
+                "group": "Conceptos clave",
+                "pages": [
+                  "es/guides/authentication",
+                  "es/guides/errors",
+                  "es/guides/idempotency"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Tienda digital",
+            "icon": "store",
+            "groups": [
+              {
+                "group": "Guías",
+                "pages": [
+                  "es/user-api/overview",
+                  "es/user-api/affiliates",
+                  "es/user-api/orders",
+                  "es/user-api/webhooks",
+                  "es/user-api/fulfillment",
+                  "es/user-api/errors"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "PapelPay",
+            "icon": "credit-card",
+            "groups": [
+              {
+                "group": "Guías",
+                "pages": [
+                  "es/papelpay/overview",
+                  "es/papelpay/subscriptions",
+                  "es/papelpay/card-form"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Temas",
+            "icon": "palette",
+            "groups": [
+              {
+                "group": "Temas",
+                "pages": [
+                  "es/themes/overview",
+                  "es/themes/liquid",
+                  "es/themes/designs",
+                  "es/themes/code-layer",
+                  "es/themes/commerce",
+                  "es/themes/app-blocks"
+                ]
+              },
+              {
+                "group": "Agentes de IA (MCP)",
+                "pages": [
+                  "es/themes/mcp",
+                  "es/themes/mcp-tools"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "qPapel Protection",
+            "icon": "shield-halved",
+            "groups": [
+              {
+                "group": "Guías",
+                "pages": [
+                  "es/qpapel/overview",
+                  "es/qpapel/license-keys"
+                ]
               }
             ]
           }

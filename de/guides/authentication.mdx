@@ -1,0 +1,64 @@
+---
+title: "Authentifizierung"
+description: "Authentifizieren Sie Requests an jede PapelShip API mit Ihrem API-Schlüssel."
+---
+
+Jeder Request muss einen API-Schlüssel enthalten. Jede API akzeptiert einen leicht unterschiedlichen Satz von Headern.
+
+<Tabs>
+  <Tab title="User API">
+    Senden Sie bei jedem Request Ihren API-Schlüssel **und** Ihren Store-Hash.
+
+    ```bash
+    x-api-key: your_api_key
+    x-store-hash: your_store_hash
+    ```
+
+    | Header | Beschreibung |
+    | :-- | :-- |
+    | `x-api-key` | Ihr persönlicher API-Schlüssel aus den Dashboard-Einstellungen. |
+    | `x-store-hash` | Die eindeutige Kennung Ihres Shops. |
+  </Tab>
+  <Tab title="qPapel Protection">
+    Senden Sie Ihren Entwicklerschlüssel (`pk_live_...`) auf eine von drei Arten.
+
+    ```bash
+    # Bevorzugt
+    Authorization: Bearer pk_live_your_key
+    
+    # Alternative
+    x-api-key: pk_live_your_key
+    
+    # Legacy (für ältere Loader unterstützt)
+    api-key: pk_live_your_key
+    ```
+  </Tab>
+</Tabs>
+
+## Zugangsdaten testen
+
+Rufen Sie den Konnektivitäts-Endpunkt der User API auf, um zu prüfen, ob Ihr Schlüssel und Ihr Store-Hash funktionieren:
+
+```bash
+curl https://app.papelship.com/api/v1/me \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```
+
+Ein gültiger Request liefert `"success": true`. Ein ungültiger Schlüssel liefert `401 Unauthorized`.
+
+## Schlüssel sicher aufbewahren
+
+<AccordionGroup>
+  <Accordion title="Schlüssel nur auf Ihrem Server verwenden" icon="server">
+    API-Schlüssel gewähren vollen Zugriff auf Ihren Shop und Ihre Lizenzen. Betten Sie sie niemals in Frontend-JavaScript, mobile Apps oder verteilte Desktop-Binaries ein.
+  </Accordion>
+
+  <Accordion title="Schlüssel in Umgebungsvariablen speichern" icon="lock">
+    Laden Sie Schlüssel aus Umgebungsvariablen oder einem Secrets Manager. Committen Sie sie niemals in die Versionsverwaltung.
+  </Accordion>
+
+  <Accordion title="Kompromittierten Schlüssel sofort austauschen" icon="rotate">
+    Wenn ein Schlüssel offengelegt wurde, widerrufen Sie ihn im Dashboard und erstellen Sie einen neuen.
+  </Accordion>
+</AccordionGroup>

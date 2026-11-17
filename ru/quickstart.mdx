@@ -1,0 +1,121 @@
+---
+title: "Быстрый старт"
+description: "Создайте первый заказ через PapelShip Store API, отправьте клиента на страницу оплаты и подтвердите платеж через вебхук или чтением заказа."
+---
+
+В этом руководстве вы пройдете полный цикл заказа в PapelShip Store API: создадите заказ на один из своих товаров, отправите клиента на размещенную страницу оплаты и подтвердите платеж, прежде чем на него полагаться.
+
+## Предварительные требования
+
+- Магазин PapelShip хотя бы с одним товаром
+- Ключ Store API (`pk_live_...`) с разрешением `orders:write` и ID вашего магазина для заголовка `x-store-hash`
+
+<Tip>
+  И то и другое находится в [панели управления PapelShip](https://app.papelship.com) в настройках API вашего магазина. См. [Аутентификация](/ru/guides/authentication).
+</Tip>
+
+<Steps>
+  <Step title="Создайте заказ">
+    Передайте email клиента и товары. Добавьте заголовок `Idempotency-Key`, чтобы повторные запросы никогда не создавали второй заказ.
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST https://app.papelship.com/api/v1/invoices \
+      -H "x-api-key: pk_live_your_key" \
+      -H "x-store-hash: your_store_id" \
+      -H "Idempotency-Key: WEB-1042" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "customer_email": "buyer@example.com",
+        "items": [{ "product_id": "a1B2c3D4e5F6", "quantity": 1 }],
+        "metadata": { "order_ref": "WEB-1042" }
+      }'
+    ```
+
+    ```javascript Node.js
+    const res = await fetch("https://app.papelship.com/api/v1/invoices", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.PAPELSHIP_API_KEY,
+        "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+        "Idempotency-Key": order.id,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customer_email: order.email,
+        items: [{ product_id: "a1B2c3D4e5F6", quantity: 1 }],
+        metadata: { order_ref: order.id },
+      }),
+    });
+    const { invoice } = await res.json();
+    ```
+
+    ```python Python
+    import os, requests
+    
+    res = requests.post(
+        "https://app.papelship.com/api/v1/invoices",
+        headers={
+            "x-api-key": os.environ["PAPELSHIP_API_KEY"],
+            "x-store-hash": os.environ["PAPELSHIP_STORE_ID"],
+            "Idempotency-Key": order_id,
+        },
+        json={
+            "customer_email": "buyer@example.com",
+            "items": [{"product_id": "a1B2c3D4e5F6", "quantity": 1}],
+            "metadata": {"order_ref": order_id},
+        },
+    )
+    invoice = res.json()["invoice"]
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Отправьте клиента на страницу оплаты">
+    Ответ содержит заказ с полем `checkout_url`. Перенаправьте туда клиента, чтобы он оплатил любым способом, который принимает ваш магазин.
+
+    ```json Ответ (201)
+    {
+      "success": true,
+      "invoice": {
+        "id": "c35ffd-19a1b2c3d4e-8c7a20",
+        "status": "pending",
+        "currency": "USD",
+        "total_cents": 3499,
+        "checkout_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+        "expires_at": "2026-10-04T15:00:00.000Z"
+      }
+    }
+    ```
+
+    Сохраните `invoice.id` вместе со своим заказом. Неоплаченные заказы истекают через 3 часа. Чтобы сразу списать оплату с карты или показать форму карты на своем сайте, см. [PapelPay](/ru/papelpay/overview).
+  </Step>
+  <Step title="Подтвердите платеж">
+    Никогда не полагайтесь только на возврат клиента на ваш сайт. Слушайте вебхук `order.completed` или прочитайте заказ на своем сервере:
+
+    ```bash
+    curl https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20 \
+      -H "x-api-key: pk_live_your_key" \
+      -H "x-store-hash: your_store_id"
+    ```
+
+    Заказ оплачен и доставлен, когда `status` равен `completed`.
+  </Step>
+</Steps>
+
+<Warning>
+  Храните API-ключ на своем сервере. Никогда не включайте его в браузерный код, мобильные приложения или десктопные клиенты.
+</Warning>
+
+## Следующие шаги
+
+<Columns cols={2}>
+  <Card title="Заказы" icon="receipt" href="/ru/user-api/orders">
+    Физические товары, статусы, отмена и возвраты.
+  </Card>
+
+  <Card title="PapelPay" icon="credit-card" href="/ru/papelpay/overview">
+    Оплата картой, подписки и форма карты на вашем сайте.
+  </Card>
+</Columns>

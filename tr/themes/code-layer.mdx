@@ -1,0 +1,72 @@
+---
+title: "React temaları için kod katmanı"
+sidebarTitle: "Kod katmanı"
+description: "Görsel düzenleyiciden çıkmadan Nightfall, Ship, Circuit, Arsenal, MarketPro ve Vanguard üzerine kod bölümleri, CSS ve JavaScript ekleyin."
+---
+
+Hazır temalar Nightfall, Ship, Circuit, Arsenal, MarketPro ve Vanguard olduğu gibi kalır. Kod katmanı, bunların üzerine kendi kodunuzu eklemenizi ve görsel olarak düzenlemeye devam etmenizi sağlar.
+
+## Tema kod paketi
+
+Her mağaza, her hazır tema için bir **tema kod paketi** alır. Paketi, herhangi bir tema kopyası gibi kod düzenleyicide açarsınız. Bir paket yalnızca şunları içerir:
+
+| Klasör | İçerik |
+| --- | --- |
+| `sections/` | Kod bölümleri (`{% schema %}` bloğu olan `.liquid` dosyaları) |
+| `snippets/` | Bölümleriniz için parçalar |
+| `assets/` | Tema stillerinden sonra yüklenen `theme.css` ve tema sayfalarında ertelenmiş olarak yüklenen `theme.js` |
+| `locales/` | Bölümleriniz için çeviriler |
+
+Tema JavaScript'i ödeme, giriş veya hesap sayfalarında asla yüklenmez.
+
+## Görsel düzenleyicide kod bölümleri
+
+`{% schema %}` bloğu olan her `sections/<name>.liquid`, görsel düzenleyicinin **Bölüm ekle** listesinde **Tema kodu** altında görünür. Ayar formu schema'dan gelir, bu yüzden bir kod bölümü kod yazmadan da tamamen düzenlenebilir kalır. Sıralama, gizleme, çoğaltma ve silme hazır bölümlerdeki gibi çalışır.
+
+Schema'yı kodda değiştirdiğinizde form hemen güncellenir. Yeni ayarlar varsayılan değerlerini alır; kaldırılan ayarlar yok sayılır ve değerleri saklanır.
+
+## CSS'te bölüm id'leri
+
+Bir kod bölümünde `section.id` değeri `code:<name>` olur. `:` karakteri CSS seçicilerini (`#{{ section.id }}-yearly:checked` sessizce yok sayılır) ve `#id` aramalarını bozar. `{% style %}` içinde ve `id=` / `for=` özniteliklerinde `section.css_id` (`code-<name>`) ya da `{{ value | css_id }}` kullanın. Kod düzenleyici ile MCP `validate` / `save_draft`, bu yerlerde ham bir `section.id` için uyarı verir; düzenleyicinin hızlı düzeltmesi **Use section.css_id**'dir.
+
+Etiketler, radio/checkbox geçişleri, `<details>` ve seçim kutuları görsel düzenleyici tuvalinde çalışır. Bağlantılara ve butonlara tıklamak için üst çubukta **Etkileşim**'i açın (ya da `I` tuşuna basın veya `Alt` tuşunu basılı tutun).
+
+## Hazır bir bölümün kodunu düzenleyin
+
+Hazır bir bölümü ayırmak için o bölümde **Kodu düzenle**'yi seçin. Bölümün Liquid ikizi aynı markup ve sınıf adlarıyla paketinize kopyalanır; böylece birebir aynı görünür ve ayarlarını korur. **Hazır bölüme geri dön** orijinal bölümü geri getirir.
+
+## Ticaret ve ödeme
+
+Kod bölümleri uygulama bloklarıyla satış yapar. Script gerektirmezler:
+
+```liquid
+{% app_block 'add_to_cart', product_id: product.id %}
+{% app_block 'buy_now', product_id: product.id, mode: 'embed', label: 'Buy' %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+- `buy_now` ve `checkout_button` varsayılan olarak ödeme sayfasına gider. `mode: 'embed'` ödeme açılır penceresini sayfanızın üzerinde açar.
+- `add_to_cart` ve `cart_count` platformun sepet çekmecesini açar. Temanın sepet rozeti senkron kalır.
+- `reviews_widget` ve `powered_by` kod bölümlerinde çalışmaz. `currency_selector` için `currencies: 'USD,EUR'` gerekir.
+- Kod bölümlerinde `shop`, `collections`, `all_products`, `request` ve `localization` bulunur. `product`, `collection` veya `routes` bulunmaz.
+- `window.PapelShip`, kod bölümleri bir uygulama bloğu veya bir `data-ps` bağlaması içeren sayfalarda, sayfa yüklendikten sonra yüklenir. `assets/theme.js` içinde `papelship:sdk-ready` olayını bekleyin.
+
+Bkz. [Ticaret ve ödeme](/tr/themes/commerce) ve [Uygulama blokları](/tr/themes/app-blocks).
+
+## Yayınlama
+
+Canlı sayfalar paketin **yayınlanmış** sürümünü gösterir. Kaydedilen dosyalar yalnızca görsel düzenleyicide ve kod düzenleyici önizlemelerinde görünür.
+
+1. Dosyaları kod düzenleyicide düzenleyip kaydedin ya da bir yapay zeka ajanının taslak kaydetmesine izin verin.
+2. Önizlemeyi kontrol edin.
+3. Kod düzenleyicide veya görsel düzenleyicide **Yayınla**'ya basın. İkisi aynı butondur ve kaç değişikliğin yayınlanmadığını gösterir.
+
+Yayınlama önce paketin her dosyasını doğrular. Herhangi biri başarısız olursa canlı mağazada hiçbir şey değişmez.
+
+<Note>
+  MCP ile bağlanan yapay zeka ajanları paket dosyalarını kaydedebilir ancak asla yayınlayamaz. Bkz. [Yapay zeka ajanları (MCP)](/tr/themes/mcp).
+</Note>
+
+## Güvenlik
+
+Paket dosyaları tasarımlar gibi, hem kaynakta hem de işlenmiş çıktıda taranır. Zengin metin ve HTML ayarları sunucuda temizlenir.

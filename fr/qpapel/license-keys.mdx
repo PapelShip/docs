@@ -1,0 +1,72 @@
+---
+title: "Clés de licence"
+description: "Émettez et gérez les clés de licence de vos clients avec liaison HWID."
+---
+
+## Types de clés
+
+| `key_type` | Comportement |
+| :-- | :-- |
+| `time_limited` | Valide pendant `days` jours. Par défaut. |
+| `hour_limited` | `days` est interprété en heures. |
+| `single_use` | Peut être activée une seule fois. |
+| `multi_use` | Peut être activée jusqu'à `max_uses` fois. |
+| `time_restricted` | Valide uniquement dans une plage horaire définie. |
+
+## Créer des clés
+
+```bash
+curl -X POST https://app.papelship.com/api/qpapel/v1/keys \
+  -H "Authorization: Bearer pk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 101,
+    "days": 30,
+    "key_type": "time_limited",
+    "bind_hwid": true,
+    "auto_start": false,
+    "amount": 1,
+    "note": "Order #1042"
+  }'
+```
+
+<ParamField body="bind_hwid" default="true" type="boolean">
+  Verrouille la clé sur la première machine qui l'active.
+</ParamField>
+
+<ParamField body="auto_start" default="false" type="boolean">
+  Si `true`, le décompte démarre immédiatement. Si `false`, il démarre à la première utilisation.
+</ParamField>
+
+<ParamField body="amount" default="1" type="integer">
+  Générez jusqu'à 100 clés en un seul appel.
+</ParamField>
+
+## Gérer une clé
+
+<AccordionGroup>
+  <Accordion title="Réinitialiser le HWID" icon="rotate">
+    Permettez à un client de passer sur un nouveau PC : `POST /keys/{id}/reset-hwid`.
+  </Accordion>
+
+  <Accordion title="Geler et dégeler" icon="snowflake">
+    Mettez le décompte en pause pendant une interruption de service avec `POST /keys/{id}/freeze`. Reprenez avec `DELETE /keys/{id}/freeze`.
+  </Accordion>
+
+  <Accordion title="Prolonger" icon="clock">
+    Ajoutez des jours avec `POST /keys/{id}/add-time` et `{ "days": 7 }`.
+  </Accordion>
+
+  <Accordion title="Bannir et débannir" icon="ban">
+    Révoquez avec `POST /keys/{id}/ban` et un `reason`. Rétablissez avec `POST /keys/{id}/unban`.
+  </Accordion>
+</AccordionGroup>
+
+## Trouver les clés qui expirent bientôt
+
+Listez les clés qui expirent dans les sept prochains jours pour envoyer des rappels de renouvellement :
+
+```bash
+curl "https://app.papelship.com/api/qpapel/v1/keys?expiresInDays=7&sortBy=end_time&sortOrder=ASC" \
+  -H "Authorization: Bearer pk_live_your_key"
+```

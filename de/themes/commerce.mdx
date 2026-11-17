@@ -1,0 +1,80 @@
+---
+title: "Commerce und Checkout"
+sidebarTitle: "Commerce & Checkout"
+description: "In den Warenkorb, Sofort kaufen und Checkout aus jedem Theme: die Checkout-Seite oder das eingebettete Checkout-Popup, mit App-Blöcken, data-ps-Attributen oder window.PapelShip."
+---
+
+Jede Theme-Art verkauft auf dieselbe Weise: Plattformblöcke platzieren die Buttons auf der Seite, und die Zahlung erfolgt immer auf der PapelShip Checkout-Seite oder in deren Popup. Ein Theme erfasst niemals Kartendaten.
+
+## Checkout-Seite oder Popup
+
+`buy_now`, `checkout_button`, `data-ps="buy"` und `PapelShip.checkout()` akzeptieren einen `mode`:
+
+| mode | Was passiert |
+| --- | --- |
+| `page` (Standard) | Der Browser wechselt zur Checkout-Seite der Plattform: `<store>/checkout` oder die Sofort-kaufen-URL für ein einzelnes Produkt. |
+| `embed` | Der Checkout öffnet sich als Popup über der aktuellen Seite, in einem PapelShip Frame. Wenn das Popup nicht geladen werden kann, öffnet sich stattdessen die Checkout-Seite. Das Bezahlen des Warenkorbs leert ihn. |
+
+`add_to_cart` fügt immer zum Warenkorb hinzu und öffnet die Warenkorb-Schublade.
+
+## Liquid Themes und Code-Sections
+
+App-Blöcke benötigen kein Skript. Übergeben Sie die `id` (oder `hash_id`) des Produkts als `product_id`:
+
+```liquid
+{% for p in all_products limit: 3 %}
+  <h3>{{ p.title | escape }}</h3>
+  <p>{{ p.price | money }}</p>
+  {% app_block 'add_to_cart', product_id: p.id %}
+  {% app_block 'buy_now', product_id: p.id, mode: 'embed', label: 'Buy' %}
+{% endfor %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+<Note>
+  `product` funktioniert als Alias von `product_id`, und ein Produktobjekt wird ebenfalls akzeptiert. `product_id` hat Vorrang, wenn beide angegeben sind.
+</Note>
+
+## Hochgeladene Designs (und beliebiges Markup)
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed","label":"Buy"}'></div>
+
+<!-- oder Ihr eigener Button -->
+<button type="button" data-ps="buy" data-ps-product-id="PRODUCT_ID" data-ps-mode="embed">Buy</button>
+```
+
+## Aus JavaScript
+
+`window.PapelShip` kann nach Ihrem Skript geladen werden. Dieser Helfer funktioniert in jeder Theme-Art:
+
+```js
+function withPapelShip(fn) {
+  var done = false;
+  function go() { if (!done && window.PapelShip && window.PapelShip.version) { done = true; fn(window.PapelShip); } }
+  go();
+  if (!done) { window.addEventListener('papelship:sdk-ready', go); document.addEventListener('DOMContentLoaded', go); }
+}
+
+withPapelShip(function (ps) {
+  document.getElementById('buy').onclick = function () {
+    ps.checkout({ products: [{ id: 'PRODUCT_ID' }], mode: 'embed', onPaid: function (d) { console.log(d.invoiceId); } });
+  };
+});
+```
+
+## Wo window.PapelShip verfügbar ist
+
+| Theme-Art | Geladen | Zeitpunkt |
+| --- | --- | --- |
+| Liquid Theme | Auf jeder Theme-Seite | Verzögert am Anfang von `<head>`. Verzögerte Theme-Skripte (`script_tag`) können es verwenden. |
+| Hochgeladenes Design | Nur auf Seiten mit einem `data-ps`-Binding oder einem `data-app-block`-Platzhalter | Verzögert am Anfang von `<head>`. Rufen Sie es aus `DOMContentLoaded` auf. Eine Seite, die nur Skript verwendet, benötigt einen Platzhalter, zum Beispiel `<div data-app-block="cart_count" hidden></div>`. |
+| Code-Section / herausgelöster Zwilling | Auf Seiten, deren Code-Sections einen App-Block oder ein `data-ps`-Binding enthalten, und immer im Builder | Wird nach der Hydration der Seite geladen, nachdem `assets/theme.js` ausgeführt wurde. Warten Sie auf `papelship:sdk-ready`. Inline-`<script>` wird in Code-Sections abgelehnt. |
+
+Inline-`<script>`-Tags werden auf Liquid-Theme-Seiten nicht ausgeführt. Legen Sie Skripte in `assets/*.js` ab und laden Sie sie mit `{{ 'x.js' | asset_url | script_tag }}`.
+
+## Testen
+
+Die Builder-Arbeitsfläche wählt Elemente aus, wenn Sie darauf klicken, daher tun Buttons dort nichts. Aktivieren Sie **Interagieren** in der oberen Leiste des Builders (drücken Sie `I` oder halten Sie `Alt` gedrückt) oder öffnen Sie die Vorschau.
+
+Unter [App-Blöcke](/de/themes/app-blocks) finden Sie jeden Block, seine Argumente und wo er funktioniert.

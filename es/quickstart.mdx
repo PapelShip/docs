@@ -1,0 +1,121 @@
+---
+title: "Inicio rápido"
+description: "Cree su primer pedido con la Store API de PapelShip, envíe al cliente al checkout y confirme el pago mediante webhook o consultando el pedido."
+---
+
+Esta guía le acompaña a través de un pedido completo con la Store API de PapelShip: cree un pedido para uno de sus productos, envíe al cliente al checkout alojado y confirme el pago antes de darlo por válido.
+
+## Requisitos previos
+
+- Una tienda de PapelShip con al menos un producto
+- Una clave de Store API (`pk_live_...`) con el permiso `orders:write`, y el ID de su tienda para el encabezado `x-store-hash`
+
+<Tip>
+  Encontrará ambos en el [panel de PapelShip](https://app.papelship.com), en la configuración de API de su tienda. Consulte [Autenticación](/es/guides/authentication).
+</Tip>
+
+<Steps>
+  <Step title="Cree un pedido">
+    Envíe el correo electrónico del cliente y los productos. Agregue un encabezado `Idempotency-Key` para que los reintentos nunca creen un segundo pedido.
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST https://app.papelship.com/api/v1/invoices \
+      -H "x-api-key: pk_live_your_key" \
+      -H "x-store-hash: your_store_id" \
+      -H "Idempotency-Key: WEB-1042" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "customer_email": "buyer@example.com",
+        "items": [{ "product_id": "a1B2c3D4e5F6", "quantity": 1 }],
+        "metadata": { "order_ref": "WEB-1042" }
+      }'
+    ```
+
+    ```javascript Node.js
+    const res = await fetch("https://app.papelship.com/api/v1/invoices", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.PAPELSHIP_API_KEY,
+        "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+        "Idempotency-Key": order.id,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customer_email: order.email,
+        items: [{ product_id: "a1B2c3D4e5F6", quantity: 1 }],
+        metadata: { order_ref: order.id },
+      }),
+    });
+    const { invoice } = await res.json();
+    ```
+
+    ```python Python
+    import os, requests
+    
+    res = requests.post(
+        "https://app.papelship.com/api/v1/invoices",
+        headers={
+            "x-api-key": os.environ["PAPELSHIP_API_KEY"],
+            "x-store-hash": os.environ["PAPELSHIP_STORE_ID"],
+            "Idempotency-Key": order_id,
+        },
+        json={
+            "customer_email": "buyer@example.com",
+            "items": [{"product_id": "a1B2c3D4e5F6", "quantity": 1}],
+            "metadata": {"order_ref": order_id},
+        },
+    )
+    invoice = res.json()["invoice"]
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Envíe al cliente al checkout">
+    La respuesta contiene el pedido con su `checkout_url`. Redirija al cliente allí para que pague con cualquier método que acepte su tienda.
+
+    ```json Respuesta (201)
+    {
+      "success": true,
+      "invoice": {
+        "id": "c35ffd-19a1b2c3d4e-8c7a20",
+        "status": "pending",
+        "currency": "USD",
+        "total_cents": 3499,
+        "checkout_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+        "expires_at": "2026-10-04T15:00:00.000Z"
+      }
+    }
+    ```
+
+    Guarde `invoice.id` junto con su pedido. Los pedidos no pagados caducan después de 3 horas. Para cobrar una tarjeta de inmediato, o para mostrar el formulario de tarjeta en su propio sitio, consulte [PapelPay](/es/papelpay/overview).
+  </Step>
+  <Step title="Confirme el pago">
+    Nunca confíe únicamente en que el cliente regrese a su sitio. Escuche el webhook `order.completed` o consulte el pedido desde su servidor:
+
+    ```bash
+    curl https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20 \
+      -H "x-api-key: pk_live_your_key" \
+      -H "x-store-hash: your_store_id"
+    ```
+
+    El pedido está pagado y entregado cuando `status` es `completed`.
+  </Step>
+</Steps>
+
+<Warning>
+  Mantenga su clave de API en su servidor. Nunca la incluya en código de navegador, aplicaciones móviles ni clientes de escritorio.
+</Warning>
+
+## Próximos pasos
+
+<Columns cols={2}>
+  <Card title="Pedidos" icon="receipt" href="/es/user-api/orders">
+    Productos físicos, estados, cancelación y reembolsos.
+  </Card>
+
+  <Card title="PapelPay" icon="credit-card" href="/es/papelpay/overview">
+    Pagos con tarjeta, suscripciones y el formulario de tarjeta en su sitio.
+  </Card>
+</Columns>

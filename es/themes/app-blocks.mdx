@@ -1,0 +1,137 @@
+---
+title: "Referencia de bloques de aplicación"
+sidebarTitle: "Bloques de aplicación"
+description: "Todos los bloques de la plataforma: argumentos, alias, lo que renderizan, el comportamiento de ventana emergente, panel o navegación, y qué tipos de tema los admiten."
+---
+
+Los agentes de IA obtienen la misma referencia desde el MCP de temas: la herramienta `get_reference` (tema `app_blocks`) y el recurso `papelship://reference/app-blocks`. El editor de código, `validate` y `save_draft` advierten sobre bloques desconocidos, argumentos desconocidos o con un tipo incorrecto, y bloques que un tipo de tema no admite.
+
+Bloques de la plataforma (`{% app_block %}` / data-app-block): argumentos, comportamiento, compatibilidad por tipo; bloques de página bloqueados.
+
+```liquid
+{% app_block 'buy_now', product_id: product.id, mode: 'embed' %}
+```
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed"}'></div>
+```
+
+| Bloque | Comportamiento | liquid | design | code | twin |
+| --- | --- | --- | --- | --- | --- |
+| `add_to_cart` | panel | sí | sí | sí\* | sí\* |
+| `buy_now` | navegación | sí | sí | sí | sí |
+| `cart_count` | panel | sí | sí | sí\* | sí\* |
+| `cart_drawer` | panel | sí | sí | sí\* | sí\* |
+| `checkout_button` | navegación | sí | sí | sí | sí |
+| `currency_selector` | en línea | sí | sí | sí\* | sí\* |
+| `language_selector` | navegación | sí | sí | sí | sí |
+| `newsletter_form` | formulario | sí | sí | sí | sí |
+| `powered_by` | en línea | sí | no | no | no |
+| `quick_view` | diálogo | sí | sí | sí | sí |
+| `recently_viewed` | en línea | sí | sí | sí\* | sí\* |
+| `reviews_widget` | en línea | sí | sí | no | no |
+| `variant_picker` | en línea | sí | sí | sí | sí |
+| `wishlist_button` | en línea | sí | sí | sí | sí |
+
+`sí*`: funciona, con una nota a continuación. En las secciones de código y en los equivalentes extraídos, los bloques del carrito usan el panel del carrito de la plataforma, no el panel propio del tema React; la insignia del carrito del tema se mantiene sincronizada.
+
+## add_to_cart
+
+Botón de agregar al carrito para un producto. Agrega al carrito compartido de la tienda y abre el panel del carrito. Si un producto tiene varias variantes y no hay ninguna elegida, el variant_picker que está a su lado lo pregunta; si no lo hay, se abre la página del producto.
+
+| Argumento | Tipo | Obligatorio | Alias | Por defecto | Descripción |
+| --- | --- | --- | --- | --- | --- |
+| `product_id` | product | sí | `product` |  | ID o hash ID del producto (product.id / product.hash_id). También se acepta un objeto de producto. |
+| `variant_id` | id |  | `variant` |  | ID de la variante; por defecto: la variante elegida en un variant_picker a su lado o, si no, la variante por defecto. |
+| `quantity` | integer |  |  | `1` | Cantidad (1 o más). |
+| `label` | string |  |  |  | Texto del botón (por defecto "Add to cart", traducido). Se ignora cuando el marcador de posición tiene su propio marcado. |
+| `mode` | enum (`page`, `embed`) |  |  |  | Sin efecto: add_to_cart siempre agrega al carrito. Use buy_now para el checkout. |
+
+## buy_now
+
+Botón de compra inmediata para un producto. `mode: 'page'` (por defecto) lleva al checkout de la plataforma solo con este producto (el carrito se conserva). `mode: 'embed'` abre la ventana emergente de checkout sobre la página (iframe de la plataforma; los datos de tarjeta nunca pasan por el tema) y recurre a la página cuando el widget no puede cargarse.
+
+| Argumento | Tipo | Obligatorio | Alias | Por defecto | Descripción |
+| --- | --- | --- | --- | --- | --- |
+| `product_id` | product | sí | `product` |  | ID o hash ID del producto. También se acepta un objeto de producto. |
+| `variant_id` | id |  | `variant` |  | ID de la variante; por defecto: la variante elegida en un variant_picker a su lado. |
+| `quantity` | integer |  |  | `1` | Cantidad (1 o más). |
+| `label` | string |  |  |  | Texto del botón (por defecto "Buy now", traducido). |
+| `mode` | enum (`page`, `embed`) |  |  | `page` | `page` = página de checkout; `embed` = ventana emergente de checkout sobre la página actual. |
+
+## cart_count
+
+Botón del carrito con el número de artículos ("Cart `<n>`"); su propio marcado conserva su aspecto y un hijo `[data-ps-count]` recibe el número. Al hacer clic se abre el panel del carrito. Sin argumentos.
+
+## cart_drawer
+
+Configura el panel deslizante del carrito (líneas, cantidades, descuentos de campaña, barra de envío gratis, venta adicional, checkout). No renderiza nada en su lugar; el primer `cart_drawer` de la página define las opciones.
+
+| Argumento | Tipo | Por defecto | Descripción |
+| --- | --- | --- | --- |
+| `upsell` | string |  | Handle o ID de la colección cuyos productos se ofrecen en el panel. |
+| `upsell_limit` | integer | `3` | Productos de venta adicional que se muestran (1-6). |
+| `upsell_heading` | string |  | Encabezado de la venta adicional (por defecto "You may also like"). |
+| `free_shipping` | boolean | `true` | `false` oculta la barra de progreso del envío gratis. |
+
+## checkout_button
+
+Botón de checkout para todo el carrito (deshabilitado mientras el carrito está vacío). `mode: 'page'` (por defecto) lleva a `<store>/checkout`; `mode: 'embed'` abre la ventana emergente de checkout; el carrito se vacía después del pago.
+
+| Argumento | Tipo | Por defecto | Descripción |
+| --- | --- | --- | --- |
+| `label` | string |  | Texto del botón (por defecto "Checkout", traducido). |
+| `mode` | enum (`page`, `embed`) | `page` | Página de checkout o ventana emergente. |
+
+## currency_selector
+
+Selector de la moneda de visualización (oculto cuando hay menos de dos monedas). Guarda la moneda de visualización (el checkout siempre cobra en la moneda de la tienda) y emite `papelship:currency-change`. En las secciones de código y en los equivalentes, pase `currencies`: esas páginas solo conocen la moneda de la tienda.
+
+| Argumento | Tipo | Descripción |
+| --- | --- | --- |
+| `label` | string | Texto de la etiqueta. |
+| `currencies` | list | Códigos de moneda (`"USD,EUR,TRY"` o un array); por defecto: las monedas de visualización de la tienda. |
+
+## language_selector
+
+Selector del idioma de la tienda (oculto cuando la tienda tiene un solo idioma). Define la cookie de idioma y recarga la página. Argumento: `label`.
+
+## newsletter_form
+
+Suscripción al boletín con una casilla de consentimiento explícito. Envía los datos al endpoint de leads de la plataforma; las vistas previas nunca suscriben. Argumentos: `label`, `placeholder`, `button`, `consent_text`.
+
+## powered_by
+
+El crédito "Powered by PapelShip" (oculto en los planes que permiten ocultarlo). Solo para temas Liquid: las páginas de diseño y los pies de página de los temas React reciben el crédito de la plataforma automáticamente.
+
+## quick_view
+
+Botón de vista rápida para un producto: abre un diálogo con imágenes, precio, variantes y agregar al carrito. Argumentos: `product_id` (obligatorio, alias `product`), `label`.
+
+## recently_viewed
+
+Los productos vistos recientemente por el visitante (desde este navegador); no renderiza nada cuando la lista está vacía. Los productos se registran en las páginas de producto Liquid (las páginas de producto de los temas React no registran visitas). Argumentos: `limit` (4 por defecto, 1-20), `heading`.
+
+## reviews_widget
+
+Reseñas publicadas: las del producto de la página en las páginas de producto o, si no, las de la tienda. No es compatible con las secciones de código ni con los equivalentes (esas páginas no incluyen datos de reseñas; use la sección de reseñas del tema React). Argumentos: `heading`, `limit` (5 por defecto, 1-50), `write` (`true` por defecto; `false` oculta el enlace para escribir una reseña).
+
+## variant_picker
+
+Selector de variantes (grupos de opciones) para un producto. Los `add_to_cart` / `buy_now` del mismo producto en el contenedor común más cercano (o en un elemento `data-ps-scope`) usan la variante elegida; los textos `data-ps` de precio / precio de comparación / inventario la siguen. Argumento: `product_id` (obligatorio, alias `product`).
+
+## wishlist_button
+
+Interruptor de favorito para un producto (un botón de corazón con `aria-pressed`). Se guarda en el navegador y se sincroniza con la cuenta del cliente cuando ha iniciado sesión. Argumento: `product_id` (ID numérico; los hash ID no se guardan en la cuenta).
+
+## Bloques de página bloqueados
+
+| Bloque | Página | Archivo de tema Liquid | Archivo de diseño |
+| --- | --- | --- | --- |
+| `checkout_form` | Página de checkout | `templates/checkout.liquid` | `pages/checkout.liquid` o `.html` |
+| `cart_view` | Página del carrito | `templates/cart.liquid` | `pages/cart.liquid` o `.html` |
+| `customer_login` | Página de inicio de sesión | `templates/customers/login.liquid` | `pages/login.liquid` o `.html` |
+| `customer_account` | Página de la cuenta | `templates/customers/account.liquid` | `pages/account.liquid` o `.html` |
+| `order_track` | Página de seguimiento de pedidos | `templates/customers/track.liquid` | `pages/track.liquid` o `.html` |
+
+Cada uno funciona una sola vez, en su propio archivo de reemplazo. Los paquetes de código de los temas React no tienen reemplazos de página.

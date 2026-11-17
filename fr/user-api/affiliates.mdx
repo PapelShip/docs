@@ -1,0 +1,161 @@
+---
+title: "Programme d'affiliation"
+sidebarTitle: "Affiliés"
+description: "Consultez les partenaires, les conversions et les paiements, invitez des partenaires et réagissez aux webhooks d'affiliation."
+---
+
+Utilisez les points de terminaison d'affiliation pour synchroniser votre programme de partenaires avec vos propres systèmes : lister les partenaires, suivre les commandes attribuées et suivre les paiements.
+
+<Info>
+  Votre boutique doit être approuvée pour le programme d'affiliation. Faites votre demande dans le tableau de bord, sous **Affiliates**. En attendant, chaque point de terminaison d'affiliation renvoie `403` avec le code `FEATURE_NOT_ENABLED`.
+</Info>
+
+## Points de terminaison
+
+| Méthode | Chemin | Description |
+| :-- | :-- | :-- |
+| `GET` | `/affiliates/partners` | Liste les partenaires. Filtrez par `status` ou recherchez avec `q`. |
+| `POST` | `/affiliates/partners` | Invite un partenaire par e-mail. Le partenaire est actif immédiatement. |
+| `GET` | `/affiliates/conversions` | Liste les commandes attribuées avec l'état de commission de chacune. |
+| `GET` | `/affiliates/payouts` | Liste les demandes de paiement. Les demandes en cours apparaissent en premier. |
+
+L'approbation des partenaires, l'examen des conversions signalées et l'envoi des paiements restent dans le tableau de bord.
+
+## Montants et identifiants
+
+- Dans les réponses de l'API, les montants sont des entiers en unités mineures. `commission: 499` en `USD` correspond à 4,99 \$.
+- Les charges utiles des webhooks utilisent les unités majeures. `commission: 4.99` correspond à 4,99 \$.
+- Les partenaires et les paiements utilisent des identifiants publics de 16 caractères. Les conversions utilisent l'`invoice_id` public de la commande.
+
+## Pagination
+
+Les points de terminaison de liste renvoient 25 éléments par page avec un `next_cursor`. Renvoyez-le dans `cursor` pour obtenir la page suivante. `next_cursor` vaut `null` sur la dernière page.
+
+```bash
+curl "https://app.papelship.com/api/v1/affiliates/conversions?status=valid&cursor=1832" \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```
+
+Chaque liste renvoie aussi `counts`, le nombre d'enregistrements par statut :
+
+```json
+{
+  "success": true,
+  "conversions": [ ... ],
+  "next_cursor": 1807,
+  "counts": { "valid": 40, "flagged": 2, "rejected": 1 }
+}
+```
+
+## Inviter un partenaire
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/affiliates/partners \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "creator@example.com", "name": "Alex Creator" }'
+```
+
+```json Réponse (201)
+{ "success": true, "id": "7fKq2LmN9xPa3RtB" }
+```
+
+Les clés en lecture seule ne peuvent pas inviter de partenaires.
+
+## Attribution des commandes
+
+Une commande est créditée à un partenaire de l'une des façons suivantes, par ordre de priorité :
+
+1. **Coupon partenaire.** L'acheteur a utilisé un coupon lié au partenaire.
+2. **Lien de suivi.** L'acheteur a ouvert un lien partenaire : `https://your-store.com/any-page?ref=CODE` ou `https://your-store.com/r/CODE`. La vitrine mémorise le clic pendant la durée de validité du cookie du programme.
+3. **API.** Vous avez transmis `affiliateCode` lors de la création de la facture. La conversion a `source: "api"`.
+
+La conversion est rejetée lorsque l'acheteur est le partenaire lui-même, ou lorsqu'un autre coupon est utilisé et que le programme n'autorise pas le cumul de coupons. Elle est signalée pour examen lorsque la commande présente un score de fraude élevé ou que le partenaire reçoit un nombre inhabituel de commandes en peu de temps.
+
+## États de commission
+
+| `commission_state` | Signification |
+| :-- | :-- |
+| `unpaid` | La commande n'est pas encore terminée. |
+| `held` | Signalée. En attente de votre examen dans le tableau de bord. |
+| `pending` | Dans la période de rétention. Voir `available_at`. |
+| `available` | Le partenaire peut demander un paiement. |
+| `none` | La conversion a été rejetée. |
+
+Les remboursements annulent automatiquement la commission. `commission` correspond toujours au montant net.
+
+## Webhooks
+
+Abonnez-vous à ces événements dans **Developers › Webhooks**. Ils utilisent la même enveloppe et le même en-tête `PapelShip-Signature` que les événements de commande.
+
+| Événement | Déclenchement |
+| :-- | :-- |
+| `affiliate.partner_applied` | Une personne postule à votre programme depuis la vitrine. |
+| `affiliate.conversion` | Une commande attribuée est terminée et la commission est enregistrée. Envoyé une seule fois par commande. |
+| `affiliate.payout_requested` | Un partenaire demande un paiement. |
+| `affiliate.payout_sent` | Vous marquez un paiement comme envoyé. |
+
+```json affiliate.conversion
+{
+  "id": "evt_9b2c...",
+  "object": "event",
+  "type": "affiliate.conversion",
+  "created": 1791100000,
+  "livemode": true,
+  "store": { "id": "0bHQn0bU2dei", "name": "Acme", "slug": "acme" },
+  "data": {
+    "object": {
+      "object": "affiliate_conversion",
+      "order_id": "c35ffd-19a1b2c3d4e-8c7a20",
+      "partner": { "id": "7fKq2LmN9xPa3RtB", "email": "creator@example.com" },
+      "source": "link",
+      "link_code": "alex",
+      "status": "valid",
+      "commission": 4.99,
+      "currency": "USD",
+      "available_at": "2026-10-18T12:00:00.000Z",
+      "created_at": "2026-10-04T12:00:00.000Z"
+    }
+  }
+}
+```
+
+```json affiliate.payout_sent
+{
+  "type": "affiliate.payout_sent",
+  "data": {
+    "object": {
+      "object": "affiliate_payout",
+      "id": "Qm3vX8kL2pN7rT4w",
+      "partner": { "id": "7fKq2LmN9xPa3RtB", "email": "creator@example.com" },
+      "amount": 125,
+      "currency": "USD",
+      "method": "crypto",
+      "coin": "USDT",
+      "network": "TRC20",
+      "amount_coin": 125.04,
+      "status": "sent",
+      "tx_hash": "a1b2c3...",
+      "created_at": "2026-10-02T09:30:00.000Z"
+    }
+  }
+}
+```
+
+## Erreurs
+
+Les erreurs d'affiliation incluent un `code` lisible par machine :
+
+```json
+{ "success": false, "code": "ALREADY_MEMBER", "error": "This email is already a partner of your store." }
+```
+
+| Code | Statut | Signification |
+| :-- | :-- | :-- |
+| `FEATURE_NOT_ENABLED` | `403` | La boutique n'est pas approuvée pour le programme d'affiliation. |
+| `INVALID_EMAIL` | `400` | L'adresse e-mail n'est pas valide. |
+| `ALREADY_MEMBER` | `409` | L'adresse e-mail est déjà celle d'un partenaire de cette boutique. |
+| `BANNED` | `409` | Le partenaire est banni de cette boutique. |
+| `NOT_FOUND` | `404` | Le partenaire ou l'enregistrement n'existe pas. |

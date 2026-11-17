@@ -1,0 +1,63 @@
+---
+title: "Відправлення фізичних замовлень"
+sidebarTitle: "Доставка"
+description: "Отримуйте список замовлень для відправлення, створюйте відправлення з відстеженням, оновлюйте статус доставки та обробляйте повернення."
+---
+
+Якщо ваш магазин продає фізичні товари, використовуйте ці ендпоінти, щоб підключити свій склад або програмне забезпечення для доставки. Ваш магазин має бути схвалений для фізичних товарів у розділі **Settings › Physical goods**.
+
+## 1. Знайдіть замовлення для відправлення
+
+```bash
+curl "https://app.papelship.com/api/v1/orders?status=to_ship" \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+`to_ship` повертає оплачені замовлення з ще не відправленими позиціями, спочатку найстаріші. Інші фільтри: `in_transit`, `delivered`, `issues` (невдалі доставки, повернення) і `all`.
+
+`GET /orders/{invoiceId}` повертає адресу, кожну позицію з `shipped_quantity`, відправлення, повернення та нотатки.
+
+## 2. Створіть відправлення
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "carrier_code": "dhl_express", "tracking_number": "1234567890" }'
+```
+
+- Не вказуйте `items`, щоб відправити все, що залишилося. Для часткового відправлення надішліть `items: [{ "invoice_item_id": 55, "qty": 1 }]`.
+- Клієнт отримує лист із посиланням для відстеження. Надішліть `notify_customer: false`, щоб це пропустити.
+- Посилання для відстеження формується на основі перевізника. `GET /shipping` повертає коди перевізників.
+
+## 3. Оновіть статус
+
+```bash
+curl -X PATCH https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments/88 \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "delivered", "location": "London" }'
+```
+
+Статуси: `label_created`, `shipped`, `in_transit`, `out_for_delivery`, `delivered`, `failed_attempt`, `returned_to_sender`. Кожен із них додається до хронології відстеження, яку бачить клієнт. `fulfillment_status` замовлення автоматично змінюється слідом за відправленнями.
+
+## Повернення
+
+Клієнти запитують повернення зі сторінки свого замовлення в межах строку повернення товару. Обробляйте їх через `PATCH /orders/{invoiceId}/returns/{returnId}`:
+
+| `action` | Результат |
+| :-- | :-- |
+| `approve` | Приймає запит. `location_id` визначає, куди надсилати посилку. |
+| `reject` | Відхиляє запит. `note` є обов'язковим і надсилається клієнту. |
+| `receive` | Ви отримали посилку. `restock: true` повертає товари до залишків. |
+| `refund` | Фіксує `refund_cents`. Поверніть кошти самостійно, потім викличте `POST /invoices/{id}/refund`. |
+| `close` | Закриває повернення. |
+
+`GET /returns?status=requested` повертає відкриті запити за всіма замовленнями.
+
+## Налаштування доставки
+
+Переглядайте та змінюйте зони, тарифи та складські локації через `/shipping/zones` і `/shipping/locations`. Розрахуйте вартість доставки кошика через `POST /shipping/quote`.

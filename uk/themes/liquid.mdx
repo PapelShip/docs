@@ -1,0 +1,132 @@
+---
+title: "Теми та Liquid"
+sidebarTitle: "Теми Liquid"
+description: "Структура теми Liquid у PapelShip, об'єкти, фільтри та теги, які можна використовувати, і як оформлюються сторінки платформи."
+---
+
+Тема Liquid є пакетом текстових файлів, які рендеряться на сервері за допомогою [Liquid](https://shopify.github.io/liquid/). Якщо ви знайомі з темами Shopify, структура буде вам звичною.
+
+## Папки
+
+| Папка | Містить |
+| --- | --- |
+| `layout/` | `theme.liquid`, оболонку сторінки. Вона виводить `{{ content_for_layout }}`. |
+| `templates/` | По одному шаблону на кожен тип сторінки, у форматі JSON (`index.json`) або Liquid. |
+| `sections/` | Багаторазові секції сторінки з блоком `{% schema %}`. |
+| `blocks/` | Блоки теми, які можуть містити секції. |
+| `snippets/` | Часткові шаблони, які підключаються через `{% render %}`. |
+| `assets/` | CSS, JavaScript, SVG і шрифти. |
+| `config/` | `settings_schema.json` (налаштування теми) і `settings_data.json` (їхні значення). |
+| `locales/` | Файли перекладів, наприклад `en.default.json`. |
+
+Кожній темі потрібні `layout/theme.liquid`, `templates/index.json` і `config/settings_schema.json`.
+
+## Секції та схема
+
+Секція оголошує свої налаштування та блоки в блоці `{% schema %}`. Візуальний редактор будує на його основі форму налаштувань.
+
+```liquid sections/hero.liquid
+<section class="hero">
+  <h1>{{ section.settings.heading | escape }}</h1>
+  {% for block in section.blocks %}
+    <p>{{ block.settings.text | escape }}</p>
+  {% endfor %}
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "settings": [
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Welcome" }
+  ],
+  "blocks": [
+    { "type": "line", "name": "Line", "settings": [{ "type": "text", "id": "text", "label": "Text" }] }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}
+```
+
+Значення налаштувань із форматованим текстом і HTML очищаються на сервері під час збереження.
+
+## Об'єкти
+
+| Об'єкт | Поля |
+| --- | --- |
+| `shop` | `name`, `slug`, `logo`, `currency`, `locale`, `languages`, `url`, `settings` |
+| `product` | У шаблонах товару: `id`, `hash_id`, `title`, `handle`, `url`, `price`, `compare_at_price`, `on_sale`, `available`, `featured_image`, `images`, `description`, `short_description`, `rating`, `rating_count`, `options`, `variants`, `variant_count`, `default_variant_id`, `requires_shipping`, `campaign`, `meta` |
+| `collection` | У шаблонах колекції: `title`, `handle`, `url`, `products_count`, `products` |
+| `collections` | Усі колекції, кожна з полями колекції |
+| `all_products` | Усі товари магазину, кожен з полями товару |
+| `settings` | Значення налаштувань теми |
+| `section` | У секції: `id`, `css_id`, `type`, `settings`, `blocks` |
+| `request` | `locale`, `page_type`, `path`, `design_mode` |
+| `localization` | `language`, `available_languages`, `currency` |
+
+## Фільтри
+
+| Фільтр | Що робить |
+| --- | --- |
+| `money` | Форматує центи як ціну |
+| `money_with_currency` | Ціна з кодом валюти |
+| `money_without_currency` | Лише число |
+| `t` | Перекладає ключ із ваших файлів локалізації |
+| `image_url` | URL зображення, за потреби зі зміненим розміром |
+| `image_tag` | Повний тег `<img>` |
+| `asset_url` | URL файлу в `assets/` |
+| `stylesheet_tag` | Тег `<link rel="stylesheet">` |
+| `script_tag` | Тег `<script>` |
+| `handleize` | Створює безпечний для URL handle |
+| `json` | Безпечний JSON для скриптів |
+| `product_url` | Посилання на сторінку товару |
+| `collection_url` | Посилання на сторінку колекції |
+| `store_url` | Посилання на шлях магазину |
+| `escape` | Екранує текст для HTML |
+| `css_id` | Робить значення безпечним для CSS-селекторів і атрибутів id |
+
+<Warning>
+  Екрануйте весь текст товарів і клієнтів за допомогою `| escape`. Назви та описи пишуть люди.
+</Warning>
+
+## Теги
+
+| Тег | Що робить |
+| --- | --- |
+| `{% section %}` | Рендерить статичну секцію |
+| `{% sections %}` | Рендерить групу секцій |
+| `{% render %}` | Рендерить сніпет. Сніпети не бачать змінних сторінки, тож передавайте те, що їм потрібно: `{% render 'card', product: product %}` |
+| `{% app_block %}` | Рендерить блок платформи, наприклад `{% app_block 'add_to_cart', product_id: product.id %}` (`product` є псевдонімом). Див. [App blocks](/uk/themes/app-blocks) і [Комерція та оформлення замовлення](/uk/themes/commerce). |
+| `{% schema %}` | Метадані секції, ніколи не рендеряться |
+
+App blocks: `add_to_cart`, `buy_now`, `cart_count`, `cart_drawer`, `checkout_button`, `powered_by`, `variant_picker`.
+
+## Сторінки платформи
+
+Оформлення замовлення, кошик, вхід, обліковий запис і відстеження замовлень завжди працюють на PapelShip. Ви можете оформити сторінку навколо них за допомогою шаблону, що містить рівно один заблокований блок:
+
+| Сторінка | Шаблон | Заблокований блок |
+| --- | --- | --- |
+| Оформлення замовлення | `templates/checkout.liquid` | `checkout_form` |
+| Кошик | `templates/cart.liquid` | `cart_view` |
+| Вхід | `templates/customers/login.liquid` | `customer_login` |
+| Обліковий запис | `templates/customers/account.liquid` | `customer_account` |
+| Відстеження замовлень | `templates/customers/track.liquid` | `order_track` |
+
+```liquid templates/checkout.liquid
+<div class="checkout-shell">
+  <h1>{{ 'checkout.title' | t }}</h1>
+  {% app_block "checkout_form" %}
+</div>
+```
+
+Блок має розташовуватися безпосередньо в шаблоні, а не в сніпеті. JavaScript теми ніколи не завантажується на цих сторінках, а поля картки завжди належать платформі.
+
+## Публікація
+
+Збереження є чернетками: активний магазин залишається на опублікованій версії, доки ви не опублікуєте зміни.
+
+1. Редагуйте копію в редакторі коду або візуальному редакторі. Збереження (Ctrl+S) перевіряє файл і створює версію; інший редактор одразу показує зміну.
+2. Перегляньте копію в редакторі.
+3. Натисніть **Publish** в будь-якому з редакторів. Він показує список неопублікованих файлів і спершу перевіряє кожен файл теми.
+
+AI-агенти можуть зберігати чернетки, але не можуть публікувати. Див. [AI-агенти (MCP)](/uk/themes/mcp).

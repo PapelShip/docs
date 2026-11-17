@@ -1,0 +1,72 @@
+---
+title: "Couche de code pour les thèmes React"
+sidebarTitle: "Couche de code"
+description: "Ajoutez des sections de code, du CSS et du JavaScript par-dessus Nightfall, Ship, Circuit, Arsenal, MarketPro et Vanguard sans quitter l'éditeur visuel."
+---
+
+Les thèmes intégrés Nightfall, Ship, Circuit, Arsenal, MarketPro et Vanguard restent exactement tels quels. La couche de code vous permet d'ajouter votre propre code par-dessus et de continuer à les modifier visuellement.
+
+## Paquet de code de thème
+
+Chaque boutique dispose d'un **paquet de code de thème** par thème intégré. Vous l'ouvrez dans l'éditeur de code comme n'importe quelle copie de thème. Un paquet contient uniquement :
+
+| Dossier | Contenu |
+| --- | --- |
+| `sections/` | Sections de code (`.liquid` avec un bloc `{% schema %}`) |
+| `snippets/` | Fragments pour vos sections |
+| `assets/` | `theme.css`, chargé après les styles du thème, et `theme.js`, chargé en différé sur les pages du thème |
+| `locales/` | Traductions de vos sections |
+
+Le JavaScript du thème n'est jamais chargé sur les pages de paiement, de connexion ou de compte.
+
+## Sections de code dans l'éditeur visuel
+
+Chaque fichier `sections/<name>.liquid` avec un bloc `{% schema %}` apparaît dans la liste **Add section** de l'éditeur visuel, sous **Theme code**. Son formulaire de paramètres provient du schema, de sorte qu'une section de code reste entièrement modifiable sans code. Réorganiser, masquer, dupliquer et supprimer fonctionnent comme pour les sections intégrées.
+
+Lorsque vous modifiez le schema dans le code, le formulaire se met à jour immédiatement. Les nouveaux paramètres reçoivent leurs valeurs par défaut ; les paramètres supprimés sont ignorés et leurs valeurs conservées.
+
+## Identifiants de section dans le CSS
+
+Dans une section de code, `section.id` vaut `code:<name>`. Le caractère `:` casse les sélecteurs CSS (`#{{ section.id }}-yearly:checked` est ignoré sans avertissement) et les recherches `#id`. Utilisez `section.css_id` (`code-<name>`) dans `{% style %}` et dans les attributs `id=` / `for=`, ou `{{ value | css_id }}`. L'éditeur de code ainsi que `validate` / `save_draft` du MCP signalent un `section.id` brut à ces endroits ; la correction rapide de l'éditeur est **Use section.css_id**.
+
+Les libellés, les bascules radio/case à cocher, `<details>` et les listes de sélection fonctionnent dans le canevas de l'éditeur visuel. Pour cliquer sur des liens et des boutons, activez **Interact** dans la barre supérieure (ou appuyez sur `I`, ou maintenez `Alt` enfoncée).
+
+## Modifier le code d'une section intégrée
+
+Choisissez **Edit code** sur une section intégrée pour l'extraire. Son jumeau Liquid est copié dans votre paquet avec le même balisage et les mêmes noms de classes : son apparence reste identique et ses paramètres sont conservés. **Revert to built-in** rétablit la section d'origine.
+
+## Commerce et paiement
+
+Les sections de code vendent grâce aux blocs d'application. Elles n'ont besoin d'aucun script :
+
+```liquid
+{% app_block 'add_to_cart', product_id: product.id %}
+{% app_block 'buy_now', product_id: product.id, mode: 'embed', label: 'Acheter' %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+- `buy_now` et `checkout_button` mènent par défaut à la page de paiement. `mode: 'embed'` ouvre la fenêtre de paiement par-dessus votre page.
+- `add_to_cart` et `cart_count` ouvrent le tiroir du panier de la plateforme. Le badge du panier du thème reste synchronisé.
+- `reviews_widget` et `powered_by` ne fonctionnent pas dans les sections de code. `currency_selector` nécessite `currencies: 'USD,EUR'`.
+- Les sections de code disposent de `shop`, `collections`, `all_products`, `request` et `localization`. Elles n'ont pas accès à `product`, `collection` ni `routes`.
+- `window.PapelShip` se charge après le chargement de la page, sur les pages dont les sections de code contiennent un bloc d'application ou une liaison `data-ps`. Dans `assets/theme.js`, attendez `papelship:sdk-ready`.
+
+Consultez [Commerce et paiement](/fr/themes/commerce) et [Blocs d'application](/fr/themes/app-blocks).
+
+## Publier
+
+Les pages en ligne affichent la version **publiée** du paquet. Les fichiers enregistrés n'apparaissent que dans les aperçus de l'éditeur visuel et de l'éditeur de code.
+
+1. Modifiez et enregistrez des fichiers dans l'éditeur de code, ou laissez un agent IA enregistrer des brouillons.
+2. Vérifiez l'aperçu.
+3. Cliquez sur **Publish** dans l'éditeur de code ou dans l'éditeur visuel. C'est le même bouton, et il indique le nombre de modifications non publiées.
+
+La publication valide d'abord tous les fichiers du paquet. Si l'un d'eux échoue, rien ne change sur la boutique en ligne.
+
+<Note>
+  Les agents IA connectés via MCP peuvent enregistrer les fichiers du paquet, mais ne les publient jamais. Consultez [Agents IA (MCP)](/fr/themes/mcp).
+</Note>
+
+## Sécurité
+
+Les fichiers du paquet sont analysés comme les designs, sur la source et sur le rendu final. Les paramètres de texte enrichi et HTML sont nettoyés côté serveur.

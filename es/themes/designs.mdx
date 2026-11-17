@@ -1,0 +1,145 @@
+---
+title: "Diseños"
+sidebarTitle: "Diseños"
+description: "Suba su propio sitio HTML como diseño y conéctelo a los productos, el carrito y el checkout con Liquid, atributos data-ps o el SDK de JavaScript."
+---
+
+Un diseño es su propio sitio web, subido como ZIP, que PapelShip sirve como su tienda. Usted mantiene el control total del marcado y agrega la parte comercial de tres formas:
+
+1. **Páginas Liquid**: las `pages/*.liquid` se renderizan en el servidor con los datos de su tienda.
+2. **Atributos `data-ps`**: HTML simple que PapelShip completa con datos de productos en el servidor.
+3. **El SDK**: `window.PapelShip` para productos, carrito y checkout en el navegador.
+
+## Paquete
+
+| Ruta | Contiene |
+| --- | --- |
+| `pages/*.html`, `pages/*.liquid` | Páginas. Las páginas `.html` son estáticas; las `.liquid` se renderizan con los datos de la tienda. |
+| `partials/`, `snippets/` | Marcado compartido |
+| `assets/`, `media/` | CSS, JavaScript, imágenes y fuentes |
+| `config/design.json` | Lista de páginas con rutas y SEO, además de su configuración |
+| `seo/robots.txt`, `seo/sitemap-extra.txt` | Archivos SEO opcionales |
+
+Cada página incluida en `config/design.json` obtiene una ruta en su tienda.
+
+**Plantillas.** `pages/product.liquid` (o `.html`) es su página de producto y `pages/shop.liquid` su listado de la tienda. Sin ellas, PapelShip muestra una página de producto o de tienda neutra dentro de su diseño.
+
+**No encontrado.** Agregue `pages/404.html` (o `.liquid`) para tener su propia página de no encontrado. Las direcciones y los productos desconocidos la muestran.
+
+## Escaneo y revisión
+
+Cada subida se escanea antes de poder publicarse. Se bloquea el código que ataca a los clientes o a la plataforma: campos de datos de tarjeta, redirecciones ocultas, formularios que envían datos a otros sitios, solicitudes a las API de PapelShip o a otras tiendas, y scripts dañinos. El código inusual pasa primero por una revisión de PapelShip. Corrija los archivos indicados y vuelva a subirlos.
+
+Los cambios se guardan como borradores; su tienda mantiene la versión publicada. **Publicar** escanea exactamente los archivos que pone en vivo: el código bloqueado impide la publicación, y los hallazgos que requieren revisión esperan una revisión de PapelShip mientras la tienda mantiene la versión actual; luego se publican una vez aprobados.
+
+## Atributos data-ps
+
+Marque elementos y PapelShip los completa con datos de productos en el servidor:
+
+```html
+<div data-ps-product="current">
+  <img data-ps="image" alt="">
+  <h1 data-ps="title"></h1>
+  <p><span data-ps="price"></span> <s data-ps="compare-price" data-ps-if="on-sale"></s></p>
+  <div data-ps="variants"></div>
+  <button data-ps="add" data-ps-if="in-stock">Add to cart</button>
+  <span data-ps-if="sold-out">Sold out</span>
+</div>
+```
+
+### Valores
+
+| `data-ps` | Completa |
+| --- | --- |
+| `title` | Título del producto |
+| `price` | Precio actual |
+| `compare-price` | Precio de comparación |
+| `stock` | Etiqueta de inventario |
+| `rating` | Valoración media |
+| `badge` | Insignia de oferta o de campaña |
+| `description` | Descripción en texto plano |
+| `image` | En un `<img>`: la imagen del producto |
+| `url` | En un `<a>`: enlace a la página del producto |
+| `buy` | Botón de compra inmediata, lleva al checkout |
+| `add` | Botón de agregar al carrito |
+| `variants` | En un `<div>`: selector de variantes. Los botones de agregar y comprar y el precio que están a su lado siguen la elección. |
+
+### Condiciones
+
+| `data-ps-if` | Conserva el elemento solo cuando |
+| --- | --- |
+| `on-sale` | El producto está en oferta |
+| `in-stock` | El producto tiene inventario |
+| `sold-out` | El producto está agotado |
+
+### Contenedores
+
+| Atributo | Función |
+| --- | --- |
+| `data-ps-products="8"` | Repite el primer hijo `<template>` para N productos (máximo 48) |
+| `data-ps-collection` | Limita la lista a un handle de colección |
+| `data-ps-sort` | `featured`, `newest`, `price-asc`, `price-desc`, `best-selling` |
+| `data-ps-ids` | ID de productos separados por comas que se mostrarán |
+| `data-ps-product` | Un producto: un id, un hash o `current` en una plantilla de producto |
+
+```html
+<div data-ps-products="8" data-ps-sort="newest">
+  <template>
+    <a data-ps="url"><img data-ps="image" alt=""><span data-ps="title"></span></a>
+    <span data-ps="price"></span>
+    <button data-ps="add" data-ps-if="in-stock">Add to cart</button>
+  </template>
+</div>
+```
+
+## Páginas Liquid
+
+Las páginas `.liquid` usan los mismos objetos, filtros y etiquetas que los temas Liquid, incluido `{% app_block %}`. Consulte [Temas y Liquid](/es/themes/liquid). Las exportaciones estáticas que usan `{{ }}` para otros motores de plantillas siguen siendo seguras: solo se renderizan las páginas `.liquid`.
+
+## SDK
+
+<Note>
+  El SDK solo se carga en las páginas de diseño que contienen un enlace `data-ps` o un marcador de posición `data-app-block`. Llámelo desde un listener de `DOMContentLoaded`. Consulte [Comercio y checkout](/es/themes/commerce).
+</Note>
+
+En esas páginas, el SDK está disponible como `window.PapelShip`.
+
+| Método | Función |
+| --- | --- |
+| `products.list({ limit, ids, collection, sort })` | Promesa de productos |
+| `products.get(id)` | Promesa de un producto |
+| `cart.items`, `cart.count`, `cart.subtotal` | Estado del carrito |
+| `cart.add(id, { variantId, quantity })` | Agrega una línea y devuelve una promesa |
+| `cart.remove`, `cart.update(index, quantity)`, `cart.clear` | Modifican el carrito |
+| `cart.open`, `cart.close` | Abren o cierran el panel del carrito |
+| `cart.on`, `cart.off` | Eventos `change` y `add` (`papelship:cart-change`, `papelship:cart-add`) |
+| `price` | Líneas de precio con las campañas aplicadas |
+| `checkout({ products?, mode: 'page' \| 'embed', onPaid? })` | `page` (por defecto) lleva a la página de checkout de la plataforma; `embed` abre la ventana emergente de checkout sobre su página |
+| `checkoutInvoice` | Abre una factura existente |
+| `formatMoney(cents, currency)` | Da formato a un precio |
+| `bind` | Vuelve a escanear la página después de agregar marcado |
+| `on`, `off` | Eventos `papelship:*` |
+
+```js
+PapelShip.products.list({ limit: 8, sort: 'newest' }).then(function (items) {
+  var grid = document.getElementById('grid')
+  items.forEach(function (p) {
+    var a = document.createElement('a')
+    a.href = p.url
+    a.textContent = p.title + ' ' + PapelShip.formatMoney(p.price_cents, p.currency)
+    grid.appendChild(a)
+  })
+})
+```
+
+## Componentes
+
+El menú **Insertar componente** del editor de código escribe código listo para usar y editable: cuadrícula de productos, tarjeta de producto, página de producto, precio, botón de compra, agregar al carrito, contador del carrito, panel del carrito, checkout incrustado y lista de colecciones. Haga clic en un componente en la vista previa para volver a cambiar su configuración.
+
+## Páginas de la tienda
+
+El checkout, el carrito, el inicio de sesión, la cuenta y el seguimiento de pedidos se renderizan dentro de su diseño con un layout que usted elige en el panel. Para diseñarlas usted mismo, agregue `pages/checkout.liquid`, `pages/cart.liquid`, `pages/login.liquid`, `pages/account.liquid` o `pages/track.liquid` (o `.html`) con exactamente un bloque bloqueado, por ejemplo `<div data-app-block="checkout_form"></div>`. Los bloques se enumeran en [Páginas de la plataforma](/es/themes/liquid#páginas-de-la-plataforma).
+
+<Note>
+  Los clientes siempre pagan en la página de checkout de PapelShip o en su ventana emergente incrustada. Los diseños no pueden reemplazar el checkout ni recopilar datos de tarjeta.
+</Note>

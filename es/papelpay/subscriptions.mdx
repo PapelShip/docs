@@ -1,0 +1,87 @@
+---
+title: "Venda suscripciones con pagos con tarjeta de PapelPay"
+sidebarTitle: "Suscripciones"
+description: "Cree pedidos de la Store API que se renuevan cada periodo con PapelPay: configure auto_renew, lea el objeto de suscripción y siga o detenga las renovaciones después del pago."
+icon: "rotate"
+keywords:
+  - "papelpay"
+  - "suscripción"
+  - "auto_renew"
+  - "recurrente"
+  - "renovación"
+---
+
+Un producto con las suscripciones activadas y un periodo de facturación puede comprarse como suscripción. Cuando el cliente paga con PapelPay, la tarjeta se vuelve a cobrar en cada periodo hasta que cancela. Con cualquier otro método de pago, el cliente recibe por correo una factura de renovación antes de que termine cada periodo. Esta página muestra cómo controlar esa elección desde la Store API.
+
+## Elegir suscripción o compra única
+
+Envíe `auto_renew` al crear el pedido:
+
+| Valor | Resultado |
+| :-- | :-- |
+| `true` | El pedido se compra como suscripción. El cliente no puede desactivarla en el checkout. |
+| `false` | El pedido es una compra única. El checkout no muestra ninguna opción de suscripción. |
+| Omitido | El cliente elige en el checkout. La suscripción aparece preseleccionada. |
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: WEB-2087" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_email": "buyer@example.com",
+    "items": [{ "product_id": "Pr0Mnth1yX9a" }],
+    "auto_renew": true,
+    "payment_method": "PAPELPAY"
+  }'
+```
+
+`auto_renew: true` requiere un pedido con exactamente una línea de producto, y ese producto debe tener las suscripciones activadas con un periodo de facturación. De lo contrario, la llamada falla con `SUBSCRIPTION_NOT_AVAILABLE` (`422`) y no se crea ningún pedido.
+
+## El objeto de suscripción
+
+Las respuestas de creación y de detalle de un pedido incluyen `subscription`. Es `null` cuando el pedido no puede ser una suscripción.
+
+```json
+"subscription": {
+  "enabled": true,
+  "locked": true,
+  "interval_days": 30,
+  "interval": "month",
+  "discount_percent": 20,
+  "discount_applies_to": "automatic_payments",
+  "discount_cents": 0,
+  "subscription_id": null,
+  "auto_renewal_id": null
+}
+```
+
+| Campo | Significado |
+| :-- | :-- |
+| `enabled` | `true`: comprado como suscripción. `false`: compra única. |
+| `locked` | Lo define `auto_renew` al crear. El cliente no puede cambiarlo en el checkout. |
+| `interval_days`, `interval` | Periodo de facturación. `interval` es `day`, `week`, `month` o `year` para los periodos estándar; en caso contrario, `null`. |
+| `discount_percent` | Descuento para suscriptores definido en el producto. |
+| `discount_applies_to` | `automatic_payments`: solo cuando la tarjeta se renueva automáticamente. `all_payment_methods`: con cualquier método. |
+| `discount_cents` | Descuento incluido actualmente en `total_cents`. Permanece en `0` hasta que el cliente elige un método de pago al que se aplique. |
+| `subscription_id` | Después del pago, el registro de la suscripción. |
+| `auto_renewal_id` | Después de un pago con tarjeta de PapelPay, la renovación automática de la tarjeta. |
+
+## Después del pago
+
+El primer pago completa el pedido e inicia la suscripción. Cada renovación crea un nuevo pedido pagado y extiende la suscripción. Consulte y detenga las suscripciones con estos endpoints:
+
+| Acción | Endpoint |
+| :-- | :-- |
+| Listar suscripciones | `GET /subscriptions` |
+| Consultar una, con sus pagos | `GET /subscriptions/{subscriptionId}` |
+| Cancelar | `POST /subscriptions/{subscriptionId}/cancel` |
+| Listar las renovaciones automáticas con tarjeta | `GET /subscriptions/auto-renewals` |
+| Detener los cobros futuros con tarjeta | `POST /subscriptions/auto-renewals/{renewalId}/cancel` |
+
+Detener una renovación automática pone fin a los cobros futuros al terminar el periodo pagado. La cancelación nunca reembolsa al cliente.
+
+<Note>
+  Los pagos con tarjeta de las suscripciones se cobran en USD.
+</Note>

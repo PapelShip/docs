@@ -1,0 +1,44 @@
+---
+title: "Erreurs"
+description: "Comprenez les codes de statut HTTP et les réponses d'erreur de PapelShip."
+---
+
+PapelShip utilise les codes de statut HTTP standard. Chaque réponse JSON inclut un booléen `success`.
+
+```json Réponse d'erreur
+{
+  "success": false,
+  "error": "Invalid parameters provided"
+}
+```
+
+## Codes de statut
+
+| Code | Signification | Que faire |
+| :-- | :-- | :-- |
+| `200` | La requête a abouti. | Lisez le corps de la réponse. |
+| `400` | Requête incorrecte ou erreur de validation. | Vérifiez les champs obligatoires et les types de valeurs. |
+| `401` | Clé API manquante ou invalide. | Vérifiez vos en-têtes d'authentification. |
+| `403` | La clé n'a pas l'autorisation pour cette action. | Utilisez une clé disposant de la bonne portée. |
+| `404` | Ressource introuvable. | Vérifiez l'identifiant dans l'URL ou dans la requête. |
+| `500` | Erreur serveur. | Réessayez avec un délai exponentiel. |
+
+## Erreurs de la Store API
+
+Les erreurs de la Store API contiennent aussi un `code` lisible par machine, des `details` facultatifs et un `request_id` à communiquer au support :
+
+```json Erreur de la Store API
+{
+  "success": false,
+  "code": "PRODUCT_NOT_FOUND",
+  "error": "Product a1B2c3D4e5F6 not found in this store",
+  "details": { "field": "items[0].product_id" },
+  "request_id": "req_8fK2mQ1xZ7pL0vN3"
+}
+```
+
+Basez votre logique sur `code`, pas sur le message. Consultez [Erreurs de la Store API](/fr/user-api/errors) pour la liste de tous les codes.
+
+<Tip>
+  Ne réessayez qu'en cas d'échec réseau et de réponses `5xx`. Envoyez la même `Idempotency-Key` à chaque nouvelle tentative. Consultez [Idempotence](/fr/guides/idempotency).
+</Tip>

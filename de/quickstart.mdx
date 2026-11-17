@@ -1,0 +1,121 @@
+---
+title: "Schnellstart"
+description: "Erstellen Sie Ihre erste Bestellung mit der PapelShip Store API, leiten Sie den Kunden zum Checkout weiter und bestätigen Sie die Zahlung per Webhook oder durch Abrufen der Bestellung."
+---
+
+Diese Anleitung führt Sie durch eine vollständige Bestellung mit der PapelShip Store API: Erstellen Sie eine Bestellung für eines Ihrer Produkte, leiten Sie den Kunden zum gehosteten Checkout weiter und bestätigen Sie die Zahlung, bevor Sie sich darauf verlassen.
+
+## Voraussetzungen
+
+- Ein PapelShip Shop mit mindestens einem Produkt
+- Ein Store API-Schlüssel (`pk_live_...`) mit der Berechtigung `orders:write` sowie Ihre Shop-ID für den Header `x-store-hash`
+
+<Tip>
+  Beides finden Sie im [PapelShip Dashboard](https://app.papelship.com) in den API-Einstellungen Ihres Shops. Siehe [Authentifizierung](/de/guides/authentication).
+</Tip>
+
+<Steps>
+  <Step title="Bestellung erstellen">
+    Senden Sie die E-Mail-Adresse des Kunden und die Produkte. Fügen Sie einen `Idempotency-Key`-Header hinzu, damit Wiederholungen niemals eine zweite Bestellung erzeugen.
+
+    <CodeGroup>
+
+    ```bash cURL
+    curl -X POST https://app.papelship.com/api/v1/invoices \
+      -H "x-api-key: pk_live_your_key" \
+      -H "x-store-hash: your_store_id" \
+      -H "Idempotency-Key: WEB-1042" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "customer_email": "buyer@example.com",
+        "items": [{ "product_id": "a1B2c3D4e5F6", "quantity": 1 }],
+        "metadata": { "order_ref": "WEB-1042" }
+      }'
+    ```
+
+    ```javascript Node.js
+    const res = await fetch("https://app.papelship.com/api/v1/invoices", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.PAPELSHIP_API_KEY,
+        "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+        "Idempotency-Key": order.id,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customer_email: order.email,
+        items: [{ product_id: "a1B2c3D4e5F6", quantity: 1 }],
+        metadata: { order_ref: order.id },
+      }),
+    });
+    const { invoice } = await res.json();
+    ```
+
+    ```python Python
+    import os, requests
+    
+    res = requests.post(
+        "https://app.papelship.com/api/v1/invoices",
+        headers={
+            "x-api-key": os.environ["PAPELSHIP_API_KEY"],
+            "x-store-hash": os.environ["PAPELSHIP_STORE_ID"],
+            "Idempotency-Key": order_id,
+        },
+        json={
+            "customer_email": "buyer@example.com",
+            "items": [{"product_id": "a1B2c3D4e5F6", "quantity": 1}],
+            "metadata": {"order_ref": order_id},
+        },
+    )
+    invoice = res.json()["invoice"]
+    ```
+
+    </CodeGroup>
+  </Step>
+  <Step title="Kunden zum Checkout weiterleiten">
+    Die Antwort enthält die Bestellung mit ihrer `checkout_url`. Leiten Sie den Kunden dorthin weiter, damit er mit einer beliebigen Zahlungsmethode bezahlt, die Ihr Shop akzeptiert.
+
+    ```json Antwort (201)
+    {
+      "success": true,
+      "invoice": {
+        "id": "c35ffd-19a1b2c3d4e-8c7a20",
+        "status": "pending",
+        "currency": "USD",
+        "total_cents": 3499,
+        "checkout_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+        "expires_at": "2026-10-04T15:00:00.000Z"
+      }
+    }
+    ```
+
+    Speichern Sie `invoice.id` zusammen mit Ihrer Bestellung. Unbezahlte Bestellungen laufen nach 3 Stunden ab. Um eine Karte sofort zu belasten oder das Kartenformular auf Ihrer eigenen Website anzuzeigen, siehe [PapelPay](/de/papelpay/overview).
+  </Step>
+  <Step title="Zahlung bestätigen">
+    Verlassen Sie sich niemals allein darauf, dass der Kunde auf Ihre Website zurückkehrt. Warten Sie auf den Webhook `order.completed` oder rufen Sie die Bestellung auf Ihrem Server ab:
+
+    ```bash
+    curl https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20 \
+      -H "x-api-key: pk_live_your_key" \
+      -H "x-store-hash: your_store_id"
+    ```
+
+    Die Bestellung ist bezahlt und ausgeliefert, wenn `status` den Wert `completed` hat.
+  </Step>
+</Steps>
+
+<Warning>
+  Bewahren Sie Ihren API-Schlüssel auf Ihrem Server auf. Liefern Sie ihn niemals in Browser-Code, mobilen Apps oder Desktop-Clients aus.
+</Warning>
+
+## Nächste Schritte
+
+<Columns cols={2}>
+  <Card title="Bestellungen" icon="receipt" href="/de/user-api/orders">
+    Physische Produkte, Status, Stornierung und Rückerstattungen.
+  </Card>
+
+  <Card title="PapelPay" icon="credit-card" href="/de/papelpay/overview">
+    Kartenzahlungen, Abonnements und das Kartenformular auf Ihrer Website.
+  </Card>
+</Columns>

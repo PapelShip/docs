@@ -1,0 +1,137 @@
+---
+title: "Référence des blocs d'application"
+sidebarTitle: "Blocs d'application"
+description: "Tous les blocs de la plateforme : arguments, alias, rendu, comportement (fenêtre, tiroir, navigation) et types de thèmes compatibles."
+---
+
+Les agents IA obtiennent la même référence depuis le MCP des thèmes : l'outil `get_reference` (sujet `app_blocks`) et la ressource `papelship://reference/app-blocks`. L'éditeur de code, `validate` et `save_draft` signalent les blocs inconnus, les arguments inconnus ou mal typés, ainsi que les blocs qu'un type de thème ne prend pas en charge.
+
+Blocs de la plateforme (`{% app_block %}` / data-app-block) : arguments, comportement, prise en charge par type ; blocs de page verrouillés.
+
+```liquid
+{% app_block 'buy_now', product_id: product.id, mode: 'embed' %}
+```
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed"}'></div>
+```
+
+| Bloc | Comportement | liquid | design | code | jumeau |
+| --- | --- | --- | --- | --- | --- |
+| `add_to_cart` | tiroir | oui | oui | oui\* | oui\* |
+| `buy_now` | navigation | oui | oui | oui | oui |
+| `cart_count` | tiroir | oui | oui | oui\* | oui\* |
+| `cart_drawer` | tiroir | oui | oui | oui\* | oui\* |
+| `checkout_button` | navigation | oui | oui | oui | oui |
+| `currency_selector` | en ligne | oui | oui | oui\* | oui\* |
+| `language_selector` | navigation | oui | oui | oui | oui |
+| `newsletter_form` | formulaire | oui | oui | oui | oui |
+| `powered_by` | en ligne | oui | non | non | non |
+| `quick_view` | boîte de dialogue | oui | oui | oui | oui |
+| `recently_viewed` | en ligne | oui | oui | oui\* | oui\* |
+| `reviews_widget` | en ligne | oui | oui | non | non |
+| `variant_picker` | en ligne | oui | oui | oui | oui |
+| `wishlist_button` | en ligne | oui | oui | oui | oui |
+
+`oui*` : fonctionne, avec une remarque ci-dessous. Dans les sections de code et les jumeaux extraits, les blocs de panier utilisent le tiroir du panier de la plateforme, et non le tiroir propre au thème React ; le badge du panier du thème reste synchronisé.
+
+## add_to_cart
+
+Bouton d'ajout au panier pour un produit. Ajoute au panier partagé de la vitrine et ouvre le tiroir du panier. Pour un produit comportant plusieurs variantes sans choix effectué : le variant_picker situé à côté demande la variante, sinon la page produit s'ouvre.
+
+| Argument | Type | Obligatoire | Alias | Par défaut | Description |
+| --- | --- | --- | --- | --- | --- |
+| `product_id` | product | oui | `product` |  | Identifiant ou hash ID du produit (product.id / product.hash_id). Un objet produit est également accepté. |
+| `variant_id` | id |  | `variant` |  | Identifiant de la variante ; par défaut : la variante choisie dans un variant_picker situé à côté, sinon la variante par défaut. |
+| `quantity` | integer |  |  | `1` | Quantité (1 ou plus). |
+| `label` | string |  |  |  | Texte du bouton ("Add to cart" par défaut, traduit). Ignoré lorsque l'emplacement possède son propre balisage. |
+| `mode` | enum (`page`, `embed`) |  |  |  | Sans effet : add_to_cart ajoute toujours au panier. Utilisez buy_now pour le paiement. |
+
+## buy_now
+
+Bouton d'achat immédiat pour un produit. `mode: 'page'` (par défaut) mène au paiement de la plateforme avec uniquement ce produit (le panier est conservé). `mode: 'embed'` ouvre la fenêtre de paiement par-dessus la page (iframe de la plateforme ; les données de carte ne transitent jamais par le thème) et bascule sur la page lorsque le widget ne peut pas se charger.
+
+| Argument | Type | Obligatoire | Alias | Par défaut | Description |
+| --- | --- | --- | --- | --- | --- |
+| `product_id` | product | oui | `product` |  | Identifiant ou hash ID du produit. Un objet produit est également accepté. |
+| `variant_id` | id |  | `variant` |  | Identifiant de la variante ; par défaut : la variante choisie dans un variant_picker situé à côté. |
+| `quantity` | integer |  |  | `1` | Quantité (1 ou plus). |
+| `label` | string |  |  |  | Texte du bouton ("Buy now" par défaut, traduit). |
+| `mode` | enum (`page`, `embed`) |  |  | `page` | `page` = page de paiement ; `embed` = fenêtre de paiement par-dessus la page actuelle. |
+
+## cart_count
+
+Bouton du panier avec le nombre d'articles ("Cart `<n>`") ; votre propre balisage conserve son apparence et un enfant `[data-ps-count]` reçoit le nombre. Un clic ouvre le tiroir du panier. Aucun argument.
+
+## cart_drawer
+
+Configure le tiroir coulissant du panier (lignes, quantités, réductions de campagne, barre de livraison gratuite, vente additionnelle, paiement). N'affiche rien à son emplacement ; le premier `cart_drawer` de la page définit les options.
+
+| Argument | Type | Par défaut | Description |
+| --- | --- | --- | --- |
+| `upsell` | string |  | Handle ou identifiant de la collection dont les produits sont proposés dans le tiroir. |
+| `upsell_limit` | integer | `3` | Nombre de produits de vente additionnelle affichés (1 à 6). |
+| `upsell_heading` | string |  | Titre de la vente additionnelle ("You may also like" par défaut). |
+| `free_shipping` | boolean | `true` | `false` masque la barre de progression de la livraison gratuite. |
+
+## checkout_button
+
+Bouton de paiement pour l'ensemble du panier (désactivé tant que le panier est vide). `mode: 'page'` (par défaut) mène à `<store>/checkout` ; `mode: 'embed'` ouvre la fenêtre de paiement ; le panier est vidé après le paiement.
+
+| Argument | Type | Par défaut | Description |
+| --- | --- | --- | --- |
+| `label` | string |  | Texte du bouton ("Checkout" par défaut, traduit). |
+| `mode` | enum (`page`, `embed`) | `page` | Page de paiement ou fenêtre. |
+
+## currency_selector
+
+Sélecteur de devise d'affichage (masqué s'il y a moins de deux devises). Enregistre la devise d'affichage (le paiement est toujours débité dans la devise de la boutique) et émet `papelship:currency-change`. Dans les sections de code et les jumeaux, transmettez `currencies` : ces pages ne connaissent que la devise de la boutique.
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `label` | string | Texte du libellé. |
+| `currencies` | list | Codes de devise (`"USD,EUR,TRY"` ou un tableau) ; par défaut : les devises d'affichage de la boutique. |
+
+## language_selector
+
+Sélecteur de langue de la boutique (masqué lorsque la boutique n'a qu'une seule langue). Définit le cookie de langue et recharge la page. Argument : `label`.
+
+## newsletter_form
+
+Inscription à la newsletter avec une case de consentement explicite. Envoie les données au point de terminaison de prospects de la plateforme ; les aperçus n'inscrivent jamais personne. Arguments : `label`, `placeholder`, `button`, `consent_text`.
+
+## powered_by
+
+La mention "Powered by PapelShip" (masquée sur les offres qui permettent de la masquer). Thèmes Liquid uniquement : les pages de design et les pieds de page des thèmes React reçoivent automatiquement la mention de la plateforme.
+
+## quick_view
+
+Bouton d'aperçu rapide pour un produit : ouvre une boîte de dialogue avec les images, le prix, les variantes et l'ajout au panier. Arguments : `product_id` (obligatoire, alias `product`), `label`.
+
+## recently_viewed
+
+Les produits récemment consultés par le visiteur (dans ce navigateur) ; n'affiche rien lorsque la liste est vide. Les produits sont enregistrés sur les pages produit Liquid (les pages produit des thèmes React n'enregistrent pas les consultations). Arguments : `limit` (4 par défaut, de 1 à 20), `heading`.
+
+## reviews_widget
+
+Avis publiés : ceux du produit de la page sur les pages produit, sinon ceux de la boutique. Non pris en charge dans les sections de code ni dans les jumeaux (ces pages ne contiennent pas de données d'avis ; utilisez la section d'avis du thème React). Arguments : `heading`, `limit` (5 par défaut, de 1 à 50), `write` (`true` par défaut ; `false` masque le lien pour rédiger un avis).
+
+## variant_picker
+
+Sélecteur de variante (groupes de boutons radio) pour un produit. Les blocs `add_to_cart` / `buy_now` du même produit dans le conteneur commun le plus proche (ou dans un élément `data-ps-scope`) utilisent la variante choisie ; les textes `data-ps` price / compare-price / stock la suivent. Argument : `product_id` (obligatoire, alias `product`).
+
+## wishlist_button
+
+Bascule de favori pour un produit (un bouton en forme de cœur avec `aria-pressed`). Enregistré dans le navigateur et synchronisé avec le compte client lorsque celui-ci est connecté. Argument : `product_id` (identifiant numérique ; les hash ID ne sont pas enregistrés dans le compte).
+
+## Blocs de page verrouillés
+
+| Bloc | Page | Fichier de thème Liquid | Fichier de design |
+| --- | --- | --- | --- |
+| `checkout_form` | Page de paiement | `templates/checkout.liquid` | `pages/checkout.liquid` ou `.html` |
+| `cart_view` | Page du panier | `templates/cart.liquid` | `pages/cart.liquid` ou `.html` |
+| `customer_login` | Page de connexion | `templates/customers/login.liquid` | `pages/login.liquid` ou `.html` |
+| `customer_account` | Page du compte | `templates/customers/account.liquid` | `pages/account.liquid` ou `.html` |
+| `order_track` | Page de suivi de commande | `templates/customers/track.liquid` | `pages/track.liquid` ou `.html` |
+
+Chacun ne fonctionne qu'une seule fois, dans son propre fichier de remplacement. Les paquets de code des thèmes React n'ont pas de remplacement de page.

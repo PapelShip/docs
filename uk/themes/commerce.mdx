@@ -1,0 +1,80 @@
+---
+title: "Комерція та оформлення замовлення"
+sidebarTitle: "Комерція та оформлення"
+description: "Додавання в кошик, купівля в один клік і оформлення замовлення з будь-якої теми: сторінка оформлення або вбудоване спливне вікно, за допомогою app blocks, атрибутів data-ps або window.PapelShip."
+---
+
+Усі типи тем продають однаково: блоки платформи розміщують кнопки на сторінці, а оплата завжди відбувається на сторінці оформлення PapelShip або в її спливному вікні. Тема ніколи не збирає дані картки.
+
+## Сторінка оформлення або спливне вікно
+
+`buy_now`, `checkout_button`, `data-ps="buy"` і `PapelShip.checkout()` приймають `mode`:
+
+| mode | Що відбувається |
+| --- | --- |
+| `page` (за замовчуванням) | Браузер переходить на сторінку оформлення платформи: `<store>/checkout` або URL швидкої купівлі для одного товару. |
+| `embed` | Оформлення відкривається у спливному вікні поверх поточної сторінки, у фреймі PapelShip. Якщо спливне вікно не вдається завантажити, замість нього відкривається сторінка оформлення. Після оплати кошик очищається. |
+
+`add_to_cart` завжди додає товар у кошик і відкриває бічну панель кошика.
+
+## Теми Liquid і кодові секції
+
+App blocks не потребують скриптів. Передайте `id` (або `hash_id`) товару як `product_id`:
+
+```liquid
+{% for p in all_products limit: 3 %}
+  <h3>{{ p.title | escape }}</h3>
+  <p>{{ p.price | money }}</p>
+  {% app_block 'add_to_cart', product_id: p.id %}
+  {% app_block 'buy_now', product_id: p.id, mode: 'embed', label: 'Buy' %}
+{% endfor %}
+{% app_block 'checkout_button', mode: 'embed' %}
+```
+
+<Note>
+  `product` працює як псевдонім `product_id`, а також приймається об'єкт товару. Якщо вказано обидва, пріоритет має `product_id`.
+</Note>
+
+## Завантажені дизайни (та будь-яка розмітка)
+
+```html
+<div data-app-block="buy_now" data-props='{"product_id":"PRODUCT_ID","mode":"embed","label":"Buy"}'></div>
+
+<!-- або ваша власна кнопка -->
+<button type="button" data-ps="buy" data-ps-product-id="PRODUCT_ID" data-ps-mode="embed">Buy</button>
+```
+
+## З JavaScript
+
+`window.PapelShip` може завантажитися після вашого скрипту. Ця допоміжна функція працює в будь-якому типі теми:
+
+```js
+function withPapelShip(fn) {
+  var done = false;
+  function go() { if (!done && window.PapelShip && window.PapelShip.version) { done = true; fn(window.PapelShip); } }
+  go();
+  if (!done) { window.addEventListener('papelship:sdk-ready', go); document.addEventListener('DOMContentLoaded', go); }
+}
+
+withPapelShip(function (ps) {
+  document.getElementById('buy').onclick = function () {
+    ps.checkout({ products: [{ id: 'PRODUCT_ID' }], mode: 'embed', onPaid: function (d) { console.log(d.invoiceId); } });
+  };
+});
+```
+
+## Де доступний window.PapelShip
+
+| Тип теми | Завантажується | Коли |
+| --- | --- | --- |
+| Тема Liquid | На кожній сторінці теми | Відкладено на початку `<head>`. Відкладені скрипти теми (`script_tag`) можуть його використовувати. |
+| Завантажений дизайн | Лише на сторінках із прив'язкою `data-ps` або заповнювачем `data-app-block` | Відкладено на початку `<head>`. Викликайте його з `DOMContentLoaded`. Сторінці, яка використовує лише скрипт, потрібен один заповнювач, наприклад `<div data-app-block="cart_count" hidden></div>`. |
+| Кодова секція / виокремлений двійник | На сторінках, чиї кодові секції містять app block або прив'язку `data-ps`, і завжди в конструкторі | Завантажується після гідратації сторінки, після виконання `assets/theme.js`. Дочекайтеся `papelship:sdk-ready`. Вбудований `<script>` у кодових секціях відхиляється. |
+
+Вбудовані теги `<script>` не виконуються на сторінках тем Liquid. Розміщуйте скрипти в `assets/*.js` і підключайте їх через `{{ 'x.js' | asset_url | script_tag }}`.
+
+## Тестування
+
+Полотно конструктора виділяє елементи, коли ви на них натискаєте, тому кнопки там не спрацьовують. Увімкніть **Interact** на верхній панелі конструктора (натисніть `I` або утримуйте `Alt`) чи відкрийте попередній перегляд.
+
+Усі блоки, їхні аргументи та місця, де вони працюють, наведено в розділі [App blocks](/uk/themes/app-blocks).

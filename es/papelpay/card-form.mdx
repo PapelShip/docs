@@ -1,0 +1,90 @@
+---
+title: "Muestre el formulario de tarjeta de PapelPay en su sitio"
+sidebarTitle: "Formulario de tarjeta en su sitio"
+description: "Monte el formulario de tarjeta de PapelPay en su propia página de checkout con el SDK de JavaScript: opciones, eventos, apariencia, dominios permitidos y cómo confirmar el pago."
+icon: "code"
+keywords:
+  - "papelpay"
+  - "incrustar"
+  - "formulario de tarjeta"
+  - "sdk de javascript"
+  - "papelship-widget"
+  - "iframe"
+---
+
+El SDK de JavaScript de PapelShip monta el formulario de tarjeta de PapelPay dentro de su propia página de checkout, para que el cliente nunca salga de su sitio. El formulario se carga en un marco servido por PapelShip: los datos de la tarjeta nunca pasan por su servidor ni por su página.
+
+## Antes de empezar
+
+- Inicie el pago con tarjeta en su servidor con `POST /api/v1/invoices/{invoiceId}/papelpay` y pase `payment.embed_url` a su página. Consulte [Descripción general](/es/papelpay/overview).
+- Agregue el dominio de su página de checkout en el panel, en **PapelPay > Dominios**, y verifíquelo. Un dominio personalizado verificado de su tienda también funciona, al igual que sus subdominios.
+- `localhost` y `127.0.0.1` funcionan sin configuración mientras desarrolla.
+
+<Warning>
+  En un dominio no verificado, el marco muestra un aviso en lugar del formulario y `onError` recibe `origin_not_allowed`.
+</Warning>
+
+## Montar el formulario
+
+```html checkout.html
+<div id="card"></div>
+
+<script src="https://app.papelship.com/scripts/papelship-widget.js"></script>
+<script>
+  const card = PapelShip.papelpay.mount("#card", {
+    embedUrl: payment.embed_url,
+    invoiceId: payment.invoice_id,
+    locale: "en",
+    appearance: { mode: "light", surface: "#ffffff", border: "#e5e7eb", text: "#111827", font: "inter", radius: 10 },
+    onReady: () => console.log("Card form loaded"),
+    onPaid: ({ invoiceId }) => {
+      window.location.href = `/order/${invoiceId}/thanks`;
+    },
+    onDeclined: ({ message }) => showError(message),
+    onError: ({ code }) => showError(code),
+  });
+</script>
+```
+
+El marco crece y se reduce según su contenido. `mount` devuelve `{ iframe, destroy }`; llame a `card.destroy()` para quitar el formulario, por ejemplo cuando el cliente elige otro método de pago.
+
+## Opciones
+
+| Opción | Notas |
+| :-- | :-- |
+| `embedUrl` | Obligatorio. `payment.embed_url` de la Store API. Cualquier otra URL se rechaza con `invalid_embed_url`. |
+| `invoiceId` | Opcional. Se devuelve en cada evento para que pueda asociarlo a su pedido. |
+| `locale` | Idioma del formulario, por ejemplo `en` o `tr`. |
+| `appearance.mode` | `light` o `dark`. |
+| `appearance.surface`, `appearance.border`, `appearance.text` | Colores hexadecimales como `#ffffff`. |
+| `appearance.font` | `inter`, `system` o `fustat`. |
+| `appearance.radius` | Radio de las esquinas en píxeles, de `0` a `24`. |
+| `height` | Altura inicial en píxeles antes de que el formulario informe la suya (`420` por defecto). |
+| `title` | Título accesible del marco (`Card payment` por defecto). |
+
+## Eventos
+
+| Callback | Cuándo | Datos |
+| :-- | :-- | :-- |
+| `onReady` | El formulario se ha cargado. | `{ invoiceId }` |
+| `onPaid` | Se cobró la tarjeta. Se dispara una sola vez. | `{ invoiceId }` |
+| `onDeclined` | La tarjeta fue rechazada. El cliente puede probar con otra tarjeta. | `{ invoiceId, message }` |
+| `onError` | El formulario no puede aceptar un pago. | `{ invoiceId, code }` |
+
+Los mismos eventos están disponibles de forma global con `PapelShip.on("papelpay:paid", fn)`, `papelpay:declined`, `papelpay:error` y `papelpay:ready`, y como `CustomEvent` `papelship:papelpay:paid` (y así sucesivamente) en `window`.
+
+| Código de `onError` | Significado | Qué hacer |
+| :-- | :-- | :-- |
+| `origin_not_allowed` | El dominio de su página no está verificado para esta tienda. | Agréguelo en **PapelPay > Dominios**. |
+| `not_embeddable` | Los pagos con tarjeta de su tienda no se pueden mostrar en un marco. | Envíe al cliente a `payment.payment_url`. |
+| `session_expired` | La sesión de pago caducó. | Inicie el pago de nuevo y monte el nuevo `embed_url`. |
+| `session_ended` | La sesión de pago se cerró. | Consulte el pedido para ver si se pagó. |
+| `invalid_embed_url` | `embedUrl` no es un `embed_url` de PapelPay. | Pase `payment.embed_url` sin modificar. |
+
+## Confirmar el pago en su servidor
+
+`onPaid` indica a su página que se cobró la tarjeta. Antes de entregar nada por su cuenta, confirme el pedido en su servidor: espere el webhook `order.completed` o consulte `GET /api/v1/invoices/{invoiceId}` y compruebe que `status` sea `completed`. Consulte [Webhooks](/es/user-api/webhooks).
+
+<Tip>
+  Permita las funciones de pago con tarjeta en el elemento padre del marco si usa su propio sandbox de iframe o política de permisos: el SDK define `allow="payment *"` en su marco para los pagos con billetera.
+</Tip>

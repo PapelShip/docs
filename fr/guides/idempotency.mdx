@@ -1,0 +1,40 @@
+---
+title: "Idempotence"
+description: "Réessayez en toute sécurité les requêtes de création et d'action de la Store API avec une Idempotency-Key, afin qu'un délai d'attente dépassé ne crée jamais de seconde commande, de second remboursement ou de second paiement."
+---
+
+Les pannes réseau arrivent. Lorsqu'une requête dépasse le délai d'attente, vous ne pouvez pas savoir si PapelShip a créé la commande. Un en-tête `Idempotency-Key` vous permet de réessayer l'appel à la Store API en toute sécurité.
+
+## Fonctionnement
+
+Ajoutez un en-tête `Idempotency-Key` (255 caractères maximum) à une requête de création ou d'action. PapelShip conserve la première réponse pendant 24 heures. Une nouvelle tentative avec la même clé et le même corps reçoit cette réponse enregistrée, au lieu d'exécuter à nouveau la requête.
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/invoices \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_email": "buyer@example.com", "items": [{ "product_id": "a1B2c3D4e5F6" }] }'
+```
+
+| Code | Statut | Signification |
+| :-- | :-- | :-- |
+| `IDEMPOTENCY_IN_PROGRESS` | `409` | La première requête avec cette clé est toujours en cours. Réessayez dans quelques instants. |
+| `IDEMPOTENCY_KEY_REUSED` | `422` | La clé a déjà été utilisée avec un corps différent. Utilisez une nouvelle clé pour une requête différente. |
+
+## Points de terminaison compatibles
+
+La clé fonctionne sur les points de terminaison de création et d'action de la Store API, notamment :
+
+- `POST /invoices` (créer une commande)
+- `POST /invoices/{invoiceId}/papelpay` (lancer le paiement par carte)
+- `POST /invoices/{invoiceId}/complete` et `POST /invoices/{invoiceId}/refund`
+- `POST /orders/{invoiceId}/shipments`
+- `POST /products` et `POST /coupons`
+
+## Bonnes pratiques
+
+- Générez une clé par commande, et non par requête. L'identifiant de votre propre commande convient très bien.
+- Enregistrez la clé avec votre commande afin que chaque nouvelle tentative la réutilise.
+- Ne réutilisez jamais une clé pour une autre commande ou un autre montant.

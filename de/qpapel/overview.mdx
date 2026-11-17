@@ -1,0 +1,39 @@
+---
+title: "Überblick über qPapel Protection"
+sidebarTitle: "Überblick"
+description: "Lizenzieren, konfigurieren und schützen Sie Ihre Desktop-Anwendungen und Loader."
+---
+
+qPapel Protection ist ein Lizenzierungs- und Manipulationsschutz-Backend für Desktop-Software. Mit der Web API automatisieren Sie alles über Ihr eigenes Panel oder Ihren eigenen Bot.
+
+**Basis-URL:** `https://app.papelship.com/api/qpapel/v1`
+
+<CardGroup cols={2}>
+  <Card title="Lizenzschlüssel" icon="key" href="/de/qpapel/license-keys">
+    Erstellen, sperren, einfrieren und verlängern Sie Kundenschlüssel und setzen Sie deren HWID zurück.
+  </Card>
+
+  <Card title="Reseller-Schlüssel" icon="handshake">
+    Weisen Sie Reseller-Konten Schlüssel zu und steuern Sie deren Laufzeit.
+  </Card>
+
+  <Card title="Remote-Einstellungen" icon="sliders">
+    Übertragen Sie Laufzeitkonfiguration an Clients und prüfen Sie SHA-256-Hashes von Builds.
+  </Card>
+
+  <Card title="Mitarbeiter-URLs" icon="user-shield">
+    Geben Sie Moderatoren eingeschränkten, zeitlich begrenzten Zugriff auf das Portal.
+  </Card>
+
+  <Card title="Discord-Integrationen" icon="discord">
+    Streamen Sie Sicherheitslogs in einen Kanal und ordnen Sie Rollenberechtigungen zu.
+  </Card>
+
+  <Card title="Client-Sicherheit" icon="shield-halved">
+    Blockieren Sie Prozesse und Fenster, sperren Sie Geräte und stellen Sie geschützte Strings und Dateien bereit.
+  </Card>
+</CardGroup>
+
+## Produktkennungen
+
+Einige Endpunkte erwarten eine numerische `product_id`. Andere erwarten den `cheat_value` des Produkts, einen String wie `cs2_cheat`. Die Referenz jedes Endpunkts zeigt, welchen Wert er erwartet.

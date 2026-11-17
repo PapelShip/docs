@@ -1,0 +1,72 @@
+---
+title: "Ліцензійні ключі"
+description: "Видавайте та керуйте ліцензійними ключами клієнтів із прив'язкою до HWID."
+---
+
+## Типи ключів
+
+| `key_type` | Поведінка |
+| :-- | :-- |
+| `time_limited` | Дійсний протягом `days` днів. За замовчуванням. |
+| `hour_limited` | `days` тлумачиться як години. |
+| `single_use` | Можна активувати один раз. |
+| `multi_use` | Можна активувати до `max_uses` разів. |
+| `time_restricted` | Дійсний лише в межах заданого часового вікна. |
+
+## Створення ключів
+
+```bash
+curl -X POST https://app.papelship.com/api/qpapel/v1/keys \
+  -H "Authorization: Bearer pk_live_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "product_id": 101,
+    "days": 30,
+    "key_type": "time_limited",
+    "bind_hwid": true,
+    "auto_start": false,
+    "amount": 1,
+    "note": "Order #1042"
+  }'
+```
+
+<ParamField body="bind_hwid" default="true" type="boolean">
+  Прив'язує ключ до першого комп'ютера, на якому його активовано.
+</ParamField>
+
+<ParamField body="auto_start" default="false" type="boolean">
+  Якщо `true`, відлік починається негайно. Якщо `false`, він починається під час першого використання.
+</ParamField>
+
+<ParamField body="amount" default="1" type="integer">
+  Генерує до 100 ключів за один виклик.
+</ParamField>
+
+## Керування ключем
+
+<AccordionGroup>
+  <Accordion title="Скидання HWID" icon="rotate">
+    Дозвольте клієнту перейти на новий ПК: `POST /keys/{id}/reset-hwid`.
+  </Accordion>
+
+  <Accordion title="Замороження та розмороження" icon="snowflake">
+    Призупініть відлік на час простою через `POST /keys/{id}/freeze`. Відновіть через `DELETE /keys/{id}/freeze`.
+  </Accordion>
+
+  <Accordion title="Подовження" icon="clock">
+    Додайте дні через `POST /keys/{id}/add-time` із `{ "days": 7 }`.
+  </Accordion>
+
+  <Accordion title="Блокування та розблокування" icon="ban">
+    Відкличте через `POST /keys/{id}/ban` із `reason`. Відновіть через `POST /keys/{id}/unban`.
+  </Accordion>
+</AccordionGroup>
+
+## Пошук ключів, термін дії яких спливає
+
+Отримайте список ключів, термін дії яких спливає протягом наступних семи днів, щоб надіслати нагадування про поновлення:
+
+```bash
+curl "https://app.papelship.com/api/qpapel/v1/keys?expiresInDays=7&sortBy=end_time&sortOrder=ASC" \
+  -H "Authorization: Bearer pk_live_your_key"
+```

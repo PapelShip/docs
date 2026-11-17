@@ -1,0 +1,131 @@
+---
+title: "Kartenzahlungen mit PapelPay annehmen"
+sidebarTitle: "Überblick"
+description: "Belasten Sie Karten für Store API-Bestellungen mit PapelPay: Starten Sie die Zahlung, leiten Sie den Kunden zum Checkout weiter oder zeigen Sie das Kartenformular auf Ihrer Website an und bestätigen Sie per Webhook."
+icon: "credit-card"
+keywords:
+  - "papelpay"
+  - "Kartenzahlungen"
+  - "Checkout"
+  - "store api"
+  - "Abonnements"
+---
+
+PapelPay ist die Kartenzahlungsmethode Ihres PapelShip Shops. Mit der Store API erstellen Sie eine Bestellung, starten deren PapelPay-Zahlung und lassen den Kunden per Karte in Ihrem gehosteten Checkout oder in einem Kartenformular auf Ihrer eigenen Website bezahlen. Bestellungen für Produkte, die als Abonnement verkauft werden, werden in jedem Abrechnungszeitraum erneut belastet.
+
+<Info>
+  PapelPay muss in Ihrem Shop aktiv sein. Beantragen Sie es im Dashboard unter **PapelPay**; die Endpunkte auf dieser Seite liefern `PAPELPAY_NOT_ENABLED`, bis Ihr Shop freigeschaltet ist.
+</Info>
+
+## So funktioniert eine Kartenzahlung
+
+<Steps>
+  <Step title="Bestellung erstellen">
+    Rufen Sie `POST /api/v1/invoices` mit dem Kunden und den Produkten auf, wie unter [Bestellungen erstellen und verwalten](/de/user-api/orders) beschrieben. Fügen Sie `auto_renew` hinzu, um ein Abonnementprodukt als Abonnement oder als Einmalkauf zu verkaufen. Siehe [Abonnements](/de/papelpay/subscriptions).
+  </Step>
+  <Step title="Kartenzahlung starten">
+    Rufen Sie `POST /api/v1/invoices/{invoiceId}/papelpay` auf oder senden Sie beim Erstellen der Bestellung `"payment_method": "PAPELPAY"`, um beides in einem Aufruf zu erledigen. Die Antwort enthält ein `payment`-Objekt.
+  </Step>
+  <Step title="Kunden bezahlen lassen">
+    Leiten Sie den Kunden zu `payment.payment_url` weiter, Ihrem gehosteten Checkout, der direkt mit dem Kartenformular geöffnet wird. Um den Kunden auf Ihrer Website zu halten, binden Sie `payment.embed_url` mit dem JavaScript SDK ein. Siehe [Kartenformular auf Ihrer Website](/de/papelpay/card-form).
+  </Step>
+  <Step title="Bestellung bestätigen">
+    Sobald die Karte belastet wurde, wechselt die Bestellung zu `completed` und PapelShip liefert die Produkte aus. Warten Sie auf den Webhook `order.completed` oder rufen Sie die Bestellung mit `GET /api/v1/invoices/{invoiceId}` ab. Siehe [Webhooks](/de/user-api/webhooks).
+  </Step>
+</Steps>
+
+## Kartenzahlung starten
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://app.papelship.com/api/v1/invoices/c35ffd-19a1b2c3d4e-8c7a20/papelpay \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Idempotency-Key: 4d2b7f1e-8a3c-4e9b-b1d0-5c6a7e8f9a01" \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_ip": "203.0.113.10", "locale": "en" }'
+```
+
+```javascript Node.js
+const res = await fetch(
+  `https://app.papelship.com/api/v1/invoices/${invoiceId}/papelpay`,
+  {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.PAPELSHIP_API_KEY,
+      "x-store-hash": process.env.PAPELSHIP_STORE_ID,
+      "Idempotency-Key": `${invoiceId}:papelpay`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ customer_ip: req.ip, locale: "en" }),
+  }
+);
+const { payment } = await res.json();
+```
+
+</CodeGroup>
+
+```json Antwort (200)
+{
+  "success": true,
+  "payment": {
+    "object": "papelpay_payment",
+    "invoice_id": "c35ffd-19a1b2c3d4e-8c7a20",
+    "session_id": "ch_7Hq2Lm9xP4",
+    "status": "pending",
+    "mode": "subscription",
+    "interval_days": 30,
+    "amount_cents": 2399,
+    "currency": "USD",
+    "payment_url": "https://invoice.papelship.com/c35ffd-19a1b2c3d4e-8c7a20",
+    "embed_url": "https://invoice.papelship.com/api/payment/papelpay/embed/ch_7Hq2Lm9xP4",
+    "embeddable": true,
+    "expires_at": "2026-11-17T15:00:00.000Z"
+  },
+  "invoice": { "id": "c35ffd-19a1b2c3d4e-8c7a20", "status": "payment_pending" }
+}
+```
+
+| Body-Feld | Hinweise |
+| :-- | :-- |
+| `customer_ip` | Die IP-Adresse des Käufers. Aktiviert die Kartenprüfungen (VPN, wiederholte Ablehnungen) für diese Zahlung. |
+| `locale` | Sprache der Fehlermeldungen, zum Beispiel `en` oder `tr`. |
+
+Ein erneuter Aufruf des Endpunkts, während die Zahlung offen ist, liefert dieselbe `session_id`. Verwenden Sie die Bestell-ID in Ihrem `Idempotency-Key`.
+
+## Das Payment-Objekt
+
+| Feld | Bedeutung |
+| :-- | :-- |
+| `mode` | `subscription`: Die Karte wird alle `interval_days` erneut belastet, bis der Kunde kündigt. `one_time`: eine einmalige Belastung. |
+| `interval_days` | Abrechnungszeitraum in Tagen bei Abonnements, andernfalls `null`. |
+| `amount_cents`, `currency` | Der jetzt belastete Betrag. Kartenzahlungen können in USD belastet werden. |
+| `payment_url` | Ihr gehosteter Checkout, direkt mit dem Kartenformular geöffnet. Dieselbe Seite wie die `checkout_url` der Bestellung. |
+| `embed_url` | Nur das Kartenformular, für Ihre eigene Seite. `null`, wenn die Kartenzahlungen Ihres Shops nicht eingebettet werden können; verwenden Sie dann `payment_url`. |
+| `embeddable` | `true`, wenn `embed_url` gesetzt ist. |
+| `expires_at` | Zu diesem Zeitpunkt läuft die Bestellung unbezahlt ab. |
+
+## Fehler
+
+| Code | Status | Bedeutung |
+| :-- | :-- | :-- |
+| `PAPELPAY_NOT_ENABLED` | `422` | PapelPay ist in Ihrem Shop nicht aktiv. |
+| `PAYMENT_METHOD_DISABLED` | `422` | Die Bestellung führt `PAPELPAY` in `disabled_payment_methods`. |
+| `INVOICE_NOT_PAYABLE` | `409` | Die Bestellung ist bezahlt, storniert, erstattet oder abgelaufen. |
+| `CARD_CHECKOUT_BLOCKED` | `403` | Die Kartenprüfungen haben diesen Käufer gestoppt. `details.reason` nennt den Grund; `details.existing_invoice_id` nennt eine offene Bestellung für denselben Kauf. |
+| `PAPELPAY_UNAVAILABLE` | `503` | Kartenzahlungen sind kurzzeitig pausiert. Versuchen Sie es später erneut. |
+
+Wenn Sie beim Erstellen `"payment_method": "PAPELPAY"` senden und die Kartenzahlung nicht gestartet werden kann, existiert die Bestellung trotzdem. `details.invoice_id` im Fehler nennt sie, sodass Sie es mit `POST /invoices/{invoiceId}/papelpay` erneut versuchen können.
+
+## Nächste Schritte
+
+<Columns cols={2}>
+  <Card title="Abonnements" icon="rotate" href="/de/papelpay/subscriptions">
+    Verkaufen Sie ein Produkt als Abonnement und verfolgen Sie dessen Verlängerungen.
+  </Card>
+
+  <Card title="Kartenformular auf Ihrer Website" icon="code" href="/de/papelpay/card-form">
+    Zeigen Sie das Kartenformular auf Ihrer eigenen Checkout-Seite an.
+  </Card>
+</Columns>

@@ -1,0 +1,90 @@
+---
+title: "Das PapelPay-Kartenformular auf Ihrer Website anzeigen"
+sidebarTitle: "Kartenformular auf Ihrer Website"
+description: "Binden Sie das PapelPay-Kartenformular mit dem JavaScript SDK in Ihre eigene Checkout-Seite ein: Optionen, Ereignisse, Erscheinungsbild, zugelassene Domains und Zahlungsbestätigung."
+icon: "code"
+keywords:
+  - "papelpay"
+  - "Einbettung"
+  - "Kartenformular"
+  - "javascript sdk"
+  - "papelship-widget"
+  - "iframe"
+---
+
+Das PapelShip JavaScript SDK bindet das PapelPay-Kartenformular in Ihre eigene Checkout-Seite ein, sodass der Kunde Ihre Website nie verlässt. Das Formular wird in einem Frame von PapelShip geladen: Kartendaten erreichen niemals Ihren Server oder Ihre Seite.
+
+## Bevor Sie beginnen
+
+- Starten Sie die Kartenzahlung auf Ihrem Server mit `POST /api/v1/invoices/{invoiceId}/papelpay` und übergeben Sie `payment.embed_url` an Ihre Seite. Siehe [Überblick](/de/papelpay/overview).
+- Fügen Sie die Domain Ihrer Checkout-Seite im Dashboard unter **PapelPay > Domains** hinzu und verifizieren Sie sie. Eine verifizierte benutzerdefinierte Domain Ihres Shops funktioniert ebenfalls, ebenso deren Subdomains.
+- `localhost` und `127.0.0.1` funktionieren während der Entwicklung ohne Einrichtung.
+
+<Warning>
+  Auf einer nicht verifizierten Domain zeigt der Frame statt des Formulars einen Hinweis an, und `onError` erhält `origin_not_allowed`.
+</Warning>
+
+## Formular einbinden
+
+```html checkout.html
+<div id="card"></div>
+
+<script src="https://app.papelship.com/scripts/papelship-widget.js"></script>
+<script>
+  const card = PapelShip.papelpay.mount("#card", {
+    embedUrl: payment.embed_url,
+    invoiceId: payment.invoice_id,
+    locale: "en",
+    appearance: { mode: "light", surface: "#ffffff", border: "#e5e7eb", text: "#111827", font: "inter", radius: 10 },
+    onReady: () => console.log("Card form loaded"),
+    onPaid: ({ invoiceId }) => {
+      window.location.href = `/order/${invoiceId}/thanks`;
+    },
+    onDeclined: ({ message }) => showError(message),
+    onError: ({ code }) => showError(code),
+  });
+</script>
+```
+
+Der Frame wächst und schrumpft mit seinem Inhalt. `mount` liefert `{ iframe, destroy }`; rufen Sie `card.destroy()` auf, um das Formular zu entfernen, zum Beispiel wenn der Kunde eine andere Zahlungsmethode wählt.
+
+## Optionen
+
+| Option | Hinweise |
+| :-- | :-- |
+| `embedUrl` | Pflichtfeld. `payment.embed_url` aus der Store API. Jede andere URL wird mit `invalid_embed_url` abgelehnt. |
+| `invoiceId` | Optional. Wird in jedem Ereignis zurückgegeben, damit Sie es Ihrer Bestellung zuordnen können. |
+| `locale` | Sprache des Formulars, zum Beispiel `en` oder `tr`. |
+| `appearance.mode` | `light` oder `dark`. |
+| `appearance.surface`, `appearance.border`, `appearance.text` | Hex-Farben wie `#ffffff`. |
+| `appearance.font` | `inter`, `system` oder `fustat`. |
+| `appearance.radius` | Eckenradius in Pixeln, von `0` bis `24`. |
+| `height` | Anfangshöhe in Pixeln, bevor das Formular seine eigene meldet (Standard `420`). |
+| `title` | Barrierefreier Titel des Frames (Standard `Card payment`). |
+
+## Ereignisse
+
+| Callback | Zeitpunkt | Daten |
+| :-- | :-- | :-- |
+| `onReady` | Das Formular wurde geladen. | `{ invoiceId }` |
+| `onPaid` | Die Karte wurde belastet. Wird einmal ausgelöst. | `{ invoiceId }` |
+| `onDeclined` | Die Karte wurde abgelehnt. Der Kunde kann eine andere Karte versuchen. | `{ invoiceId, message }` |
+| `onError` | Das Formular kann keine Zahlung annehmen. | `{ invoiceId, code }` |
+
+Dieselben Ereignisse sind global über `PapelShip.on("papelpay:paid", fn)`, `papelpay:declined`, `papelpay:error` und `papelpay:ready` verfügbar sowie als `CustomEvent`s `papelship:papelpay:paid` (und so weiter) auf `window`.
+
+| `onError`-Code | Bedeutung | Vorgehen |
+| :-- | :-- | :-- |
+| `origin_not_allowed` | Die Domain Ihrer Seite ist für diesen Shop nicht verifiziert. | Fügen Sie sie unter **PapelPay > Domains** hinzu. |
+| `not_embeddable` | Die Kartenzahlungen Ihres Shops können nicht in einem Frame angezeigt werden. | Leiten Sie den Kunden zu `payment.payment_url` weiter. |
+| `session_expired` | Die Zahlungssitzung ist abgelaufen. | Starten Sie die Zahlung erneut und binden Sie die neue `embed_url` ein. |
+| `session_ended` | Die Zahlungssitzung wurde geschlossen. | Rufen Sie die Bestellung ab, um zu prüfen, ob sie bezahlt wurde. |
+| `invalid_embed_url` | `embedUrl` ist keine PapelPay-`embed_url`. | Übergeben Sie `payment.embed_url` unverändert. |
+
+## Zahlung auf Ihrem Server bestätigen
+
+`onPaid` teilt Ihrer Seite mit, dass die Karte belastet wurde. Bevor Sie selbst etwas ausliefern, bestätigen Sie die Bestellung auf Ihrem Server: Warten Sie auf den Webhook `order.completed` oder rufen Sie `GET /api/v1/invoices/{invoiceId}` ab und prüfen Sie, ob `status` den Wert `completed` hat. Siehe [Webhooks](/de/user-api/webhooks).
+
+<Tip>
+  Erlauben Sie Kartenzahlungsfunktionen im übergeordneten Element des Frames, wenn Sie eine eigene iframe-Sandbox oder Permissions Policy verwenden: Das SDK setzt für Wallet-Zahlungen `allow="payment *"` auf seinem Frame.
+</Tip>

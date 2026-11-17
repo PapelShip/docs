@@ -1,0 +1,64 @@
+---
+title: "Authentification"
+description: "Authentifiez vos requêtes auprès de chaque API PapelShip avec votre clé API."
+---
+
+Chaque requête doit inclure une clé API. Chaque API accepte un ensemble d'en-têtes légèrement différent.
+
+<Tabs>
+  <Tab title="User API">
+    Envoyez votre clé API **et** le hash de votre boutique dans chaque requête.
+
+    ```bash
+    x-api-key: your_api_key
+    x-store-hash: your_store_hash
+    ```
+
+    | En-tête | Description |
+    | :-- | :-- |
+    | `x-api-key` | Votre clé API personnelle, disponible dans les paramètres du tableau de bord. |
+    | `x-store-hash` | L'identifiant unique de votre boutique. |
+  </Tab>
+  <Tab title="qPapel Protection">
+    Envoyez votre clé développeur (`pk_live_...`) de l'une des trois manières suivantes.
+
+    ```bash
+    # Recommandé
+    Authorization: Bearer pk_live_your_key
+    
+    # Alternative
+    x-api-key: pk_live_your_key
+    
+    # Hérité (pris en charge pour les anciens loaders)
+    api-key: pk_live_your_key
+    ```
+  </Tab>
+</Tabs>
+
+## Tester vos identifiants
+
+Appelez le point de terminaison de connectivité de la User API pour vérifier que votre clé et le hash de votre boutique fonctionnent :
+
+```bash
+curl https://app.papelship.com/api/v1/me \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```
+
+Une requête valide renvoie `"success": true`. Une clé invalide renvoie `401 Unauthorized`.
+
+## Protéger vos clés
+
+<AccordionGroup>
+  <Accordion title="Utilisez vos clés uniquement sur votre serveur" icon="server">
+    Les clés API donnent un accès complet à votre boutique et à vos licences. Ne les intégrez jamais dans du JavaScript frontend, des applications mobiles ou des binaires de bureau distribués.
+  </Accordion>
+
+  <Accordion title="Stockez vos clés dans des variables d'environnement" icon="lock">
+    Chargez vos clés depuis des variables d'environnement ou un gestionnaire de secrets. Ne les enregistrez jamais dans votre gestionnaire de versions.
+  </Accordion>
+
+  <Accordion title="Renouvelez immédiatement une clé divulguée" icon="rotate">
+    Si une clé est exposée, révoquez-la dans le tableau de bord et créez-en une nouvelle.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,147 @@
+---
+title: "Webhooks"
+sidebarTitle: "Webhooks"
+description: "Reciba eventos firmados cuando cambien pedidos, productos, reseñas y registros de afiliados."
+---
+
+Los webhooks envían un `POST` HTTP a su servidor cuando ocurre algo en su tienda, para que no tenga que consultar periódicamente.
+
+Cree endpoints en **Desarrolladores › Webhooks** o con [`POST /webhooks`](#gestionar-endpoints-con-la-api).
+
+## Eventos
+
+| Evento | Cuándo |
+| :-- | :-- |
+| `order.created` | Se crea un pedido (tienda, API o embed). |
+| `order.completed` | Un pedido se paga y se entrega. Incluye las entregas. |
+| `order.partially_paid` | Llegó una parte de un pago en cripto. |
+| `order.manual_review` | Un pago manual espera su revisión. |
+| `order.expired` | Un pedido no se pagó a tiempo. |
+| `order.cancelled` | Se canceló un pedido no pagado. |
+| `order.refunded` | Se registró un reembolso. Se envía una vez por cada importe reembolsado. |
+| `product.out_of_stock` | Un producto se quedó sin inventario. |
+| `product.low_stock` | Una variante de un producto físico alcanzó su umbral de inventario bajo. Incluye `variant_id` y `threshold`. |
+| `product.restocked` | Se agregó inventario a un producto. |
+| `product.deleted` | Se eliminó un producto. |
+| `review.created` | Un cliente dejó una reseña. |
+| `question.created` | Un cliente hizo una pregunta en la página de un producto. |
+| `question.answered` | Su equipo respondió una pregunta sobre un producto (panel o API). `answer.first` es `true` para la primera respuesta. |
+| `customer.created` | Se agregó un nuevo cliente a su tienda. |
+| `withdrawal.completed` | Se envió un retiro de la billetera. |
+| `affiliate.partner_applied` | Alguien solicitó unirse a su programa de afiliados. |
+| `affiliate.conversion` | Un pedido atribuido se completó y se registró la comisión. |
+| `affiliate.payout_requested` | Un socio solicitó un pago. |
+| `affiliate.payout_sent` | Usted marcó un pago como enviado. |
+
+`GET /events/types` devuelve la misma lista.
+
+## Carga
+
+```json
+{
+  "id": "evt_9b2c4f1a7d",
+  "object": "event",
+  "type": "order.completed",
+  "created": 1791100000,
+  "livemode": true,
+  "store": { "id": "0bHQn0bU2dei", "name": "Acme", "slug": "acme" },
+  "data": {
+    "object": {
+      "object": "order",
+      "id": "c35ffd-19a1b2c3d4e-8c7a20",
+      "status": "completed",
+      "currency": "USD",
+      "total": 34.99,
+      "customer": { "email": "buyer@example.com", "country": "GB" },
+      "items": [{ "product_id": "a1B2c3D4e5F6", "name": "Pro License", "quantity": 1, "unit_price": 34.99, "total": 34.99 }],
+      "paid_at": "2026-10-04T12:03:00.000Z"
+    }
+  }
+}
+```
+
+<Note>
+  Los importes de los webhooks están en unidades mayores (`34.99`), a diferencia de la API, que usa unidades menores (`3499`).
+</Note>
+
+## Verificar la firma
+
+Cada solicitud incluye estos encabezados:
+
+| Encabezado | Valor |
+| :-- | :-- |
+| `PapelShip-Signature` | `t=<unix seconds>,v1=<hex HMAC>` |
+| `PapelShip-Event-Id` | El ID del evento. Úselo para ignorar duplicados. |
+| `PapelShip-Event-Type` | El tipo de evento. |
+| `PapelShip-Delivery-Attempt` | 1 en el primer intento. |
+
+La firma es `HMAC-SHA256(secret, "<t>.<raw body>")` en hexadecimal. El secreto (`whsec_...`) se muestra al crear el endpoint. Calcúlela sobre el cuerpo **sin procesar**, antes de analizar el JSON, y rechace las marcas de tiempo antiguas.
+
+<CodeGroup>
+
+```javascript Node.js
+import crypto from "node:crypto";
+
+export function verify(rawBody, header, secret, toleranceSec = 300) {
+  const parts = Object.fromEntries(header.split(",").map((p) => p.split("=")));
+  const t = Number(parts.t);
+  if (!t || Math.abs(Date.now() / 1000 - t) > toleranceSec) return false;
+  const expected = crypto.createHmac("sha256", secret).update(`${t}.${rawBody}`).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(parts.v1 || "");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+```
+
+```python Python
+import hmac, hashlib, time
+
+def verify(raw_body: bytes, header: str, secret: str, tolerance: int = 300) -> bool:
+    parts = dict(p.split("=", 1) for p in header.split(","))
+    t = int(parts.get("t", 0))
+    if not t or abs(time.time() - t) > tolerance:
+        return False
+    expected = hmac.new(secret.encode(), f"{t}.".encode() + raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, parts.get("v1", ""))
+```
+
+```php PHP
+function verify(string $rawBody, string $header, string $secret, int $tolerance = 300): bool {
+    parse_str(str_replace(',', '&', $header), $parts);
+    $t = (int)($parts['t'] ?? 0);
+    if (!$t || abs(time() - $t) > $tolerance) return false;
+    $expected = hash_hmac('sha256', $t . '.' . $rawBody, $secret);
+    return hash_equals($expected, $parts['v1'] ?? '');
+}
+```
+
+</CodeGroup>
+
+## Respuesta y reintentos
+
+- Responda con cualquier estado `2xx` en un plazo de 10 segundos. Realice el trabajo lento después de responder.
+- Las entregas fallidas se reintentan después de 1 minuto, 5 minutos, 30 minutos, 2 horas, 6 horas y 12 horas (7 intentos en unas 21 horas).
+- Un endpoint se desactiva tras 40 fallos seguidos sin ningún éxito en 3 días. Reactívelo en el panel o con `PATCH /webhooks/{id}` y `enabled: true`.
+- El mismo evento puede llegar más de una vez. Use `PapelShip-Event-Id` para procesarlo una sola vez.
+
+## Gestionar endpoints con la API
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/webhooks \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://example.com/webhooks/papelship", "events": ["order.completed", "order.refunded"] }'
+```
+
+La respuesta contiene el `secret` de firma. Se muestra una sola vez; guárdelo en el entorno de su servidor.
+
+| Endpoint | Uso |
+| :-- | :-- |
+| `GET /webhooks` | Lista los endpoints con estadísticas de entrega de 7 días. |
+| `PATCH /webhooks/{id}` | Cambia la URL, los eventos o `enabled`. |
+| `POST /webhooks/{id}/test` | Envía un evento de prueba. |
+| `GET /events/deliveries` | Registro de entregas con estado y códigos de respuesta. |
+| `POST /events/deliveries/{id}/resend` | Vuelve a enviar una entrega. |
+
+La rotación del secreto se sigue haciendo en el panel.

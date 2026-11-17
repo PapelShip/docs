@@ -1,0 +1,63 @@
+---
+title: "Отправка физических заказов"
+sidebarTitle: "Доставка"
+description: "Получайте список заказов к отправке, создавайте отправления с трекингом, обновляйте статус доставки и обрабатывайте возвраты."
+---
+
+Если ваш магазин продает физические товары, используйте эти эндпоинты, чтобы подключить склад или программу для доставки. Магазин должен быть одобрен для продажи физических товаров в разделе **Настройки › Физические товары**.
+
+## 1. Найдите заказы к отправке
+
+```bash
+curl "https://app.papelship.com/api/v1/orders?status=to_ship" \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id"
+```
+
+`to_ship` возвращает оплаченные заказы с еще не отправленными позициями, начиная с самых старых. Другие фильтры: `in_transit`, `delivered`, `issues` (неудачные доставки, возвраты) и `all`.
+
+`GET /orders/{invoiceId}` возвращает адрес, каждую позицию с `shipped_quantity`, отправления, возвраты и заметки.
+
+## 2. Создайте отправление
+
+```bash
+curl -X POST https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "carrier_code": "dhl_express", "tracking_number": "1234567890" }'
+```
+
+- Не передавайте `items`, чтобы отправить все оставшееся. Для частичной отправки передайте `items: [{ "invoice_item_id": 55, "qty": 1 }]`.
+- Клиент получит письмо со ссылкой для отслеживания. Передайте `notify_customer: false`, чтобы не отправлять его.
+- Ссылка для отслеживания формируется по перевозчику. `GET /shipping` возвращает коды перевозчиков.
+
+## 3. Обновите статус
+
+```bash
+curl -X PATCH https://app.papelship.com/api/v1/orders/c35ffd-19a1b2c3d4e-8c7a20/shipments/88 \
+  -H "x-api-key: pk_live_your_key" \
+  -H "x-store-hash: your_store_id" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "delivered", "location": "London" }'
+```
+
+Статусы: `label_created`, `shipped`, `in_transit`, `out_for_delivery`, `delivered`, `failed_attempt`, `returned_to_sender`. Каждый из них добавляется в хронологию отслеживания, которую видит клиент. `fulfillment_status` заказа автоматически следует за отправлениями.
+
+## Возвраты
+
+Клиенты запрашивают возврат со страницы своего заказа в течение срока возврата, заданного для товара. Обрабатывайте запросы с помощью `PATCH /orders/{invoiceId}/returns/{returnId}`:
+
+| `action` | Результат |
+| :-- | :-- |
+| `approve` | Принимает запрос. `location_id` задает, куда отправить посылку. |
+| `reject` | Отклоняет запрос. `note` обязателен и отправляется клиенту. |
+| `receive` | Вы получили посылку. `restock: true` возвращает товары на склад. |
+| `refund` | Регистрирует `refund_cents`. Верните деньги самостоятельно, затем вызовите `POST /invoices/{id}/refund`. |
+| `close` | Закрывает возврат. |
+
+`GET /returns?status=requested` возвращает открытые запросы по всем заказам.
+
+## Настройки доставки
+
+Просматривайте и изменяйте зоны, тарифы и адреса складов через `/shipping/zones` и `/shipping/locations`. Рассчитайте стоимость доставки корзины с помощью `POST /shipping/quote`.

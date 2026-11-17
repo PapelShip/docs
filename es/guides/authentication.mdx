@@ -1,0 +1,64 @@
+---
+title: "Autenticación"
+description: "Autentique las solicitudes a cada API de PapelShip con su clave de API."
+---
+
+Cada solicitud debe incluir una clave de API. Cada API acepta un conjunto de encabezados ligeramente distinto.
+
+<Tabs>
+  <Tab title="User API">
+    Envíe su clave de API **y** el hash de su tienda en cada solicitud.
+
+    ```bash
+    x-api-key: your_api_key
+    x-store-hash: your_store_hash
+    ```
+
+    | Encabezado | Descripción |
+    | :-- | :-- |
+    | `x-api-key` | Su clave de API personal, obtenida en la configuración del panel. |
+    | `x-store-hash` | El identificador único de su tienda. |
+  </Tab>
+  <Tab title="qPapel Protection">
+    Envíe su clave de desarrollador (`pk_live_...`) de una de estas tres formas.
+
+    ```bash
+    # Recomendada
+    Authorization: Bearer pk_live_your_key
+    
+    # Alternativa
+    x-api-key: pk_live_your_key
+    
+    # Heredada (compatible con loaders antiguos)
+    api-key: pk_live_your_key
+    ```
+  </Tab>
+</Tabs>
+
+## Pruebe sus credenciales
+
+Llame al endpoint de conectividad de la User API para confirmar que su clave y el hash de su tienda funcionan:
+
+```bash
+curl https://app.papelship.com/api/v1/me \
+  -H "x-api-key: your_api_key" \
+  -H "x-store-hash: your_store_hash"
+```
+
+Una solicitud válida devuelve `"success": true`. Una clave no válida devuelve `401 Unauthorized`.
+
+## Proteja sus claves
+
+<AccordionGroup>
+  <Accordion title="Use las claves solo en su servidor" icon="server">
+    Las claves de API otorgan acceso total a su tienda y a sus licencias. Nunca las incluya en JavaScript de frontend, aplicaciones móviles ni binarios de escritorio distribuidos.
+  </Accordion>
+
+  <Accordion title="Guarde las claves en variables de entorno" icon="lock">
+    Cargue las claves desde variables de entorno o un gestor de secretos. Nunca las suba al control de versiones.
+  </Accordion>
+
+  <Accordion title="Rote de inmediato una clave filtrada" icon="rotate">
+    Si una clave queda expuesta, revóquela en el panel y cree una nueva.
+  </Accordion>
+</AccordionGroup>
